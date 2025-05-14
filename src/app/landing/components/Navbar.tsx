@@ -57,7 +57,7 @@ export default function Navbar() {
 
           {/* Navigation Links */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link href="/" className="text-gray-700 hover:text-blue-600">
+            <Link href="/feed" className="text-gray-700 hover:text-blue-600">
               Home
             </Link>
 
