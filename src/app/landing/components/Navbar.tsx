@@ -4,12 +4,19 @@ import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FiChevronDown, FiDownload, FiFileText, FiVideo, FiBookmark, FiHelpCircle } from 'react-icons/fi';
+import { useRouter } from "next/navigation";
+import {
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from '@clerk/nextjs'
 
 export default function Navbar() {
   const [showResources, setShowResources] = useState(false);
   const [showDownloads, setShowDownloads] = useState(false);
   const resourcesRef = useRef<HTMLDivElement>(null);
   const downloadsRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -53,7 +60,7 @@ export default function Navbar() {
             <Link href="/" className="text-gray-700 hover:text-blue-600">
               Home
             </Link>
-            
+
             {/* Resources Dropdown */}
             <div className="relative" ref={resourcesRef}>
               <button
@@ -150,21 +157,28 @@ export default function Navbar() {
 
           {/* Auth Buttons */}
           <div className="flex items-center space-x-4">
-            <Link
-              href="/login"
-              className="text-gray-700 hover:text-blue-600 font-medium"
-            >
-              Log in
-            </Link>
-            <Link
-              href="/signup"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Sign up
-            </Link>
+            <SignedOut>
+              <button
+                type="button"
+                onClick={() => router.push("/sign-in")}
+                className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
+              >
+                Log in
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/sign-up")}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Sign up
+              </button>
+            </SignedOut>
+            <SignedIn>
+              <UserButton />
+            </SignedIn>
           </div>
         </div>
       </div>
-    </nav>
+    </nav >
   );
 } 
