@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FiChevronDown, FiDownload, FiFileText, FiVideo, FiBookmark, FiHelpCircle } from 'react-icons/fi';
@@ -8,6 +8,24 @@ import { FiChevronDown, FiDownload, FiFileText, FiVideo, FiBookmark, FiHelpCircl
 export default function Navbar() {
   const [showResources, setShowResources] = useState(false);
   const [showDownloads, setShowDownloads] = useState(false);
+  const resourcesRef = useRef<HTMLDivElement>(null);
+  const downloadsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (resourcesRef.current && !resourcesRef.current.contains(event.target as Node)) {
+        setShowResources(false);
+      }
+      if (downloadsRef.current && !downloadsRef.current.contains(event.target as Node)) {
+        setShowDownloads(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   return (
     <nav className="bg-white shadow-sm sticky top-0 z-50">
@@ -37,7 +55,7 @@ export default function Navbar() {
             </Link>
             
             {/* Resources Dropdown */}
-            <div className="relative">
+            <div className="relative" ref={resourcesRef}>
               <button
                 onClick={() => setShowResources(!showResources)}
                 className="flex items-center text-gray-700 hover:text-blue-600"
@@ -80,7 +98,7 @@ export default function Navbar() {
             </div>
 
             {/* Downloads Dropdown */}
-            <div className="relative">
+            <div className="relative" ref={downloadsRef}>
               <button
                 onClick={() => setShowDownloads(!showDownloads)}
                 className="flex items-center text-gray-700 hover:text-blue-600"
