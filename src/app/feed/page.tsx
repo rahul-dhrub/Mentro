@@ -48,7 +48,10 @@ export default function FeedPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
-  const currentUser = mockAuthors[0];
+  const currentUser = {
+    ...mockAuthors[0],
+    title: mockAuthors[0].title || 'Faculty Member'
+  };
   const observerTarget = useRef<HTMLDivElement>(null);
 
   const fetchPosts = useCallback(async () => {

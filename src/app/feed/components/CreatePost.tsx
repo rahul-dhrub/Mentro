@@ -488,7 +488,7 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
             {/* My Posts Switch */}
             <div className="flex items-center space-x-3">
               <div className="relative inline-flex items-center">
-                <input
+              <input
                   type="checkbox"
                   id="myPosts"
                   checked={isPersonalPosts}
@@ -511,7 +511,7 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
                     peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-100`}
                 >
                   <span className="sr-only">Toggle personal posts</span>
-                </label>
+            </label>
                 <div className="flex items-center ml-3 space-x-2">
                   <FiUser className={`w-4 h-4 ${isPersonalPosts ? 'text-blue-600' : 'text-gray-500'}`} />
                   <span className={`text-sm font-medium ${isPersonalPosts ? 'text-blue-600' : 'text-gray-700'}`}>
@@ -519,22 +519,22 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
                   </span>
                 </div>
               </div>
-            </div>
+          </div>
 
             {/* Post Button */}
-            <button
-              type="submit"
+          <button
+            type="submit"
               disabled={isLoading || !content.trim()}
               className={`px-6 py-2.5 rounded-full text-white font-medium text-sm transition-colors ${
                 isLoading || !content.trim()
                   ? 'bg-gray-300 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700'
               }`}
-            >
+          >
               {isLoading ? 'Posting...' : 'Post'}
-            </button>
-          </div>
-        </form>
+          </button>
+        </div>
+      </form>
       </div>
     </div>
   );
