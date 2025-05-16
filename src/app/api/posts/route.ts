@@ -68,60 +68,119 @@ export async function POST(request: NextRequest) {
     console.log('- Number of files:', files.length);
     console.log('- Video file:', video ? 'yes' : 'no');
 
-    // Upload images
-    const imageUrls = await Promise.all(
-      images.map(async (image) => {
-        const buffer = Buffer.from(await image.arrayBuffer());
-        console.log('Uploading image:', image.name);
-        return bunnyClient.uploadToStorage(buffer, image.name, 'images');
-      })
-    );
+    // Create a queue for progress updates
+    const progressQueue: { fileName: string; progress: number }[] = [];
+    let isComplete = false;
+    let postResponse: any = null;
 
-    // Upload files
-    const fileUrls = await Promise.all(
-      files.map(async (file) => {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        console.log('Uploading file:', file.name);
-        return bunnyClient.uploadToStorage(buffer, file.name, 'files');
-      })
-    );
+    // Create a ReadableStream that will send our progress updates
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          // Function to send progress
+          const sendProgress = (fileName: string, progress: number) => {
+            progressQueue.push({ fileName, progress });
+          };
 
-    // Upload video if present
-    let videoUrl = '';
-    if (video) {
-      const buffer = Buffer.from(await video.arrayBuffer());
-      console.log('Uploading video:', video.name);
-      videoUrl = await bunnyClient.uploadToStream(buffer, video.name);
-    }
+          // Upload images
+          const imageUrls = await Promise.all(
+            images.map(async (image) => {
+              const buffer = Buffer.from(await image.arrayBuffer());
+              console.log('Starting image upload:', image.name);
+              
+              sendProgress(image.name, 0);
+              controller.enqueue(`data: ${JSON.stringify({ fileName: image.name, progress: 0 })}\n\n`);
+              
+              const url = await bunnyClient.uploadToStorage(buffer, image.name, 'images');
+              console.log('Image upload completed:', image.name, url);
+              
+              sendProgress(image.name, 100);
+              controller.enqueue(`data: ${JSON.stringify({ fileName: image.name, progress: 100 })}\n\n`);
+              
+              return url;
+            })
+          );
 
-    // Create post
-    const post = await Post.create({
-      userId: dbUser._id, // Use the MongoDB user ID
-      content,
-      images: imageUrls,
-      files: fileUrls,
-      video: videoUrl,
-    });
+          // Upload files
+          const fileUrls = await Promise.all(
+            files.map(async (file) => {
+              const buffer = Buffer.from(await file.arrayBuffer());
+              console.log('Starting file upload:', file.name);
+              
+              sendProgress(file.name, 0);
+              controller.enqueue(`data: ${JSON.stringify({ fileName: file.name, progress: 0 })}\n\n`);
+              
+              const url = await bunnyClient.uploadToStorage(buffer, file.name, 'files');
+              console.log('File upload completed:', file.name, url);
+              
+              sendProgress(file.name, 100);
+              controller.enqueue(`data: ${JSON.stringify({ fileName: file.name, progress: 100 })}\n\n`);
+              
+              return url;
+            })
+          );
 
-    // Fetch the created post with author information
-    const populatedPost = await Post.findById(post._id).populate({
-      path: 'userId',
-      model: User,
-      select: 'name email profilePicture',
-    });
+          // Upload video if present
+          let videoUrl = '';
+          if (video) {
+            const buffer = Buffer.from(await video.arrayBuffer());
+            console.log('Starting video upload:', video.name);
+            
+            sendProgress(video.name, 0);
+            controller.enqueue(`data: ${JSON.stringify({ fileName: video.name, progress: 0 })}\n\n`);
+            
+            videoUrl = await bunnyClient.uploadToStream(buffer, video.name);
+            console.log('Video upload completed:', video.name, videoUrl);
+            
+            sendProgress(video.name, 100);
+            controller.enqueue(`data: ${JSON.stringify({ fileName: video.name, progress: 100 })}\n\n`);
+          }
 
-    // Format the response
-    const postResponse = {
-      ...populatedPost.toObject(),
-      author: {
-        id: dbUser._id,
-        name: dbUser.name,
-        email: dbUser.email,
-        avatar: dbUser.profilePicture,
+          // Create post
+          const post = await Post.create({
+            userId: dbUser._id,
+            content,
+            images: imageUrls,
+            files: fileUrls,
+            video: videoUrl,
+          });
+
+          // Fetch the created post with author information
+          const populatedPost = await Post.findById(post._id).populate({
+            path: 'userId',
+            model: User,
+            select: 'name email profilePicture',
+          });
+
+          // Format the response
+          postResponse = {
+            ...populatedPost.toObject(),
+            author: {
+              id: dbUser._id,
+              name: dbUser.name,
+              email: dbUser.email,
+              avatar: dbUser.profilePicture,
+            }
+          };
+
+          // Send completion message
+          controller.enqueue(`data: ${JSON.stringify({ type: 'complete', post: postResponse })}\n\n`);
+          controller.close();
+        } catch (error) {
+          console.error('Error in stream:', error);
+          controller.error(error);
+        }
       }
-    };
+    });
 
-    return NextResponse.json(postResponse, { status: 201 });
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
+
   } catch (error) {
     console.error('Error creating post:', error);
     return NextResponse.json(

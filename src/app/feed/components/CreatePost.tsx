@@ -9,6 +9,12 @@ interface CreatePostProps {
   onPostCreate: (post: any) => void;
 }
 
+interface UploadProgress {
+  fileName: string;
+  progress: number;
+  type: 'image' | 'video' | 'file';
+}
+
 export default function CreatePost({ currentUser, onPostCreate }: CreatePostProps) {
   const [content, setContent] = useState('');
   const [hashtags, setHashtags] = useState<string[]>([]);
@@ -21,6 +27,7 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string>('');
   const [showHashtagInput, setShowHashtagInput] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
 
   // Refs for file inputs
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -32,24 +39,63 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setUploadProgress([]);
 
+    let reader;
     try {
       const formData = new FormData();
+      
+      // Add text content
       formData.append('content', content);
       formData.append('hashtags', JSON.stringify(hashtags));
       
-      images.forEach(image => {
-        formData.append('images', image);
-      });
+      console.log('Content added:', content);
+      console.log('Hashtags added:', hashtags);
 
-      files.forEach(file => {
+      // Add all files first
+      for (const image of images) {
+        formData.append('images', image);
+        console.log('Image added:', image.name);
+      }
+
+      for (const file of files) {
         formData.append('files', file);
-      });
+        console.log('File added:', file.name);
+      }
 
       if (video) {
         formData.append('video', video);
+        console.log('Video added:', video.name);
       }
 
+      // Log the final FormData contents
+      console.log('FormData entries:');
+      for (const [key, value] of formData.entries()) {
+        if (value instanceof File) {
+          console.log(`${key}: File - ${value.name} (${value.size} bytes)`);
+        } else {
+          console.log(`${key}: ${value}`);
+        }
+      }
+
+      // Initialize progress trackers
+      const allFiles = [
+        ...images.map(file => ({ file, type: 'image' as const })),
+        ...files.map(file => ({ file, type: 'file' as const })),
+        ...(video ? [{ file: video, type: 'video' as const }] : [])
+      ];
+
+      allFiles.forEach(({ file, type }) => {
+        setUploadProgress(prev => [...prev, {
+          fileName: file.name,
+          progress: 0,
+          type
+        }]);
+      });
+
+      for (let [key, value] of formData.entries()) {
+        console.log(key, value);
+      }
       const response = await fetch('/api/posts', {
         method: 'POST',
         body: formData,
@@ -60,23 +106,74 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
         throw new Error(data.error || 'Failed to create post');
       }
 
-      const newPost = await response.json();
-      onPostCreate(newPost);
+      if (!response.body) {
+        throw new Error('No response body received');
+      }
 
-      // Reset form
-      setContent('');
-      setHashtags([]);
-      setHashtagInput('');
-      setImages([]);
-      setFiles([]);
-      setVideo(null);
-      setImagePreviewUrls([]);
-      setVideoPreviewUrl('');
-      setShowHashtagInput(false);
+      // Handle server-sent events
+      reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      console.log('Starting to read response stream');
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          console.log('Stream complete');
+          break;
+        }
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              console.log('Received SSE data:', data);
+              
+              if (data.type === 'complete' && data.post) {
+                console.log('Received completion message');
+                // Post creation completed
+                onPostCreate(data.post);
+                
+                // Reset form
+                setContent('');
+                setHashtags([]);
+                setHashtagInput('');
+                setImages([]);
+                setFiles([]);
+                setVideo(null);
+                setImagePreviewUrls([]);
+                setVideoPreviewUrl('');
+                setShowHashtagInput(false);
+                setUploadProgress([]);
+                setIsLoading(false);
+                return; // Exit the function after successful completion
+              } else if (data.fileName && typeof data.progress === 'number') {
+                // Update progress
+                setUploadProgress(prev =>
+                  prev.map(item =>
+                    item.fileName === data.fileName
+                      ? { ...item, progress: data.progress }
+                      : item
+                  )
+                );
+              }
+            } catch (e) {
+              console.error('Error parsing SSE data:', e);
+            }
+          }
+        }
+      }
     } catch (err) {
+      console.error('Error in handleSubmit:', err);
       setError(err instanceof Error ? err.message : 'Something went wrong');
-    } finally {
       setIsLoading(false);
+    } finally {
+      reader?.cancel();
+      setIsLoading(false); // Ensure loading state is reset if the stream ends
     }
   };
 
@@ -98,11 +195,21 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
     setHashtags(hashtags.filter(tag => tag !== tagToRemove));
   };
 
+  const updateProgress = (fileName: string, progress: number) => {
+    setUploadProgress(prev =>
+      prev.map(item =>
+        item.fileName === fileName
+          ? { ...item, progress }
+          : item
+      )
+    );
+  };
+
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newImages = Array.from(e.target.files);
       setImages(prev => [...prev, ...newImages]);
-      
+
       // Generate preview URLs
       const newPreviewUrls = newImages.map(file => URL.createObjectURL(file));
       setImagePreviewUrls(prev => [...prev, ...newPreviewUrls]);
@@ -126,16 +233,38 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
     setImagePreviewUrls(prev => prev.filter((_, i) => i !== index));
+    setUploadProgress(prev => prev.filter(p => p.fileName !== images[index].name));
   };
 
   const removeVideo = () => {
+    if (video) {
+      setUploadProgress(prev => prev.filter(p => p.fileName !== video.name));
+    }
     setVideo(null);
     setVideoPreviewUrl('');
   };
 
   const removeFile = (index: number) => {
+    setUploadProgress(prev => prev.filter(p => p.fileName !== files[index].name));
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
+
+  const renderProgressBar = (progress: UploadProgress) => (
+    <div key={progress.fileName} className="w-full bg-gray-100 rounded-full h-2.5 mb-2">
+      <div
+        className={`h-2.5 rounded-full transition-all duration-300 ${progress.type === 'image'
+            ? 'bg-blue-500'
+            : progress.type === 'video'
+              ? 'bg-purple-500'
+              : 'bg-green-500'
+          }`}
+        style={{ width: `${progress.progress}%` }}
+      />
+      <div className="text-xs text-gray-500 mt-1">
+        {progress.fileName} - {Math.round(progress.progress)}%
+      </div>
+    </div>
+  );
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
@@ -154,13 +283,13 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
               className="w-full p-4 text-gray-900 text-base rounded-t-xl focus:outline-none min-h-[120px] resize-none"
               required
             />
-            
+
             {/* Hashtags display */}
             {hashtags.length > 0 && (
               <div className="flex flex-wrap gap-2 px-4 py-2 border-t border-gray-100">
                 {hashtags.map((tag, index) => (
-                  <span 
-                    key={index} 
+                  <span
+                    key={index}
                     className="inline-flex items-center bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-medium"
                   >
                     {tag}
@@ -176,6 +305,15 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
               </div>
             )}
 
+            {/* Upload Progress Bars */}
+            {uploadProgress.length > 0 && (
+              <div className="px-4 py-3 border-t border-gray-200">
+                <div className="space-y-3">
+                  {uploadProgress.map(progress => renderProgressBar(progress))}
+                </div>
+              </div>
+            )}
+
             {/* Action buttons */}
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
               <div className="flex items-center space-x-4">
@@ -183,6 +321,7 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
                   type="button"
                   onClick={() => imageInputRef.current?.click()}
                   className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                  disabled={isLoading}
                 >
                   <FiImage className="w-5 h-5" />
                   <span className="text-sm font-medium">Photo</span>
@@ -191,6 +330,7 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
                   type="button"
                   onClick={() => videoInputRef.current?.click()}
                   className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                  disabled={isLoading}
                 >
                   <FiVideo className="w-5 h-5" />
                   <span className="text-sm font-medium">Video</span>
@@ -199,6 +339,7 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                  disabled={isLoading}
                 >
                   <FiFile className="w-5 h-5" />
                   <span className="text-sm font-medium">Document</span>
@@ -207,6 +348,7 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
                   type="button"
                   onClick={() => setShowHashtagInput(!showHashtagInput)}
                   className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                  disabled={isLoading}
                 >
                   <FiHash className="w-5 h-5" />
                   <span className="text-sm font-medium">Add hashtag</span>
@@ -227,6 +369,7 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
                     onKeyDown={handleHashtagKeyDown}
                     placeholder="Add a hashtag (press Enter)"
                     className="flex-1 bg-transparent border-none focus:outline-none text-gray-900 placeholder-gray-500 text-sm"
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -241,6 +384,7 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
             multiple
             onChange={handleImageChange}
             className="hidden"
+            disabled={isLoading}
           />
           <input
             ref={fileInputRef}
@@ -248,6 +392,7 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
             multiple
             onChange={handleFileChange}
             className="hidden"
+            disabled={isLoading}
           />
           <input
             ref={videoInputRef}
@@ -255,6 +400,7 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
             accept="video/*"
             onChange={handleVideoChange}
             className="hidden"
+            disabled={isLoading}
           />
 
           {/* Media previews */}
@@ -275,6 +421,7 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
                           type="button"
                           onClick={() => removeImage(index)}
                           className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
+                          disabled={isLoading}
                         >
                           <FiX className="w-4 h-4" />
                         </button>
@@ -297,6 +444,7 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
                       type="button"
                       onClick={removeVideo}
                       className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
+                      disabled={isLoading}
                     >
                       <FiX className="w-4 h-4" />
                     </button>
@@ -317,6 +465,7 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
                         type="button"
                         onClick={() => removeFile(index)}
                         className="p-1.5 text-gray-500 hover:text-red-500 rounded-full hover:bg-red-50"
+                        disabled={isLoading}
                       >
                         <FiX className="w-4 h-4" />
                       </button>
@@ -337,11 +486,10 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
             <button
               type="submit"
               disabled={isLoading || !content.trim()}
-              className={`px-6 py-2.5 rounded-full text-white font-medium text-sm transition-colors ${
-                isLoading || !content.trim()
+              className={`px-6 py-2.5 rounded-full text-white font-medium text-sm transition-colors ${isLoading || !content.trim()
                   ? 'bg-gray-300 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+                }`}
             >
               {isLoading ? 'Posting...' : 'Post'}
             </button>
