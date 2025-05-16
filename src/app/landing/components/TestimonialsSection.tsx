@@ -15,35 +15,35 @@ const testimonials: Testimonial[] = [
   {
     name: "Dr. Sarah Johnson",
     role: "Professor of Computer Science",
-    image: "/testimonials/professor1.jpg",
+    image: "https://upload.wikimedia.org/wikipedia/en/d/d5/Professor_%28Money_Heist%29.jpg",
     content: "CampusLink has transformed how I teach. The platform's intuitive interface and powerful tools make it easy to create engaging content and track student progress.",
     rating: 5
   },
   {
     name: "Michael Chen",
     role: "Graduate Student",
-    image: "/testimonials/student1.jpg",
+    image: "https://www.malvernbh.com/wp-content/uploads/2023/02/shutterstock_1079701271-1-min-1010x673.jpg",
     content: "As a student, I love how CampusLink connects me with expert faculty worldwide. The interactive learning features and real-time feedback have greatly enhanced my learning experience.",
     rating: 5
   },
   {
     name: "Prof. David Wilson",
     role: "Mathematics Department",
-    image: "/testimonials/professor2.jpg",
+    image: "https://purplecv.co.uk/wp-content/uploads/how-do-you-become-a-professor.jpg",
     content: "The analytics tools help me understand student performance better than ever. I can identify areas where students need more support and adjust my teaching accordingly.",
     rating: 5
   },
   {
     name: "Emily Rodriguez",
     role: "Undergraduate Student",
-    image: "/testimonials/student2.jpg",
+    image: "https://img.freepik.com/free-photo/portrait-young-student-happy-be-back-university_23-2148586577.jpg?semt=ais_hybrid&w=740",
     content: "The flexibility of learning at my own pace while still having access to faculty support has been invaluable. CampusLink has made my educational journey much more manageable.",
     rating: 5
   },
   {
     name: "Dr. James Thompson",
     role: "Department Head",
-    image: "/testimonials/professor3.jpg",
+    image: "https://media.istockphoto.com/id/638917964/photo/intelligent-matur-female-math-professor-in-classroom.jpg?s=612x612&w=0&k=20&c=SyKgG4EJMhTf9q_kMy1jT7dbwXQyjiSbZ1k5aJIyfZ8=",
     content: "Our department's adoption of CampusLink has led to improved student engagement and better learning outcomes. The platform's features support both traditional and innovative teaching methods.",
     rating: 5
   }
