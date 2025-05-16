@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { FiHeart, FiMessageCircle, FiShare2, FiMoreHorizontal } from 'react-icons/fi';
 import { Post, Author } from '../types';
@@ -24,6 +24,10 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
     onComment(post.id, comment.trim());
     setComment('');
   };
+  
+  useEffect(() => {
+    console.log(post);
+  }, [post]);
 
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm p-4 mb-6">
@@ -90,7 +94,7 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
           className="flex items-center space-x-2 text-gray-500 hover:text-blue-600"
         >
           <FiMessageCircle size={20} />
-          <span className="font-medium">{post.comments.length}</span>
+          <span className="font-medium">{post.comments?.length || 0}</span>
         </button>
         <button className="flex items-center space-x-2 text-gray-500 hover:text-green-600">
           <FiShare2 size={20} />
@@ -121,7 +125,7 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
 
           {/* Comments List */}
           <div className="space-y-3">
-            {post.comments.map((comment, index) => (
+            {(post.comments || []).map((comment, index) => (
               <div key={index} className="flex space-x-3">
                 <div className="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
                   <Image

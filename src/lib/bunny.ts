@@ -1,5 +1,6 @@
 interface BunnyConfig {
   storageZone: string;
+  pullZone: string;
   storageApiKey: string;
   baseUrl: string;
   streamLibrary: string;
@@ -12,6 +13,7 @@ class BunnyClient {
   constructor() {
     this.config = {
       storageZone: process.env.BUNNY_STORAGE_ZONE || '',
+      pullZone: process.env.BUNNY_PULL_ZONE || '',
       storageApiKey: process.env.BUNNY_STORAGE_API_KEY || '',
       baseUrl: process.env.BUNNY_BASE_URL || 'https://storage.bunnycdn.com',
       streamLibrary: process.env.BUNNY_STREAM_LIBRARY || '',
@@ -21,6 +23,7 @@ class BunnyClient {
     // Log configuration (without API key)
     console.log('Bunny.net Configuration:', {
       storageZone: this.config.storageZone,
+      pullZone: this.config.pullZone,
       baseUrl: this.config.baseUrl,
       streamLibrary: this.config.streamLibrary,
       hasStorageApiKey: this.config.storageApiKey,
@@ -77,7 +80,7 @@ class BunnyClient {
       }
 
       // Return the CDN URL for the uploaded file
-      return `https://${this.config.storageZone}.b-cdn.net/${path}`;
+      return `https://${this.config.pullZone}.b-cdn.net/${path}`;
     } catch (error) {
       console.error('Error uploading to Bunny.net storage:', error);
       throw error;
@@ -120,7 +123,7 @@ class BunnyClient {
           body: videoBuffer
         }
       );
-
+      console.log('guid: ', guid);
       if (!uploadResponse.ok) {
         const errorText = await uploadResponse.text();
         console.error('Failed to upload video content:', errorText);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import CreatePost from './components/CreatePost';
 import PostCard from './components/PostCard';
@@ -9,7 +9,7 @@ import RightSidebar from './components/RightSidebar';
 import Navbar from './components/Navbar';
 import CourseSidebar from './components/CourseSidebar';
 import { Post, Author } from './types';
-import { mockPosts, mockAuthors } from './mockData';
+import { mockAuthors } from './mockData';
 
 // Dynamically import BackgroundEffect with no SSR
 const BackgroundEffect = dynamic(
@@ -42,23 +42,99 @@ const mockCourses = [
 ];
 
 export default function FeedPage() {
-  const [posts, setPosts] = useState<Post[]>(mockPosts);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+  const [isPersonalPosts, setIsPersonalPosts] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
   const currentUser = mockAuthors[0];
+  const observerTarget = useRef<HTMLDivElement>(null);
+
+  const fetchPosts = useCallback(async () => {
+    if (isLoading || !hasMore) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        `/api/posts?type=${isPersonalPosts ? 'personal' : 'all'}&page=${page}&limit=10`
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch posts');
+      }
+
+      const data = await response.json();
+      
+      // Ensure each post has the required fields and parse media data
+      const formattedPosts = data.posts.map((post: any) => {
+        // Parse media if it's a string
+        let mediaData = post.media;
+        if (typeof post.media === 'string') {
+          try {
+            mediaData = JSON.parse(post.media);
+          } catch (e) {
+            console.error('Error parsing media data:', e);
+            mediaData = [];
+          }
+        }
+
+        return {
+          ...post,
+          comments: post.comments || [],
+          likes: post.likes || 0,
+          tags: post.tags || [],
+          media: Array.isArray(mediaData) ? mediaData : [],
+          timestamp: post.timestamp || new Date(post.createdAt || Date.now()).toLocaleString()
+        };
+      });
+      
+      setPosts(prev => page === 1 ? formattedPosts : [...prev, ...formattedPosts]);
+      setHasMore(data.pagination.hasMore);
+      setPage(prev => data.pagination.hasMore ? prev + 1 : prev);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, isPersonalPosts, hasMore, isLoading]);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasMore && !isLoading) {
+          fetchPosts();
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => observer.disconnect();
+  }, [fetchPosts, hasMore, isLoading]);
+
+  // Initial fetch and type change handler
+  useEffect(() => {
+    setPage(1);
+    setPosts([]);
+    setHasMore(true);
+    fetchPosts();
+  }, [isPersonalPosts]);
+
+  const handleTogglePersonalPosts = (isPersonal: boolean) => {
+    setIsPersonalPosts(isPersonal);
+  };
 
   const toggleSidebar = () => {
     setIsSidebarVisible(!isSidebarVisible);
   };
 
-  const handlePostCreate = (newPost: Omit<Post, 'id' | 'timestamp' | 'likes' | 'comments'>) => {
-    const post: Post = {
-      ...newPost,
-      id: Date.now().toString(),
-      likes: 0,
-      comments: [],
-      timestamp: 'Just now'
-    };
-    setPosts([post, ...posts]);
+  const handlePostCreate = (newPost: Post) => {
+    setPosts([newPost, ...posts]);
   };
 
   const handleLike = (postId: string) => {
@@ -90,7 +166,6 @@ export default function FeedPage() {
   };
 
   const handleShare = (postId: string) => {
-    // In a real app, this would open a share dialog
     console.log('Sharing post:', postId);
   };
 
@@ -178,46 +253,52 @@ export default function FeedPage() {
           isVisible={isSidebarVisible}
           onClose={() => setIsSidebarVisible(false)}
         />
-        <div className="flex-1">
-          <div className="max-w-7xl mx-auto py-8 px-4">
-            <div className="flex gap-8">
-              {/* Left Sidebar */}
-              <div className="hidden lg:block">
-                <Sidebar
-                  author={currentUser}
-                  stats={facultyStats}
-                  socialLinks={socialLinks}
-                />
-              </div>
+        <div className="flex-1 flex gap-8 max-w-7xl mx-auto px-4">
+          {/* Left Sidebar */}
+          <div className="hidden lg:block w-80 flex-shrink-0">
+            <div className="sticky top-20">
+              <Sidebar
+                author={currentUser}
+                stats={facultyStats}
+                socialLinks={socialLinks}
+              />
+            </div>
+          </div>
 
-              {/* Main Content */}
-              <div className="flex-1 max-w-2xl">
-                <CreatePost
-                  onPostCreate={handlePostCreate}
+          {/* Main Content - Scrollable */}
+          <div className="flex-1 max-w-2xl w-full mx-auto">
+            <CreatePost
+              currentUser={currentUser}
+              onPostCreate={handlePostCreate}
+              onTogglePersonalPosts={handleTogglePersonalPosts}
+            />
+            <div className="space-y-6">
+              {posts.map(post => (
+                <PostCard
+                  key={post.id}
+                  post={post}
                   currentUser={currentUser}
+                  onLike={handleLike}
+                  onComment={handleComment}
+                  onShare={handleShare}
                 />
-
-                <div className="space-y-6">
-                  {posts.map((post) => (
-                    <PostCard
-                      key={post.id}
-                      post={post}
-                      onLike={handleLike}
-                      onComment={handleComment}
-                      onShare={handleShare}
-                      currentUser={currentUser}
-                    />
-                  ))}
-                </div>
+              ))}
+            </div>
+            {isLoading && (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
+            )}
+            <div ref={observerTarget} className="h-4" />
+          </div>
 
-              {/* Right Sidebar */}
-              <div className="hidden xl:block">
-                <RightSidebar
-                  upcomingClasses={upcomingClasses}
-                  messages={messages}
-                />
-              </div>
+          {/* Right Sidebar */}
+          <div className="hidden xl:block w-80 flex-shrink-0">
+            <div className="sticky top-20">
+              <RightSidebar 
+                messages={messages}
+                upcomingClasses={upcomingClasses}
+              />
             </div>
           </div>
         </div>

@@ -34,3 +34,18 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+
+--------------------------------
+// Get first page of all posts
+fetch('/api/posts?type=all&page=1&limit=10')
+
+// Get second page
+fetch('/api/posts?type=all&page=2&limit=10')
+
+// Get first page of personal posts
+fetch('/api/posts?type=personal&page=1&limit=10')
+
+// Get second page of personal posts
+fetch('/api/posts?type=personal&page=2&limit=10')

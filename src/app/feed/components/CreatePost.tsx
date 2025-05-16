@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, FormEvent, ChangeEvent, useRef, KeyboardEvent } from 'react';
-import { FiImage, FiVideo, FiFile, FiX, FiHash } from 'react-icons/fi';
+import { FiImage, FiVideo, FiFile, FiX, FiHash, FiUser } from 'react-icons/fi';
 import { Post, Media, Author } from '../types';
 
 interface CreatePostProps {
   currentUser: Author;
   onPostCreate: (post: any) => void;
+  onTogglePersonalPosts?: (isPersonal: boolean) => void;
 }
 
 interface UploadProgress {
@@ -15,7 +16,7 @@ interface UploadProgress {
   type: 'image' | 'video' | 'file';
 }
 
-export default function CreatePost({ currentUser, onPostCreate }: CreatePostProps) {
+export default function CreatePost({ currentUser, onPostCreate, onTogglePersonalPosts }: CreatePostProps) {
   const [content, setContent] = useState('');
   const [hashtags, setHashtags] = useState<string[]>([]);
   const [hashtagInput, setHashtagInput] = useState('');
@@ -28,6 +29,7 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string>('');
   const [showHashtagInput, setShowHashtagInput] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
+  const [isPersonalPosts, setIsPersonalPosts] = useState(false);
 
   // Refs for file inputs
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -41,7 +43,6 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
     setError('');
     setUploadProgress([]);
 
-    let reader;
     try {
       const formData = new FormData();
       
@@ -49,61 +50,63 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
       formData.append('content', content);
       formData.append('hashtags', JSON.stringify(hashtags));
       
-      console.log('Content added:', content);
-      console.log('Hashtags added:', hashtags);
+      // Format media data
+      const mediaData: Media[] = [];
 
-      // Add all files first
+      // Add images
       for (const image of images) {
         formData.append('images', image);
-        console.log('Image added:', image.name);
+        mediaData.push({
+          type: 'image',
+          url: '', // Server will replace with actual URL
+          title: image.name,
+          size: `${(image.size / (1024 * 1024)).toFixed(2)} MB`
+        });
       }
 
+      // Add files
       for (const file of files) {
         formData.append('files', file);
-        console.log('File added:', file.name);
+        const isPdf = file.name.toLowerCase().endsWith('.pdf');
+        mediaData.push({
+          type: isPdf ? 'pdf' : 'document',
+          url: '', // Server will replace with actual URL
+          title: file.name,
+          size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`
+        });
       }
 
+      // Add video
       if (video) {
         formData.append('video', video);
-        console.log('Video added:', video.name);
+        mediaData.push({
+          type: 'video',
+          url: '', // Server will replace with actual URL
+          title: video.name,
+          size: `${(video.size / (1024 * 1024)).toFixed(2)} MB`,
+          thumbnail: '' // Server will replace with actual thumbnail
+        });
       }
 
-      // Log the final FormData contents
-      console.log('FormData entries:');
-      for (const [key, value] of formData.entries()) {
-        if (value instanceof File) {
-          console.log(`${key}: File - ${value.name} (${value.size} bytes)`);
-        } else {
-          console.log(`${key}: ${value}`);
-        }
-      }
+      // Add media data to form
+      formData.append('media', JSON.stringify(mediaData));
 
-      // Initialize progress trackers
-      const allFiles = [
-        ...images.map(file => ({ file, type: 'image' as const })),
-        ...files.map(file => ({ file, type: 'file' as const })),
-        ...(video ? [{ file: video, type: 'video' as const }] : [])
-      ];
+      console.log('Sending media data:', { content, mediaData });
 
-      allFiles.forEach(({ file, type }) => {
-        setUploadProgress(prev => [...prev, {
-          fileName: file.name,
-          progress: 0,
-          type
-        }]);
-      });
-
-      for (let [key, value] of formData.entries()) {
-        console.log(key, value);
-      }
       const response = await fetch('/api/posts', {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to create post');
+        let errorMessage = 'Failed to create post';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          console.error('Error parsing error response:', e);
+        }
+        throw new Error(errorMessage);
       }
 
       if (!response.body) {
@@ -111,10 +114,8 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
       }
 
       // Handle server-sent events
-      reader = response.body.getReader();
+      const reader = response.body.getReader();
       const decoder = new TextDecoder();
-
-      console.log('Starting to read response stream');
 
       while (true) {
         const { done, value } = await reader.read();
@@ -134,7 +135,10 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
               console.log('Received SSE data:', data);
               
               if (data.type === 'complete' && data.post) {
-                console.log('Received completion message');
+                // Clean up object URLs
+                imagePreviewUrls.forEach(url => URL.revokeObjectURL(url));
+                if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
+
                 // Post creation completed
                 onPostCreate(data.post);
                 
@@ -150,9 +154,8 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
                 setShowHashtagInput(false);
                 setUploadProgress([]);
                 setIsLoading(false);
-                return; // Exit the function after successful completion
+                return;
               } else if (data.fileName && typeof data.progress === 'number') {
-                // Update progress
                 setUploadProgress(prev =>
                   prev.map(item =>
                     item.fileName === data.fileName
@@ -163,6 +166,7 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
               }
             } catch (e) {
               console.error('Error parsing SSE data:', e);
+              throw new Error('Error processing server response');
             }
           }
         }
@@ -170,10 +174,8 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
     } catch (err) {
       console.error('Error in handleSubmit:', err);
       setError(err instanceof Error ? err.message : 'Something went wrong');
-      setIsLoading(false);
     } finally {
-      reader?.cancel();
-      setIsLoading(false); // Ensure loading state is reset if the stream ends
+      setIsLoading(false);
     }
   };
 
@@ -276,9 +278,9 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
         />
         <form onSubmit={handleSubmit} className="flex-1 space-y-4">
           <div className="relative bg-white rounded-xl border border-gray-200 focus-within:border-blue-500 transition-colors">
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
               placeholder="What do you want to share?"
               className="w-full p-4 text-gray-900 text-base rounded-t-xl focus:outline-none min-h-[120px] resize-none"
               required
@@ -288,11 +290,11 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
             {hashtags.length > 0 && (
               <div className="flex flex-wrap gap-2 px-4 py-2 border-t border-gray-100">
                 {hashtags.map((tag, index) => (
-                  <span
+              <span
                     key={index}
                     className="inline-flex items-center bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-medium"
-                  >
-                    {tag}
+              >
+                {tag}
                     <button
                       type="button"
                       onClick={() => removeHashtag(tag)}
@@ -353,8 +355,8 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
                   <FiHash className="w-5 h-5" />
                   <span className="text-sm font-medium">Add hashtag</span>
                 </button>
-              </div>
-            </div>
+          </div>
+        </div>
 
             {/* Hashtag input */}
             {showHashtagInput && (
@@ -417,28 +419,28 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
                         className="w-full h-32 object-cover"
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <button
-                          type="button"
+                    <button
+                      type="button"
                           onClick={() => removeImage(index)}
                           className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
                           disabled={isLoading}
-                        >
+                    >
                           <FiX className="w-4 h-4" />
-                        </button>
+                    </button>
                       </div>
                     </div>
                   ))}
-                </div>
-              )}
+                  </div>
+                )}
 
               {/* Video preview */}
               {videoPreviewUrl && (
                 <div className="relative group rounded-lg overflow-hidden">
-                  <video
+                    <video
                     src={videoPreviewUrl}
                     controls
                     className="w-full max-h-[300px] rounded-lg"
-                  />
+                    />
                   <div className="absolute top-2 right-2">
                     <button
                       type="button"
@@ -449,8 +451,8 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
                       <FiX className="w-4 h-4" />
                     </button>
                   </div>
-                </div>
-              )}
+                  </div>
+                )}
 
               {/* File list */}
               {files.length > 0 && (
@@ -460,21 +462,21 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
                       <div className="flex items-center gap-3">
                         <FiFile className="w-5 h-5 text-gray-500" />
                         <span className="text-sm font-medium text-gray-700">{file.name}</span>
-                      </div>
-                      <button
-                        type="button"
+                    </div>
+                    <button
+                      type="button"
                         onClick={() => removeFile(index)}
                         className="p-1.5 text-gray-500 hover:text-red-500 rounded-full hover:bg-red-50"
                         disabled={isLoading}
-                      >
+                    >
                         <FiX className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
+                    </button>
+              </div>
+            ))}
                 </div>
               )}
-            </div>
-          )}
+          </div>
+        )}
 
           {error && (
             <div className="text-red-500 text-sm font-medium p-3 bg-red-50 rounded-lg">
@@ -482,14 +484,52 @@ export default function CreatePost({ currentUser, onPostCreate }: CreatePostProp
             </div>
           )}
 
-          <div className="flex justify-end pt-3">
+          <div className="flex items-center justify-between pt-3">
+            {/* My Posts Switch */}
+            <div className="flex items-center space-x-3">
+              <div className="relative inline-flex items-center">
+                <input
+                  type="checkbox"
+                  id="myPosts"
+                  checked={isPersonalPosts}
+                  onChange={(e) => {
+                    setIsPersonalPosts(e.target.checked);
+                    onTogglePersonalPosts?.(e.target.checked);
+                  }}
+                  className="sr-only peer"
+                />
+                <label
+                  htmlFor="myPosts"
+                  className={`flex items-center w-14 h-7 rounded-full 
+                    bg-gray-200 cursor-pointer transition-all duration-300 ease-in-out
+                    peer-checked:bg-blue-600 
+                    after:content-[''] after:absolute after:top-0.5 after:left-0.5 
+                    after:bg-white after:rounded-full after:h-6 after:w-6 after:shadow-sm
+                    after:transition-all after:duration-300 after:ease-in-out
+                    peer-checked:after:translate-x-7
+                    peer-checked:after:border-white
+                    peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-100`}
+                >
+                  <span className="sr-only">Toggle personal posts</span>
+                </label>
+                <div className="flex items-center ml-3 space-x-2">
+                  <FiUser className={`w-4 h-4 ${isPersonalPosts ? 'text-blue-600' : 'text-gray-500'}`} />
+                  <span className={`text-sm font-medium ${isPersonalPosts ? 'text-blue-600' : 'text-gray-700'}`}>
+                    My Posts
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Post Button */}
             <button
               type="submit"
               disabled={isLoading || !content.trim()}
-              className={`px-6 py-2.5 rounded-full text-white font-medium text-sm transition-colors ${isLoading || !content.trim()
+              className={`px-6 py-2.5 rounded-full text-white font-medium text-sm transition-colors ${
+                isLoading || !content.trim()
                   ? 'bg-gray-300 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700'
-                }`}
+              }`}
             >
               {isLoading ? 'Posting...' : 'Post'}
             </button>
