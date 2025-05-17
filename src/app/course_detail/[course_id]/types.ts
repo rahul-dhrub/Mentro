@@ -8,12 +8,27 @@ export interface Chapter {
   lessons: Lesson[];
 }
 
+export interface VideoContent {
+  id: string;
+  title: string;
+  description?: string;
+  url: string;
+  duration?: string;
+  type: 'video' | 'upload';
+  order: number;
+}
+
 export interface Lesson {
   id: string;
   title: string;
   description: string;
   duration: string;
   isPublished: boolean;
+  isLive?: boolean;
+  videoContents?: VideoContent[];
+  liveScheduleDate?: string;
+  liveScheduleTime?: string;
+  liveScheduleLink?: string;
   assignments?: Assignment[];
   quizzes?: Quiz[];
 }
@@ -44,4 +59,13 @@ export interface Faculty {
   role: 'owner' | 'faculty';
   avatar?: string;
   joinedAt: string;
+}
+
+export interface Student {
+  id: string;
+  name: string;
+  email: string;
+  progress: number;
+  lastActivity: string;
+  status: 'active' | 'inactive';
 } 

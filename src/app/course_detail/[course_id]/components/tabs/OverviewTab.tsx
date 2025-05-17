@@ -6,12 +6,14 @@ interface OverviewTabProps {
   onAddChapter: () => void;
   onCreateAssignment: () => void;
   onCreateQuiz: () => void;
+  onTabChange: (tab: string) => void;
 }
 
 export default function OverviewTab({ 
   onAddChapter, 
   onCreateAssignment, 
-  onCreateQuiz 
+  onCreateQuiz,
+  onTabChange
 }: OverviewTabProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -47,20 +49,29 @@ export default function OverviewTab({
 
       <StatCard title="Quick Actions" icon={<FiPlus className="text-blue-500" size={24} />}>
         <button 
-          onClick={onAddChapter}
-          className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          onClick={() => {
+            onTabChange('chapters');
+            onAddChapter();
+          }}
+          className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
         >
           Add New Chapter
         </button>
         <button 
-          onClick={onCreateAssignment}
-          className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          onClick={() => {
+            onTabChange('assignments');
+            onCreateAssignment();
+          }}
+          className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
         >
           Create Assignment
         </button>
         <button 
-          onClick={onCreateQuiz}
-          className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          onClick={() => {
+            onTabChange('quizzes');
+            onCreateQuiz();
+          }}
+          className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors cursor-pointer"
         >
           Create Quiz
         </button>

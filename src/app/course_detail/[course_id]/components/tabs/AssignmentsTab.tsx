@@ -51,13 +51,13 @@ export default function AssignmentsTab({
         <div className="flex justify-end space-x-4">
           <button 
             onClick={() => onEditAssignment(assignment.id)} 
-            className="text-blue-600 hover:text-blue-900"
+            className="text-blue-600 hover:text-blue-900 cursor-pointer"
           >
             <FiEdit2 size={18} />
           </button>
           <button 
             onClick={() => onDeleteAssignment(assignment.id)} 
-            className="text-red-600 hover:text-red-900"
+            className="text-red-600 hover:text-red-900 cursor-pointer"
           >
             <FiTrash2 size={18} />
           </button>
@@ -72,7 +72,7 @@ export default function AssignmentsTab({
         <h2 className="text-xl font-semibold text-gray-900">Assignments</h2>
         <button
           onClick={onAddAssignment}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 cursor-pointer"
         >
           <FiPlus size={20} />
           <span>Add Assignment</span>

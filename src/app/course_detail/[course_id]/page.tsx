@@ -1,18 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { FiBook, FiFileText, FiClock, FiVideo, FiEdit2, FiTrash2, FiPlus, FiChevronDown } from 'react-icons/fi';
-import Image from 'next/image';
+import { FiBook, FiFileText, FiClock, FiVideo, FiEdit2, FiTrash2, FiPlus, FiChevronDown, FiX, FiUser } from 'react-icons/fi';
 import CourseHeader from './components/CourseHeader';
 import TabNavigation from './components/TabNavigation';
 import OverviewTab from './components/tabs/OverviewTab';
 import ChaptersTab from './components/tabs/ChaptersTab';
 import AssignmentsTab from './components/tabs/AssignmentsTab';
 import QuizzesTab from './components/tabs/QuizzesTab';
-import { Chapter, Assignment, Quiz, Faculty } from './types';
+import FacultyTab from './components/tabs/FacultyTab';
+import StudentsTab from './components/tabs/StudentsTab';
+import { Chapter, Assignment, Quiz, Faculty, Student } from './types';
 
 export default function FacultyCourseDetail({ params }: { params: { course_id: string } }) {
+  // Tab state
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // Chapter state and handlers
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set(['1']));
   const [chapters, setChapters] = useState<Chapter[]>([
     {
@@ -35,6 +39,8 @@ export default function FacultyCourseDetail({ params }: { params: { course_id: s
       ]
     },
   ]);
+  
+  // Assignment state
   const [assignments, setAssignments] = useState<Assignment[]>([
     {
       id: '1',
@@ -45,6 +51,8 @@ export default function FacultyCourseDetail({ params }: { params: { course_id: s
       submissions: 15,
     },
   ]);
+  
+  // Quiz state
   const [quizzes, setQuizzes] = useState<Quiz[]>([
     {
       id: '1',
@@ -56,6 +64,8 @@ export default function FacultyCourseDetail({ params }: { params: { course_id: s
       isPublished: true,
     },
   ]);
+  
+  // Faculty state
   const [faculty, setFaculty] = useState<Faculty[]>([
     {
       id: '1',
@@ -74,15 +84,25 @@ export default function FacultyCourseDetail({ params }: { params: { course_id: s
       joinedAt: '2024-02-15'
     }
   ]);
+  
+  // Student state
+  const [students, setStudents] = useState<Student[]>([
+    {
+      id: '1',
+      name: 'John Doe',
+      email: 'john@example.com',
+      progress: 75,
+      lastActivity: '2 hours ago',
+      status: 'active'
+    }
+  ]);
 
   // Event handlers
   const handleEditCourse = () => {
-    // Implement course editing functionality
     console.log('Edit course clicked');
   };
 
   const handleAddChapter = () => {
-    // Implement chapter addition logic
     console.log('Add chapter clicked');
   };
 
@@ -99,70 +119,66 @@ export default function FacultyCourseDetail({ params }: { params: { course_id: s
   };
 
   const handleEditChapter = (chapterId: string) => {
-    // Implement chapter editing logic
     console.log('Edit chapter:', chapterId);
   };
 
   const handleDeleteChapter = (chapterId: string) => {
-    // Implement chapter deletion logic
     console.log('Delete chapter:', chapterId);
   };
 
   const handleAddLesson = (chapterId: string) => {
-    // Implement lesson addition logic
     console.log('Add lesson to chapter:', chapterId);
   };
 
   const handleEditLesson = (chapterId: string, lessonId: string) => {
-    // Implement lesson editing logic
     console.log('Edit lesson:', lessonId, 'in chapter:', chapterId);
   };
 
   const handleDeleteLesson = (chapterId: string, lessonId: string) => {
-    // Implement lesson deletion logic
     console.log('Delete lesson:', lessonId, 'from chapter:', chapterId);
   };
 
   const handleAddAssignment = () => {
-    // Implement assignment addition logic
     console.log('Add assignment clicked');
   };
 
   const handleEditAssignment = (assignmentId: string) => {
-    // Implement assignment editing logic
     console.log('Edit assignment:', assignmentId);
   };
 
   const handleDeleteAssignment = (assignmentId: string) => {
-    // Implement assignment deletion logic
     console.log('Delete assignment:', assignmentId);
   };
 
   const handleAddQuiz = () => {
-    // Implement quiz addition logic
     console.log('Add quiz clicked');
   };
 
   const handleEditQuiz = (quizId: string) => {
-    // Implement quiz editing logic
     console.log('Edit quiz:', quizId);
   };
 
   const handleDeleteQuiz = (quizId: string) => {
-    // Implement quiz deletion logic
     console.log('Delete quiz:', quizId);
   };
 
   const handleAddFaculty = () => {
-    // Implement faculty addition logic
     console.log('Add faculty clicked');
   };
 
   const handleRemoveFaculty = (facultyId: string) => {
-    // Implement faculty removal logic
     console.log('Remove faculty:', facultyId);
   };
+  
+  const handleExportStudentList = () => {
+    console.log('Export student list clicked');
+  };
+  
+  const handleViewStudentDetails = (studentId: string) => {
+    console.log('View student details:', studentId);
+  };
 
+  // Render the active tab content
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'overview':
@@ -171,6 +187,7 @@ export default function FacultyCourseDetail({ params }: { params: { course_id: s
             onAddChapter={handleAddChapter}
             onCreateAssignment={handleAddAssignment}
             onCreateQuiz={handleAddQuiz}
+            onTabChange={setActiveTab}
           />
         );
       case 'chapters':
@@ -206,132 +223,25 @@ export default function FacultyCourseDetail({ params }: { params: { course_id: s
           />
         );
       case 'faculty':
-        return renderFacultyTab();
+        return (
+          <FacultyTab
+            faculty={faculty}
+            onAddFaculty={handleAddFaculty}
+            onRemoveFaculty={handleRemoveFaculty}
+          />
+        );
       case 'students':
-        return renderStudentsTab();
+        return (
+          <StudentsTab
+            students={students}
+            onExportList={handleExportStudentList}
+            onViewStudentDetails={handleViewStudentDetails}
+          />
+        );
       default:
         return null;
     }
   };
-
-  // Temporary render functions for tabs that haven't been componentized yet
-  const renderFacultyTab = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900">Course Faculty</h2>
-        <button
-          onClick={handleAddFaculty}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-        >
-          <span>Add Faculty</span>
-        </button>
-      </div>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="divide-y divide-gray-200">
-          {faculty.map((member) => (
-            <div key={member.id} className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="relative h-12 w-12 rounded-full overflow-hidden">
-                    <Image
-                      src={member.avatar || 'https://via.placeholder.com/150'}
-                      alt={member.name}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <h3 className="text-lg font-medium text-gray-900">{member.name}</h3>
-                      {member.role === 'owner' && (
-                        <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
-                          Owner
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-500">{member.email}</p>
-                    <p className="text-xs text-gray-400">Joined {new Date(member.joinedAt).toLocaleDateString()}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4">
-                  {member.role !== 'owner' && (
-                    <button
-                      onClick={() => handleRemoveFaculty(member.id)}
-                      className="text-red-600 hover:text-red-900 flex items-center space-x-1"
-                    >
-                      <span className="text-sm">Remove</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderStudentsTab = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900">Enrolled Students</h2>
-        <div className="flex space-x-4">
-          <input
-            type="text"
-            placeholder="Search students..."
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-500"
-          />
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-            Export List
-          </button>
-        </div>
-      </div>
-      {/* Simplified student table for now */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Activity</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            <tr>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="flex items-center">
-                  <div className="h-10 w-10 rounded-full bg-gray-200"></div>
-                  <div className="ml-4">
-                    <div className="text-sm font-medium text-gray-900">John Doe</div>
-                    <div className="text-sm text-gray-500">john@example.com</div>
-                  </div>
-                </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: '75%' }}></div>
-                </div>
-                <span className="text-sm text-gray-500">75% Complete</span>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                2 hours ago
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                  Active
-                </span>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <button className="text-blue-600 hover:text-blue-900">View Details</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
 
   // Available tabs
   const availableTabs = ['overview', 'chapters', 'assignments', 'quizzes', 'faculty', 'students'];

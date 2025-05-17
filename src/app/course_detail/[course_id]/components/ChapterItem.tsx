@@ -30,7 +30,7 @@ export default function ChapterItem({
           <div className="flex items-center space-x-4 flex-1">
             <button
               onClick={onToggle}
-              className="text-gray-500 hover:text-gray-700 transition-transform"
+              className="text-gray-500 hover:text-gray-700 transition-transform cursor-pointer"
               style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
             >
               <FiChevronDown size={20} />
@@ -45,10 +45,10 @@ export default function ChapterItem({
               <FiClock className="mr-1" />
               {chapter.duration}
             </span>
-            <button onClick={onEdit} className="text-blue-600 hover:text-blue-900">
+            <button onClick={onEdit} className="text-blue-600 hover:text-blue-900 cursor-pointer">
               <FiEdit2 size={18} />
             </button>
-            <button onClick={onDelete} className="text-red-600 hover:text-red-900">
+            <button onClick={onDelete} className="text-red-600 hover:text-red-900 cursor-pointer">
               <FiTrash2 size={18} />
             </button>
           </div>
@@ -62,7 +62,7 @@ export default function ChapterItem({
             <h4 className="text-md font-medium text-gray-900">Lessons</h4>
             <button
               onClick={onAddLesson}
-              className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 text-sm"
+              className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 text-sm cursor-pointer"
             >
               <FiPlus size={16} />
               <span>Add Lesson</span>
@@ -86,13 +86,13 @@ export default function ChapterItem({
                     </span>
                     <button 
                       onClick={() => onEditLesson(lesson.id)} 
-                      className="text-blue-600 hover:text-blue-900"
+                      className="text-blue-600 hover:text-blue-900 cursor-pointer"
                     >
                       <FiEdit2 size={16} />
                     </button>
                     <button 
                       onClick={() => onDeleteLesson(lesson.id)}
-                      className="text-red-600 hover:text-red-900"
+                      className="text-red-600 hover:text-red-900 cursor-pointer"
                     >
                       <FiTrash2 size={16} />
                     </button>
