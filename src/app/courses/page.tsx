@@ -1,17 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { FiSearch, FiFilter } from 'react-icons/fi';
 import Navbar from './components/Navbar';
-import CourseCard from './components/CourseCard';
-import CategorySidebar from './components/CategorySidebar';
 import FilterModal from './components/FilterModal';
+import CreateCourseModal from './components/CreateCourseModal';
+import Sidebar from './components/Sidebar';
+import MainContent from './components/MainContent';
 import { Course, Category, CourseFilter } from './types';
 
 export default function StudentCoursesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [isCreateCourseModalOpen, setIsCreateCourseModalOpen] = useState(false);
   const [filters, setFilters] = useState<CourseFilter>({
     level: undefined,
     rating: undefined,
@@ -28,7 +29,7 @@ export default function StudentCoursesPage() {
   ];
 
   // Mock courses data
-  const courses: Course[] = [
+  const [courses, setCourses] = useState<Course[]>([
     {
       id: '1',
       title: 'Complete Web Development Bootcamp',
@@ -59,7 +60,7 @@ export default function StudentCoursesPage() {
       curriculum: []
     },
     // Add more mock courses here...
-  ];
+  ]);
 
   // Filter courses based on search query and filters
   const filteredCourses = courses.filter(course => {
@@ -85,6 +86,19 @@ export default function StudentCoursesPage() {
     });
   };
 
+  const handleCreateCourse = (courseData: Partial<Course>) => {
+    const newCourse: Course = {
+      ...courseData as Course,
+      id: `${courses.length + 1}`, // Generate a simple ID
+    };
+    
+    setCourses((prevCourses) => [...prevCourses, newCourse]);
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar
@@ -99,61 +113,37 @@ export default function StudentCoursesPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col md:flex-row gap-8">
-          {/* Sidebar */}
-          <CategorySidebar
+          {/* Sidebar with categories and create course button */}
+          <Sidebar 
             categories={categories}
             selectedCategory={selectedCategory}
             onCategorySelect={setSelectedCategory}
+            onCreateCourseClick={() => setIsCreateCourseModalOpen(true)}
           />
 
-          {/* Main Content */}
-          <div className="flex-1">
-            {/* Search and Filter */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="flex-1 relative">
-                <input
-                  type="text"
-                  placeholder="Search courses..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
-                />
-                <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
-              </div>
-              <button
-                onClick={() => setIsFilterModalOpen(true)}
-                className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-800 font-medium"
-              >
-                <FiFilter className="mr-2" />
-                Filters
-              </button>
-            </div>
-
-            {/* Course Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredCourses.map((course) => (
-                <CourseCard key={course.id} course={course} />
-              ))}
-            </div>
-
-            {/* No Results */}
-            {filteredCourses.length === 0 && (
-              <div className="text-center py-12">
-                <h3 className="text-lg font-bold text-gray-900 mb-2">No courses found</h3>
-                <p className="text-gray-800">Try adjusting your search or filters to find what you're looking for.</p>
-              </div>
-            )}
-          </div>
+          {/* Main Content with search and courses */}
+          <MainContent
+            searchQuery={searchQuery}
+            onSearchChange={handleSearchChange}
+            onFilterClick={() => setIsFilterModalOpen(true)}
+            filteredCourses={filteredCourses}
+          />
         </div>
       </div>
 
-      {/* Filter Modal */}
+      {/* Modals */}
       <FilterModal
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
         filters={filters}
         onFilterChange={handleFilterChange}
         onClearFilters={handleClearFilters}
+      />
+
+      <CreateCourseModal
+        isOpen={isCreateCourseModalOpen}
+        onClose={() => setIsCreateCourseModalOpen(false)}
+        onSubmit={handleCreateCourse}
       />
     </div>
   );
