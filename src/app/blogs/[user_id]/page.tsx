@@ -50,7 +50,7 @@ const BlogsPage = () => {
 
     return (
         <Background>
-            {/* Create Blog Form */}
+                {/* Create Blog Form */}
             <BlogForm 
                 userId={userId} 
                 isSignedIn={isSignedIn} 

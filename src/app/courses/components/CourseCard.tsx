@@ -8,7 +8,7 @@ interface CourseCardProps {
 
 export default function CourseCard({ course }: CourseCardProps) {
   return (
-    <Link href={`/courses/student/${course.id}`} className="block">
+    <Link href={`/courses/${course.id}`} className="block">
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-200">
         {/* Course Thumbnail */}
         <div className="aspect-video relative">

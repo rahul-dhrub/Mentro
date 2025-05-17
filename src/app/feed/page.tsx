@@ -9,8 +9,9 @@ import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
 import Navbar from './components/Navbar';
 import CourseSidebar from './components/CourseSidebar';
-import { Post, Author } from './types';
-import { mockAuthors } from './mockData';
+import PublicationsModal from './components/PublicationsModal';
+import { Post, Author, Publication } from './types';
+import { mockAuthors, mockPublications } from './mockData';
 import Lottie from "lottie-react";
 
 const mockCourses = [
@@ -51,6 +52,8 @@ export default function FeedPage() {
   });
   const observerTarget = useRef<HTMLDivElement>(null);
   const { userId, isLoaded, isSignedIn } = useAuth();
+  const [isPublicationsModalOpen, setIsPublicationsModalOpen] = useState(false);
+  const [publications, setPublications] = useState<Publication[]>([]);
 
   // Fetch current user data
   useEffect(() => {
@@ -311,6 +314,64 @@ export default function FeedPage() {
     }
   ];
 
+  // Fetch publications
+  useEffect(() => {
+    const fetchPublications = async () => {
+      try {
+        // Try to fetch publications from API
+        const response = await fetch('/api/publications');
+        
+        if (response.ok) {
+          const data = await response.json();
+          setPublications(data.publications);
+        } else {
+          // Fall back to mock data
+          setPublications(mockPublications);
+        }
+      } catch (error) {
+        console.error('Error fetching publications:', error);
+        // Use mock data if API fails
+        setPublications(mockPublications);
+      }
+    };
+    
+    fetchPublications();
+  }, []);
+
+  // Handle adding a new publication
+  const handleAddPublication = async (newPublication: Omit<Publication, 'id'>) => {
+    try {
+      // Try to add publication via API
+      const response = await fetch('/api/publications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newPublication),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setPublications(prev => [...prev, data.publication]);
+      } else {
+        // For mock purposes, we'll just add it to the state with a fake ID
+        const mockId = `mock-${Date.now()}`;
+        setPublications(prev => [...prev, { 
+          id: mockId, 
+          ...newPublication 
+        }]);
+      }
+    } catch (error) {
+      console.error('Error adding publication:', error);
+      // For mock purposes, we'll just add it to the state with a fake ID
+      const mockId = `mock-${Date.now()}`;
+      setPublications(prev => [...prev, { 
+        id: mockId, 
+        ...newPublication 
+      }]);
+    }
+  };
+
   return (
     <>
       <div className="fixed inset-0 -z-10">
@@ -344,8 +405,18 @@ export default function FeedPage() {
             <div className="sticky top-20 h-[calc(100vh-80px)] overflow-y-auto pr-2">
               <Sidebar
                 author={currentUser}
-                stats={facultyStats}
-                socialLinks={socialLinks}
+                stats={{
+                  followers: 128,
+                  rating: 4.8,
+                  blogs: 12,
+                  publications: publications.length,
+                }}
+                socialLinks={{
+                  email: currentUser.email,
+                  linkedin: 'https://linkedin.com/in/example',
+                  twitter: 'https://twitter.com/example',
+                }}
+                onShowPublications={() => setIsPublicationsModalOpen(true)}
               />
             </div>
           </div>
@@ -388,6 +459,14 @@ export default function FeedPage() {
           </div>
         </div>
       </div>
+
+      {/* Publications Modal */}
+      <PublicationsModal
+        isOpen={isPublicationsModalOpen}
+        onClose={() => setIsPublicationsModalOpen(false)}
+        publications={publications}
+        onAddPublication={handleAddPublication}
+      />
     </>
   );
 }

@@ -17,9 +17,10 @@ interface SidebarProps {
     linkedin?: string;
     twitter?: string;
   };
+  onShowPublications?: () => void;
 }
 
-export default function Sidebar({ author, stats, socialLinks }: SidebarProps) {
+export default function Sidebar({ author, stats, socialLinks, onShowPublications }: SidebarProps) {
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm p-6 w-80">
       {/* Profile Section */}
@@ -54,7 +55,10 @@ export default function Sidebar({ author, stats, socialLinks }: SidebarProps) {
           <p className="text-2xl font-semibold text-gray-900">{stats.blogs}</p>
           <p className="text-sm text-gray-500">Blogs</p>
         </div>
-        <div className="bg-gray-50 rounded-lg p-4 text-center">
+        <div 
+          className="bg-gray-50 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-100 transition-colors"
+          onClick={onShowPublications}
+        >
           <FiAward className="mx-auto mb-2 text-purple-500" size={24} />
           <p className="text-2xl font-semibold text-gray-900">{stats.publications}</p>
           <p className="text-sm text-gray-500">Publications</p>
@@ -74,6 +78,10 @@ export default function Sidebar({ author, stats, socialLinks }: SidebarProps) {
         <a
           href="#"
           className="flex items-center text-gray-600 hover:text-blue-600 transition-colors"
+          onClick={(e) => {
+            e.preventDefault();
+            if (onShowPublications) onShowPublications();
+          }}
         >
           <FiAward className="mr-2" />
           Research Publications

@@ -101,4 +101,37 @@ export const mockPosts: Post[] = [
     timestamp: '5 hours ago',
     tags: ['Workshop', 'Mathematics']
   }
+];
+
+export const mockPublications = [
+  {
+    id: '1',
+    title: 'Machine Learning Approaches to Heart Disease Prediction: A Systematic Review',
+    url: 'https://example.com/publications/ml-heart-disease',
+    journal: 'Journal of Medical Informatics',
+    year: 2022,
+    authors: ['Jane Smith', 'John Doe', 'Robert Johnson'],
+    citationCount: 42,
+    abstract: 'This paper reviews recent machine learning techniques applied to heart disease prediction, evaluating their performance across multiple datasets and patient demographics.'
+  },
+  {
+    id: '2',
+    title: 'Quantum Computing for Optimization Problems in Engineering',
+    url: 'https://example.com/publications/quantum-optimization',
+    journal: 'IEEE Transactions on Quantum Engineering',
+    year: 2021,
+    authors: ['John Doe', 'Sarah Williams', 'Michael Brown'],
+    citationCount: 28,
+    abstract: 'We present novel quantum algorithms for solving large-scale optimization problems in engineering, demonstrating significant speedup over classical approaches.'
+  },
+  {
+    id: '3',
+    title: 'Explainable AI in Healthcare: Challenges and Opportunities',
+    url: 'https://example.com/publications/xai-healthcare',
+    journal: 'Nature Digital Medicine',
+    year: 2023,
+    authors: ['John Doe', 'Emily Chen', 'David Wilson'],
+    citationCount: 15,
+    abstract: 'This paper explores the challenges and opportunities of implementing explainable AI systems in healthcare settings, with a focus on clinical decision support.'
+  }
 ]; 

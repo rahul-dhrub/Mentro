@@ -40,4 +40,16 @@ export interface Post {
   comments: Comment[];
   timestamp: string;
   tags?: string[];
+}
+
+export interface Publication {
+  id: string;
+  title: string;
+  url: string;
+  thumbnail?: string;
+  journal?: string;
+  year?: number;
+  authors?: string[];
+  citationCount?: number;
+  abstract?: string;
 } 
