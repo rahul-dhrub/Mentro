@@ -332,6 +332,8 @@ export default function ChaptersTab({
   const useVideoUrlAndCloseModal = () => {
     if (videoInfo?.streamingUrl) {
       setCurrentContentUrl(videoInfo.streamingUrl);
+    } else if (videoInfo?.url) {
+      setCurrentContentUrl(videoInfo.url);
     }
     closeUploadModal();
   };
@@ -1124,12 +1126,14 @@ export default function ChaptersTab({
                   
                   <div className="flex justify-end mt-4">
                     <button
+                      type="button"
                       onClick={closeUploadModal}
                       className="mr-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
+                      type="button"
                       onClick={useVideoUrlAndCloseModal}
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
                     >
