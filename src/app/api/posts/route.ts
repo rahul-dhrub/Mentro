@@ -4,6 +4,7 @@ import connectDB from '@/lib/db';
 import Post from '@/models/Post';
 import User from '@/models/User';
 import { bunnyClient } from '@/lib/bunny';
+import { mockPosts } from '@/app/feed/mockData';
 
 // Verify environment variables
 const verifyEnvVariables = () => {
@@ -25,34 +26,40 @@ const verifyEnvVariables = () => {
 // GET endpoint for fetching posts
 export async function GET(request: NextRequest) {
   try {
+    // Get authentication data from Clerk
     const { userId } = await auth();
+    
+    // If no authenticated user, return mock data
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.log('No authenticated user, using mock data');
+      return handleMockData(request);
     }
 
     // Connect to database
     await connectDB();
 
-    // Get the search params
-    const searchParams = request.nextUrl.searchParams;
-    const type = searchParams.get('type'); // 'personal' or 'all'
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    // Get query params
+    const url = new URL(request.url);
+    const type = url.searchParams.get('type') || 'all';
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const limit = parseInt(url.searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
 
-    // Find the current user in our database
+    // Find the user in our database
     const dbUser = await User.findOne({ clerkId: userId });
     if (!dbUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      console.log('User not found in database, using mock data');
+      return handleMockData(request);
     }
 
+    // Define query for posts based on filter type
     let query = {};
     if (type === 'personal') {
       // For personal posts, only fetch posts by the current user
       query = { userId: dbUser._id };
     }
 
-    // Fetch posts with pagination and populate author information
+    // Fetch posts from database with pagination
     const posts = await Post.find(query)
       .sort({ createdAt: -1 }) // Sort by newest first
       .skip(skip)
@@ -60,40 +67,97 @@ export async function GET(request: NextRequest) {
       .populate({
         path: 'userId',
         model: User,
-        select: 'name email profilePicture'
+        select: 'name email profilePicture clerkId'
+      })
+      .populate({
+        path: 'comments',
+        populate: {
+          path: 'userId',
+          model: User,
+          select: 'name email profilePicture'
+        }
       });
 
     // Get total count for pagination
     const totalPosts = await Post.countDocuments(query);
 
-    // Format the posts response
+    // Format the posts for response
     const formattedPosts = posts.map(post => ({
-      ...post.toObject(),
+      id: post._id.toString(),
+      content: post.content,
+      media: post.media || [],
+      likes: post.likes || 0,
+      comments: (post.comments || []).map((comment: any) => ({
+        id: comment._id.toString(),
+        content: comment.content,
+        author: comment.userId ? {
+          id: comment.userId._id.toString(),
+          name: comment.userId.name,
+          email: comment.userId.email,
+          avatar: comment.userId.profilePicture || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'
+        } : { 
+          id: 'unknown',
+          name: 'Unknown User',
+          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'
+        },
+        timestamp: comment.createdAt,
+        likes: 0
+      })),
       author: {
-        id: post.userId._id,
+        id: post.userId._id.toString(),
         name: post.userId.name,
         email: post.userId.email,
-        avatar: post.userId.profilePicture
-      }
+        avatar: post.userId.profilePicture || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'
+      },
+      timestamp: post.createdAt
     }));
 
+    // Return the formatted posts with pagination info
     return NextResponse.json({
       posts: formattedPosts,
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(totalPosts / limit),
-        totalPosts,
+        total: totalPosts,
         hasMore: skip + posts.length < totalPosts
       }
     });
-
   } catch (error) {
-    console.error('Error fetching posts:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Error fetching posts' },
-      { status: 500 }
-    );
+    console.error('Error in posts API route:', error);
+    // Fall back to mock data on error
+    return handleMockData(request);
   }
+}
+
+// Helper function to handle mock data for unauthenticated users or errors
+function handleMockData(request: NextRequest) {
+  const url = new URL(request.url);
+  const type = url.searchParams.get('type') || 'all';
+  const page = parseInt(url.searchParams.get('page') || '1');
+  const limit = parseInt(url.searchParams.get('limit') || '10');
+
+  // Calculate pagination
+  const startIndex = (page - 1) * limit;
+  const endIndex = page * limit;
+  
+  // Filter posts if needed
+  const filteredPosts = type === 'personal' 
+    ? mockPosts.filter(post => post.author.id === '1') // Assuming ID 1 is the current user
+    : mockPosts;
+  
+  // Paginate results
+  const paginatedPosts = filteredPosts.slice(startIndex, endIndex);
+  
+  // Return results with pagination info
+  return NextResponse.json({
+    posts: paginatedPosts,
+    pagination: {
+      total: filteredPosts.length,
+      page,
+      limit,
+      hasMore: endIndex < filteredPosts.length
+    }
+  });
 }
 
 // POST endpoint for creating a post

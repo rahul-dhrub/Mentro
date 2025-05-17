@@ -6,6 +6,8 @@ export interface IUser extends mongoose.Document {
   email: string;
   profilePicture?: string;
   bio?: string;
+  title?: string;
+  department?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,6 +41,14 @@ const userSchema = new mongoose.Schema<IUser>(
       type: String,
       maxlength: [500, 'Bio cannot be more than 500 characters'],
       default: '',
+    },
+    title: {
+      type: String,
+      default: 'Faculty Member',
+    },
+    department: {
+      type: String,
+      default: 'Computer Science',
     },
   },
   {

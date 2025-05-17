@@ -5,6 +5,7 @@ import Post from '@/models/Post';
 import Comment from '@/models/Comment';
 import User from '@/models/User';
 import { uploadToBunnyStorage } from '@/app/feed/utils/bunnyStorage';
+import mongoose from 'mongoose';
 
 export async function POST(
   request: NextRequest,
@@ -23,7 +24,7 @@ export async function POST(
     const imageFiles = formData.getAll('images') as File[];
     
     // Get postId after ensuring params is resolved
-    const { postId } = params;
+    const postId = params.postId;
 
     if (!content && imageFiles.length === 0) {
       return NextResponse.json(
@@ -32,7 +33,15 @@ export async function POST(
       );
     }
 
-    const post = await Post.findById(postId);
+    // Check if postId is a valid MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      return NextResponse.json(
+        { error: 'Invalid post ID format' },
+        { status: 400 }
+      );
+    }
+
+    const post = await Post.findById(new mongoose.Types.ObjectId(postId));
     if (!post) {
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
@@ -107,9 +116,17 @@ export async function GET(
     const emailFilter = url.searchParams.get('email');
     
     // Get postId after ensuring params is resolved
-    const { postId } = params;
+    const postId = params.postId;
 
-    const post = await Post.findById(postId)
+    // Check if postId is a valid MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      return NextResponse.json(
+        { error: 'Invalid post ID format' },
+        { status: 400 }
+      );
+    }
+
+    const post = await Post.findById(new mongoose.Types.ObjectId(postId))
       .populate({
         path: 'comments',
         populate: {

@@ -59,6 +59,16 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
     
     setIsLoadingComments(true);
     try {
+      // Check if the post.id is a valid MongoDB ObjectId (24 hex characters)
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(post.id);
+      
+      if (!isValidObjectId) {
+        // For mock data posts, just show empty comments
+        setComments([]);
+        setIsLoadingComments(false);
+        return;
+      }
+      
       const url = new URL(`/api/posts/${post.id}/comments`, window.location.origin);
       if (emailFilter) {
         url.searchParams.append('email', emailFilter);
@@ -86,6 +96,13 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
     setIsSubmitting(true);
 
     try {
+      // Check if the post.id is a valid MongoDB ObjectId (24 hex characters)
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(post.id);
+      
+      if (!isValidObjectId) {
+        throw new Error('Cannot comment on mock data. This post uses a test ID.');
+      }
+
       const formData = new FormData();
       formData.append('content', comment.trim());
       
