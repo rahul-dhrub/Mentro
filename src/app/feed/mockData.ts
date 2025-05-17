@@ -4,6 +4,7 @@ export const mockAuthors: Author[] = [
   {
     id: '1',
     name: 'Dr. Sarah Johnson',
+    email: 'sarah.johnson@university.edu',
     avatar: 'https://media.istockphoto.com/id/814423752/photo/eye-of-model-with-colorful-art-make-up-close-up.jpg?s=612x612&w=0&k=20&c=l15OdMWjgCKycMMShP8UK94ELVlEGvt7GmB_esHWPYE=',
     title: 'Professor of Computer Science',
     department: 'Computer Science'
@@ -11,6 +12,7 @@ export const mockAuthors: Author[] = [
   {
     id: '2',
     name: 'Dr. Michael Chen',
+    email: 'michael.chen@university.edu',
     avatar: 'https://static.vecteezy.com/system/resources/thumbnails/036/324/708/small/ai-generated-picture-of-a-tiger-walking-in-the-forest-photo.jpg',
     title: 'Associate Professor',
     department: 'Electrical Engineering'
@@ -18,6 +20,7 @@ export const mockAuthors: Author[] = [
   {
     id: '3',
     name: 'Dr. Emily Rodriguez',
+    email: 'emily.rodriguez@university.edu',
     avatar: 'https://media.istockphoto.com/id/1419410282/photo/silent-forest-in-spring-with-beautiful-bright-sun-rays.jpg?s=612x612&w=0&k=20&c=UHeb1pGOw6ozr6utsenXHhV19vW6oiPIxDqhKCS2Llk=',
     title: 'Assistant Professor',
     department: 'Mathematics'

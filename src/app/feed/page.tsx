@@ -10,12 +10,7 @@ import Navbar from './components/Navbar';
 import CourseSidebar from './components/CourseSidebar';
 import { Post, Author } from './types';
 import { mockAuthors } from './mockData';
-
-// Dynamically import BackgroundEffect with no SSR
-const BackgroundEffect = dynamic(
-  () => import('./components/BackgroundEffect'),
-  { ssr: false }
-);
+import Lottie from "lottie-react";
 
 const mockCourses = [
   {
@@ -48,11 +43,21 @@ export default function FeedPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
+  const [animationData, setAnimationData] = useState<any>(null);
   const currentUser = {
     ...mockAuthors[0],
     title: mockAuthors[0].title || 'Faculty Member'
   };
   const observerTarget = useRef<HTMLDivElement>(null);
+
+  // Load animation data from public folder
+  useEffect(() => {
+    // Fetch animation data from public folder
+    fetch('/animation.json')
+      .then(response => response.json())
+      .then(data => setAnimationData(data))
+      .catch(error => console.error('Error loading animation:', error));
+  }, []);
 
   const fetchPosts = useCallback(async () => {
     if (isLoading || !hasMore) return;
@@ -68,7 +73,7 @@ export default function FeedPage() {
       }
 
       const data = await response.json();
-      
+
       // Ensure each post has the required fields and parse media data
       const formattedPosts = data.posts.map((post: any) => {
         // Parse media if it's a string
@@ -91,7 +96,7 @@ export default function FeedPage() {
           timestamp: post.timestamp || new Date(post.createdAt || Date.now()).toLocaleString()
         };
       });
-      
+
       setPosts(prev => page === 1 ? formattedPosts : [...prev, ...formattedPosts]);
       setHasMore(data.pagination.hasMore);
       setPage(prev => data.pagination.hasMore ? prev + 1 : prev);
@@ -141,7 +146,7 @@ export default function FeedPage() {
   };
 
   const handleLike = (postId: string) => {
-    setPosts(posts.map(post => 
+    setPosts(posts.map(post =>
       post.id === postId
         ? { ...post, likes: post.likes + 1 }
         : post
@@ -149,21 +154,21 @@ export default function FeedPage() {
   };
 
   const handleComment = (postId: string, content: string) => {
-    setPosts(posts.map(post => 
+    setPosts(posts.map(post =>
       post.id === postId
         ? {
-            ...post,
-            comments: [
-              {
-                id: Date.now().toString(),
-                author: currentUser,
-                content,
-                timestamp: 'Just now',
-                likes: 0
-              },
-              ...post.comments
-            ]
-          }
+          ...post,
+          comments: [
+            {
+              id: Date.now().toString(),
+              author: currentUser,
+              content,
+              timestamp: 'Just now',
+              likes: 0
+            },
+            ...post.comments
+          ]
+        }
         : post
     ));
   };
@@ -244,15 +249,24 @@ export default function FeedPage() {
 
   return (
     <>
-      <BackgroundEffect />
-      <Navbar 
-        user={currentUser} 
+      <div className="absolute inset-0 -z-10">
+        {animationData && (
+          <Lottie
+            animationData={animationData}
+            loop
+            autoplay
+            style={{ height: "100vh", width: "100vw", backgroundColor: "white" }}
+          />
+        )}
+      </div>
+      <Navbar
+        user={currentUser}
         onSidebarToggle={toggleSidebar}
         isSidebarVisible={isSidebarVisible}
       />
       <div className="flex min-h-screen pt-16">
-        <CourseSidebar 
-          courses={mockCourses} 
+        <CourseSidebar
+          courses={mockCourses}
           isVisible={isSidebarVisible}
           onClose={() => setIsSidebarVisible(false)}
         />
@@ -298,7 +312,7 @@ export default function FeedPage() {
           {/* Right Sidebar */}
           <div className="hidden xl:block w-80 flex-shrink-0">
             <div className="sticky top-20">
-              <RightSidebar 
+              <RightSidebar
                 messages={messages}
                 upcomingClasses={upcomingClasses}
               />

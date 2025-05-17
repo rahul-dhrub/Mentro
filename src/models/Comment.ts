@@ -3,6 +3,8 @@ import { Media } from './Post';
 
 export interface IComment extends mongoose.Document {
   userId: mongoose.Types.ObjectId | string;
+  userEmail: string;
+  userName: string;
   postId: mongoose.Types.ObjectId | string;
   content: string;
   media?: Media[];
@@ -16,6 +18,14 @@ const commentSchema = new mongoose.Schema<IComment>(
       type: mongoose.Schema.Types.ObjectId,
       required: [true, 'User ID is required'],
       ref: 'User'
+    },
+    userEmail: {
+      type: String,
+      required: [true, 'User email is required']
+    },
+    userName: {
+      type: String,
+      required: [true, 'User name is required']
     },
     postId: {
       type: mongoose.Schema.Types.ObjectId,

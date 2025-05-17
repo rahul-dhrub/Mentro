@@ -1,6 +1,7 @@
 export interface Author {
   id: string;
   name: string;
+  email?: string;
   title?: string;
   department?: string;
   avatar: string;
@@ -18,6 +19,7 @@ export interface Media {
   pageCount?: number;
   code?: string; // For emojis
   position?: number; // Position in the content
+  file?: File; // For temporary file storage before upload
 }
 
 export interface Comment {

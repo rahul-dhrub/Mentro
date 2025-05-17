@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { FiHeart, FiMessageCircle, FiShare2, FiMoreHorizontal, FiImage, FiSmile } from 'react-icons/fi';
+import { FiHeart, FiMessageCircle, FiShare2, FiMoreHorizontal, FiImage, FiSmile, FiFilter, FiX } from 'react-icons/fi';
 import { Post, Author, Media } from '../types';
 import MediaPreview from './MediaPreview';
 import EmojiPicker from 'emoji-picker-react';
@@ -16,12 +16,19 @@ interface PostCardProps {
   currentUser: Author;
 }
 
+const defaultAvatar = 'https://api.dicebear.com/7.x/avataaars/svg?seed=default';
+
 export default function PostCard({ post, onLike, onComment, onShare, currentUser }: PostCardProps) {
   const [comment, setComment] = useState('');
   const [showComments, setShowComments] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [commentMedia, setCommentMedia] = useState<Media[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [comments, setComments] = useState<any[]>([]);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [emailFilter, setEmailFilter] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
@@ -40,12 +47,78 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
     }
   }, [showEmojiPicker]);
 
-  const handleCommentSubmit = (e: React.FormEvent) => {
+  // Fetch comments when comments section is opened
+  useEffect(() => {
+    if (showComments) {
+      fetchComments();
+    }
+  }, [showComments, emailFilter]);
+
+  const fetchComments = async () => {
+    if (!showComments) return;
+    
+    setIsLoadingComments(true);
+    try {
+      const url = new URL(`/api/posts/${post.id}/comments`, window.location.origin);
+      if (emailFilter) {
+        url.searchParams.append('email', emailFilter);
+      }
+      
+      const response = await fetch(url.toString());
+      if (!response.ok) {
+        throw new Error('Failed to fetch comments');
+      }
+
+      const data = await response.json();
+      setComments(data.comments);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    } finally {
+      setIsLoadingComments(false);
+    }
+  };
+
+  const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!comment.trim() && commentMedia.length === 0) return;
-    onComment(post.id, comment.trim(), commentMedia);
-    setComment('');
-    setCommentMedia([]);
+    
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('content', comment.trim());
+      
+      // Add any temporary images that were uploaded
+      const imageFiles = commentMedia
+        .filter(media => media.type === 'image' && media.file)
+        .map(media => media.file as File);
+      
+      imageFiles.forEach(file => {
+        formData.append('images', file);
+      });
+
+      const response = await fetch(`/api/posts/${post.id}/comments`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to post comment');
+      }
+
+      // Refresh comments instead of using onComment
+      fetchComments();
+      setComment('');
+      setCommentMedia([]);
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      setError(error instanceof Error ? error.message : 'Failed to post comment');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,14 +127,16 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
 
     try {
       setIsUploading(true);
-      const imageUrl = await uploadImage(file);
+      // Instead of uploading immediately, store the file for later upload
       setCommentMedia([...commentMedia, {
         type: 'image',
-        url: imageUrl,
+        file, // Store the file object
+        url: URL.createObjectURL(file), // Create a temporary preview URL
+        title: file.name,
         position: comment.length
       }]);
     } catch (error) {
-      console.error('Error uploading image:', error);
+      console.error('Error handling image:', error);
       // You might want to show an error message to the user
     } finally {
       setIsUploading(false);
@@ -81,6 +156,14 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
   useEffect(() => {
     console.log(post);
   }, [post]);
+
+  const toggleEmailFilter = (email: string | null) => {
+    if (emailFilter === email) {
+      setEmailFilter(null); // Clear filter if clicking the same email
+    } else {
+      setEmailFilter(email); // Set filter to the email
+    }
+  };
 
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm p-4 mb-6">
@@ -158,8 +241,38 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
       {/* Comments Section */}
       {showComments && (
         <div className="space-y-4">
+          {/* Email filtering */}
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-gray-700 font-medium">Comments</h3>
+            <div className="flex items-center">
+              {emailFilter && (
+                <div className="flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm mr-2">
+                  <span>Showing only: {emailFilter}</span>
+                  <button 
+                    onClick={() => setEmailFilter(null)}
+                    className="ml-2 text-blue-800 hover:text-blue-600"
+                  >
+                    <FiX size={16} />
+                  </button>
+                </div>
+              )}
+              <button 
+                onClick={() => toggleEmailFilter(currentUser.email || null)}
+                className={`flex items-center space-x-1 ${emailFilter === currentUser.email ? 'text-blue-600' : 'text-gray-500'} hover:text-blue-600`}
+              >
+                <FiFilter size={16} />
+                <span className="text-sm">My Comments</span>
+              </button>
+            </div>
+          </div>
+
           {/* Comment Form */}
           <form onSubmit={handleCommentSubmit} className="space-y-2 relative">
+            {error && (
+              <div className="text-red-500 text-sm mb-2">
+                {error}
+              </div>
+            )}
             <div className="flex items-center space-x-2">
               <input
                 type="text"
@@ -167,12 +280,13 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Write a comment..."
                 className="flex-1 p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                disabled={isSubmitting}
               />
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="p-2 text-gray-500 hover:text-blue-600"
-                disabled={isUploading}
+                disabled={isUploading || isSubmitting}
               >
                 <FiImage size={20} />
               </button>
@@ -180,15 +294,16 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
                 type="button"
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className="p-2 text-gray-500 hover:text-blue-600"
+                disabled={isSubmitting}
               >
                 <FiSmile size={20} />
               </button>
               <button
                 type="submit"
-                disabled={(!comment.trim() && commentMedia.length === 0) || isUploading}
+                disabled={(!comment.trim() && commentMedia.length === 0) || isUploading || isSubmitting}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
-                {isUploading ? 'Uploading...' : 'Comment'}
+                {isSubmitting ? 'Posting...' : isUploading ? 'Uploading...' : 'Comment'}
               </button>
             </div>
             
@@ -233,46 +348,71 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
 
           {/* Comments List */}
           <div className="space-y-4">
-            {(post.comments || []).map((comment, index) => (
-              <div key={index} className="flex space-x-3">
-                <div className="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                  <Image
-                    src={comment.author.avatar}
-                    alt={comment.author.name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <div className="flex-1">
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-gray-900 font-medium text-sm">{comment.author.name}</p>
-                    <div className="text-gray-700 text-sm">
-                      {comment.content}
-                      {comment.media?.map((media, mediaIndex) => (
-                        media.type === 'image' ? (
-                          <div key={mediaIndex} className="mt-2">
-                            <Image
-                              src={media.url || ''}
-                              alt="Comment image"
-                              width={200}
-                              height={200}
-                              className="rounded-lg object-cover"
-                            />
-                          </div>
-                        ) : media.type === 'emoji' ? (
-                          <span key={mediaIndex}>{media.code}</span>
-                        ) : null
-                      ))}
+            {isLoadingComments ? (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
+                <p className="text-gray-500 mt-2">Loading comments...</p>
+              </div>
+            ) : comments.length > 0 ? (
+              comments.map((comment, index) => {
+                const authorName = comment.author?.name || 'Unknown User';
+                const authorAvatar = comment.author?.avatar || defaultAvatar;
+                const authorEmail = comment.author?.email || '';
+
+                return (
+                  <div key={index} className="flex space-x-3">
+                    <div className="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                      <Image
+                        src={authorAvatar}
+                        alt={authorName}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-gray-900 font-medium text-sm">{authorName}</p>
+                          {authorEmail && (
+                            <button 
+                              onClick={() => toggleEmailFilter(authorEmail)}
+                              className="text-xs text-gray-500 hover:text-blue-600"
+                            >
+                              {authorEmail}
+                            </button>
+                          )}
+                        </div>
+                        <div className="text-gray-700 text-sm">
+                          {comment.content}
+                          {comment.media?.map((media: Media, mediaIndex: number) => (
+                            media.type === 'image' ? (
+                              <div key={mediaIndex} className="mt-2">
+                                <Image
+                                  src={media.url || ''}
+                                  alt="Comment image"
+                                  width={200}
+                                  height={200}
+                                  className="rounded-lg object-cover"
+                                />
+                              </div>
+                            ) : media.type === 'emoji' ? (
+                              <span key={mediaIndex}>{media.code}</span>
+                            ) : null
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-4 mt-1">
+                        <button className="text-gray-500 text-sm hover:text-blue-600">Like</button>
+                        <button className="text-gray-500 text-sm hover:text-blue-600">Reply</button>
+                        <span className="text-gray-400 text-sm">{comment.timestamp}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-4 mt-1">
-                    <button className="text-gray-500 text-sm hover:text-blue-600">Like</button>
-                    <button className="text-gray-500 text-sm hover:text-blue-600">Reply</button>
-                    <span className="text-gray-400 text-sm">{comment.timestamp}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+                );
+              })
+            ) : (
+              <p className="text-center text-gray-500 py-4">No comments yet. Be the first to comment!</p>
+            )}
           </div>
         </div>
       )}

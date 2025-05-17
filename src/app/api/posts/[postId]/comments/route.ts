@@ -4,6 +4,7 @@ import connectDB from '@/lib/db';
 import Post from '@/models/Post';
 import Comment from '@/models/Comment';
 import User from '@/models/User';
+import { uploadToBunnyStorage } from '@/app/feed/utils/bunnyStorage';
 
 export async function POST(
   request: NextRequest,
@@ -17,15 +18,21 @@ export async function POST(
 
     await connectDB();
 
-    const { content, media } = await request.json();
-    if (!content && (!media || media.length === 0)) {
+    const formData = await request.formData();
+    const content = formData.get('content') as string;
+    const imageFiles = formData.getAll('images') as File[];
+    
+    // Get postId after ensuring params is resolved
+    const { postId } = params;
+
+    if (!content && imageFiles.length === 0) {
       return NextResponse.json(
         { error: 'Comment content or media is required' },
         { status: 400 }
       );
     }
 
-    const post = await Post.findById(params.postId);
+    const post = await Post.findById(postId);
     if (!post) {
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
@@ -35,19 +42,35 @@ export async function POST(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Upload images to Bunny storage
+    const media = await Promise.all(
+      imageFiles.map(async (file) => {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const url = await uploadToBunnyStorage(
+          buffer,
+          `comments/images/${file.name}`,
+          file.type
+        );
+        return {
+          type: 'image' as const,
+          url,
+          title: file.name
+        };
+      })
+    );
+
     const comment = await Comment.create({
       userId: dbUser._id,
+      userEmail: dbUser.email,
+      userName: dbUser.name,
       postId: post._id,
       content,
-      media: media || []
+      media
     });
 
     // Add comment to post's comments array
     post.comments.push(comment._id);
     await post.save();
-
-    // Populate author information
-    await comment.populate('author');
 
     return NextResponse.json({
       comment: {
@@ -57,7 +80,8 @@ export async function POST(
         author: {
           id: dbUser._id,
           name: dbUser.name,
-          avatar: dbUser.profilePicture
+          email: dbUser.email,
+          avatar: dbUser.profilePicture || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'
         },
         timestamp: comment.createdAt,
         likes: 0
@@ -79,13 +103,19 @@ export async function GET(
   try {
     await connectDB();
 
-    const post = await Post.findById(params.postId)
+    const url = new URL(request.url);
+    const emailFilter = url.searchParams.get('email');
+    
+    // Get postId after ensuring params is resolved
+    const { postId } = params;
+
+    const post = await Post.findById(postId)
       .populate({
         path: 'comments',
         populate: {
           path: 'author',
           model: User,
-          select: 'name profilePicture'
+          select: 'name profilePicture email'
         }
       });
 
@@ -93,20 +123,34 @@ export async function GET(
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
 
-    const comments = post.comments.map((comment: any) => ({
-      id: comment._id,
-      content: comment.content,
-      media: comment.media,
-      author: {
-        id: comment.author._id,
-        name: comment.author.name,
-        avatar: comment.author.profilePicture
-      },
-      timestamp: comment.createdAt,
-      likes: 0
-    }));
+    const defaultAvatar = 'https://api.dicebear.com/7.x/avataaars/svg?seed=default';
 
-    return NextResponse.json({ comments });
+    let comments = post.comments;
+    if (emailFilter) {
+      comments = comments.filter((comment: any) =>
+        comment.userEmail === emailFilter ||
+        (comment.author && comment.author.email === emailFilter)
+      );
+    }
+
+    const formattedComments = comments.map((comment: any) => {
+      const author = comment.author || { name: comment.userName || 'Unknown User', email: comment.userEmail, profilePicture: defaultAvatar };
+      return {
+        id: comment._id,
+        content: comment.content,
+        media: comment.media || [],
+        author: {
+          id: author._id || 'unknown',
+          name: author.name || comment.userName || 'Unknown User',
+          email: author.email || comment.userEmail || '',
+          avatar: author.profilePicture || defaultAvatar
+        },
+        timestamp: comment.createdAt,
+        likes: 0
+      };
+    });
+
+    return NextResponse.json({ comments: formattedComments });
   } catch (error) {
     console.error('Error fetching comments:', error);
     return NextResponse.json(
