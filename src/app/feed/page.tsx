@@ -313,7 +313,7 @@ export default function FeedPage() {
 
   return (
     <>
-      <div className="absolute inset-0 -z-10">
+      <div className="fixed inset-0 -z-10">
         {animationData && (
           <Lottie
             animationData={animationData}
@@ -341,7 +341,7 @@ export default function FeedPage() {
         <div className="flex-1 flex gap-8 max-w-7xl mx-auto px-4">
           {/* Left Sidebar */}
           <div className="hidden lg:block w-80 flex-shrink-0">
-            <div className="sticky top-20">
+            <div className="sticky top-20 h-[calc(100vh-80px)] overflow-y-auto pr-2">
               <Sidebar
                 author={currentUser}
                 stats={facultyStats}
@@ -379,7 +379,7 @@ export default function FeedPage() {
 
           {/* Right Sidebar */}
           <div className="hidden xl:block w-80 flex-shrink-0">
-            <div className="sticky top-20">
+            <div className="sticky top-20 h-[calc(100vh-80px)] overflow-y-auto pl-2">
               <RightSidebar
                 messages={messages}
                 upcomingClasses={upcomingClasses}

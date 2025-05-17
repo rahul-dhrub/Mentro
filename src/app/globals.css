@@ -24,3 +24,123 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Markdown Content Styling */
+.markdown-preview,
+.markdown-rendered {
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.6;
+  color: #000000;
+}
+
+.markdown-preview h1,
+.markdown-rendered h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid #e5e7eb;
+  color: #000000;
+}
+
+.markdown-preview h2,
+.markdown-rendered h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: #000000;
+}
+
+.markdown-preview h3,
+.markdown-rendered h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: #000000;
+}
+
+.markdown-preview p,
+.markdown-rendered p {
+  margin-bottom: 1rem;
+  color: #000000;
+}
+
+.markdown-preview a,
+.markdown-rendered a {
+  color: #4f46e5;
+  text-decoration: underline;
+}
+
+.markdown-preview img,
+.markdown-rendered img {
+  max-width: 100%;
+  margin: 1rem 0;
+  border-radius: 0.375rem;
+}
+
+.markdown-preview blockquote,
+.markdown-rendered blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1rem;
+  color: #000000;
+  margin: 1rem 0;
+  font-style: italic;
+}
+
+.markdown-preview pre,
+.markdown-rendered pre {
+  background-color: #f3f4f6;
+  border-radius: 0.375rem;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.markdown-preview code,
+.markdown-rendered code {
+  background-color: #f3f4f6;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-family: monospace;
+  font-size: 0.875rem;
+  color: #000000;
+}
+
+.markdown-preview pre code,
+.markdown-rendered pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.markdown-preview ul,
+.markdown-rendered ul {
+  list-style-type: disc;
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+  color: #000000;
+}
+
+.markdown-preview ol,
+.markdown-rendered ol {
+  list-style-type: decimal;
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+  color: #000000;
+}
+
+.markdown-preview li,
+.markdown-rendered li {
+  margin-bottom: 0.5rem;
+  color: #000000;
+}
+
+/* Style for embedded videos and iframes */
+.markdown-preview iframe,
+.markdown-rendered iframe {
+  max-width: 100%;
+  border-radius: 0.375rem;
+  margin: 1rem 0;
+}
