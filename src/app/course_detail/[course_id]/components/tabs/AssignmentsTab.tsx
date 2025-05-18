@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
 import { Assignment } from '../../types';
 import DataTable, { Column } from '../DataTable';
 import AssignmentModal from './assignmentsComponent/AssignmentModal';
@@ -18,6 +18,11 @@ export default function AssignmentsTab({
   onDeleteAssignment
 }: AssignmentsTabProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Delete confirmation modal states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [assignmentToDelete, setAssignmentToDelete] = useState<{id: string, title: string} | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
   const handleOpenModal = () => {
     setIsModalOpen(true);
@@ -29,6 +34,24 @@ export default function AssignmentsTab({
 
   const handleAddAssignment = (assignmentData: Assignment) => {
     onAddAssignment(assignmentData);
+  };
+  
+  const handleDeleteClick = (assignmentId: string) => {
+    const assignment = assignments.find(a => a.id === assignmentId);
+    if (assignment) {
+      setAssignmentToDelete({ id: assignment.id, title: assignment.title });
+      setDeleteConfirmation('');
+      setShowDeleteModal(true);
+    }
+  };
+  
+  const handleConfirmDelete = () => {
+    if (assignmentToDelete && deleteConfirmation === assignmentToDelete.title) {
+      onDeleteAssignment(assignmentToDelete.id);
+      setShowDeleteModal(false);
+      setAssignmentToDelete(null);
+      setDeleteConfirmation('');
+    }
   };
 
   const columns: Column<Assignment>[] = [
@@ -71,7 +94,7 @@ export default function AssignmentsTab({
             <FiEdit2 size={18} />
           </button>
           <button 
-            onClick={() => onDeleteAssignment(assignment.id)} 
+            onClick={() => handleDeleteClick(assignment.id)} 
             className="text-red-600 hover:text-red-900 cursor-pointer"
           >
             <FiTrash2 size={18} />
@@ -100,6 +123,64 @@ export default function AssignmentsTab({
         onClose={handleCloseModal}
         onAddAssignment={handleAddAssignment}
       />
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && assignmentToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-red-600">Delete Assignment</h3>
+              <button 
+                onClick={() => setShowDeleteModal(false)}
+                className="text-gray-500 hover:text-gray-700 cursor-pointer"
+              >
+                <FiX size={24} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="bg-red-50 border border-red-200 rounded-md p-4">
+                <p className="text-sm text-red-700">
+                  <strong>Warning:</strong> This action cannot be undone. This will permanently delete the assignment
+                  and all student submissions.
+                </p>
+              </div>
+              
+              <p className="text-sm text-gray-700">
+                To confirm, type <strong className="font-medium">{assignmentToDelete.title}</strong> in the field below:
+              </p>
+              
+              <input
+                type="text"
+                value={deleteConfirmation}
+                onChange={(e) => setDeleteConfirmation(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-700"
+                autoFocus
+              />
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={deleteConfirmation !== assignmentToDelete.title}
+                  className={`px-4 py-2 bg-red-600 text-white rounded-lg ${
+                    deleteConfirmation === assignmentToDelete.title 
+                      ? 'hover:bg-red-700 cursor-pointer' 
+                      : 'opacity-50 cursor-not-allowed'
+                  }`}
+                >
+                  Delete Assignment
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       <DataTable 
         columns={columns} 
