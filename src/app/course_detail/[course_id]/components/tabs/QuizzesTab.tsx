@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { Quiz } from '../../types';
 import DataTable, { Column } from '../DataTable';
+import QuizModal from './quizzesComponent/QuizModal';
 
 interface QuizzesTabProps {
   quizzes: Quiz[];
-  onAddQuiz: () => void;
+  onAddQuiz: (quiz: Quiz) => void;
   onEditQuiz: (quizId: string) => void;
   onDeleteQuiz: (quizId: string) => void;
 }
@@ -16,6 +17,23 @@ export default function QuizzesTab({
   onEditQuiz,
   onDeleteQuiz
 }: QuizzesTabProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleOpenModal = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleAddQuiz = (quizData: any) => {
+    onAddQuiz({
+      id: Date.now().toString(),
+      ...quizData
+    });
+  };
+
   const columns: Column<Quiz>[] = [
     {
       key: 'title',
@@ -84,13 +102,21 @@ export default function QuizzesTab({
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold text-gray-900">Quizzes</h2>
         <button
-          onClick={onAddQuiz}
+          onClick={handleOpenModal}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 cursor-pointer"
         >
           <FiPlus size={20} />
           <span>Add Quiz</span>
         </button>
       </div>
+      
+      {/* Quiz Modal */}
+      <QuizModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onAddQuiz={handleAddQuiz}
+      />
+      
       <DataTable 
         columns={columns} 
         data={quizzes} 

@@ -50,6 +50,10 @@ export interface Quiz {
   duration: number;
   totalMarks: number;
   isPublished: boolean;
+  scheduled?: boolean;
+  startDateTime?: string;
+  endDateTime?: string;
+  contents?: VideoContent[];
 }
 
 export interface Faculty {
