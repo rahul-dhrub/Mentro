@@ -1,8 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FiX, FiVideo, FiCalendar } from 'react-icons/fi';
+import { FaBold, FaItalic, FaUnderline, FaListUl, FaListOl, FaLink, FaHeading } from 'react-icons/fa';
 import { ContentType, LessonContent } from './types';
 import ContentForm from './ContentForm';
 import LiveScheduleForm from './LiveScheduleForm';
+import MDEditor from '@uiw/react-md-editor';
+import './markdown-styles.css';
 
 interface LessonModalProps {
   isOpen: boolean;
@@ -46,6 +49,62 @@ export default function LessonModal({
     setLiveScheduleDate('');
     setLiveScheduleTime('');
     setLiveScheduleLink('');
+  };
+  
+  // Text formatting functions
+  const insertTextFormat = (format: string) => {
+    let selectedText = window.getSelection()?.toString() || '';
+    let newText = '';
+    
+    switch (format) {
+      case 'bold':
+        newText = selectedText ? `**${selectedText}**` : '**Bold text**';
+        break;
+      case 'italic':
+        newText = selectedText ? `*${selectedText}*` : '*Italic text*';
+        break;
+      case 'underline':
+        newText = selectedText ? `<u>${selectedText}</u>` : '<u>Underlined text</u>';
+        break;
+      case 'heading':
+        newText = selectedText ? `## ${selectedText}` : '## Heading';
+        break;
+      case 'unorderedList':
+        newText = selectedText ? 
+          selectedText.split('\n').map(line => `- ${line}`).join('\n') : 
+          '- List item\n- Another item';
+        break;
+      case 'orderedList':
+        newText = selectedText ? 
+          selectedText.split('\n').map((line, i) => `${i+1}. ${line}`).join('\n') : 
+          '1. First item\n2. Second item';
+        break;
+      case 'link':
+        newText = selectedText ? `[${selectedText}](url)` : '[Link text](https://example.com)';
+        break;
+      default:
+        newText = selectedText;
+    }
+    
+    setLessonDescription(prev => {
+      if (selectedText) {
+        // Replace selected text with formatted text
+        const selection = window.getSelection();
+        const range = selection?.getRangeAt(0);
+        if (!range || !selection) return prev + newText;
+        
+        // Get the start and end indices of the selection in the textarea value
+        const textarea = document.getElementById('lesson-description') as HTMLTextAreaElement;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        
+        // Replace the selected text with the formatted text
+        return prev.substring(0, start) + newText + prev.substring(end);
+      } else {
+        // No selection, just append
+        return prev + newText;
+      }
+    });
   };
   
   const handleSaveLesson = () => {
@@ -166,14 +225,92 @@ export default function LessonModal({
             <label htmlFor="lesson-description" className="block text-sm font-medium text-gray-700 mb-1">
               Description
             </label>
-            <textarea
-              id="lesson-description"
-              value={lessonDescription}
-              onChange={(e) => setLessonDescription(e.target.value)}
-              placeholder="Enter lesson description"
-              rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
-            />
+            <div className="mb-2 flex flex-wrap items-center gap-2 border border-gray-400 rounded-t-lg p-3 bg-gray-200 shadow-md">
+              <button 
+                type="button" 
+                onClick={() => insertTextFormat('bold')}
+                className="p-2 bg-gray-700 text-white hover:bg-blue-600 rounded-md flex items-center justify-center transition-colors shadow-sm border border-gray-600"
+                title="Bold"
+              >
+                <FaBold size={16} />
+              </button>
+              <button 
+                type="button" 
+                onClick={() => insertTextFormat('italic')}
+                className="p-2 bg-gray-700 text-white hover:bg-blue-600 rounded-md flex items-center justify-center transition-colors shadow-sm border border-gray-600"
+                title="Italic"
+              >
+                <FaItalic size={16} />
+              </button>
+              <button 
+                type="button" 
+                onClick={() => insertTextFormat('underline')}
+                className="p-2 bg-gray-700 text-white hover:bg-blue-600 rounded-md flex items-center justify-center transition-colors shadow-sm border border-gray-600"
+                title="Underline"
+              >
+                <FaUnderline size={16} />
+              </button>
+              <button 
+                type="button" 
+                onClick={() => insertTextFormat('heading')}
+                className="p-2 bg-gray-700 text-white hover:bg-blue-600 rounded-md flex items-center justify-center transition-colors shadow-sm border border-gray-600"
+                title="Heading"
+              >
+                <FaHeading size={16} />
+              </button>
+              <div className="h-8 w-px bg-gray-500 mx-1"></div>
+              <button 
+                type="button" 
+                onClick={() => insertTextFormat('unorderedList')}
+                className="p-2 bg-gray-700 text-white hover:bg-blue-600 rounded-md flex items-center justify-center transition-colors shadow-sm border border-gray-600"
+                title="Bullet List"
+              >
+                <FaListUl size={16} />
+              </button>
+              <button 
+                type="button" 
+                onClick={() => insertTextFormat('orderedList')}
+                className="p-2 bg-gray-700 text-white hover:bg-blue-600 rounded-md flex items-center justify-center transition-colors shadow-sm border border-gray-600"
+                title="Numbered List"
+              >
+                <FaListOl size={16} />
+              </button>
+              <button 
+                type="button" 
+                onClick={() => insertTextFormat('link')}
+                className="p-2 bg-gray-700 text-white hover:bg-blue-600 rounded-md flex items-center justify-center transition-colors shadow-sm border border-gray-600"
+                title="Link"
+              >
+                <FaLink size={16} />
+              </button>
+              <div className="ml-auto text-xs text-gray-700 font-semibold">
+                Markdown formatting supported
+              </div>
+            </div>
+            <div className="flex flex-col">
+              <textarea
+                id="lesson-description"
+                value={lessonDescription}
+                onChange={(e) => setLessonDescription(e.target.value)}
+                placeholder="Enter lesson description (Markdown supported)"
+                rows={5}
+                className="w-full px-4 py-2 border border-gray-300 rounded-b-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 font-mono"
+              />
+              {lessonDescription && (
+                <div className="mt-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Preview
+                  </label>
+                  <div className="border border-gray-400 rounded-lg p-4 bg-white shadow-inner prose prose-headings:text-gray-800 prose-p:text-gray-700 prose-strong:text-black prose-em:text-gray-800 prose-ul:text-gray-700 prose-ol:text-gray-700 prose-a:text-blue-600 max-w-none">
+                    <MDEditor.Markdown 
+                      source={lessonDescription} 
+                      style={{ backgroundColor: 'white' }}
+                      className="white-markdown-preview"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           
           <div>

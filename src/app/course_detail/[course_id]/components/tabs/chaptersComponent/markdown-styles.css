@@ -1,0 +1,69 @@
+/* Markdown preview styling */
+.white-markdown-preview {
+  background-color: white !important;
+  color: #222222 !important; /* Much darker text color */
+}
+
+/* Make sure all nested elements also have white background */
+.white-markdown-preview * {
+  background-color: white !important;
+}
+
+/* Force white background for any MDEditor elements */
+.w-md-editor-preview,
+.wmde-markdown,
+.wmde-markdown-color {
+  background-color: white !important;
+  color: #222222 !important; /* Darker text */
+}
+
+/* Text styling for different elements */
+.white-markdown-preview p {
+  color: #222222 !important; /* Dark text for paragraphs */
+}
+
+.white-markdown-preview h1,
+.white-markdown-preview h2,
+.white-markdown-preview h3,
+.white-markdown-preview h4,
+.white-markdown-preview h5,
+.white-markdown-preview h6 {
+  color: #111111 !important; /* Nearly black for headings */
+}
+
+.white-markdown-preview strong {
+  color: #000000 !important; /* Pure black for bold text */
+}
+
+.white-markdown-preview a {
+  color: #0056b3 !important; /* Darker blue for links */
+  text-decoration: underline;
+}
+
+.white-markdown-preview ul li,
+.white-markdown-preview ol li {
+  color: #222222 !important; /* Dark text for list items */
+}
+
+/* Ensure proper text coloring on white background */
+.white-markdown-preview pre,
+.white-markdown-preview code {
+  background-color: #f5f5f5 !important; /* Light gray for code blocks */
+  color: #121212 !important; /* Very dark text for code */
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+/* Fix any dark mode styles that might be applied by MDEditor */
+.white-markdown-preview [data-color-mode="dark"],
+.white-markdown-preview [data-color-mode="light"] {
+  --color-canvas-default: white !important;
+  --color-canvas-subtle: white !important;
+  --color-bg-primary: white !important;
+  --color-bg-secondary: white !important;
+  --color-bg-tertiary: white !important;
+  --color-fg-default: #222222 !important; /* Override text color variable */
+  --color-fg-muted: #333333 !important;
+  --color-fg-subtle: #444444 !important;
+  color-scheme: light !important;
+} 

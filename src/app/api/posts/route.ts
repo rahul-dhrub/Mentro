@@ -3,6 +3,7 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import connectDB from '@/lib/db';
 import Post from '@/models/Post';
 import User from '@/models/User';
+import Comment from '@/models/Comment';
 import { bunnyClient } from '@/lib/bunny';
 import { mockPosts } from '@/app/feed/mockData';
 
@@ -71,6 +72,7 @@ export async function GET(request: NextRequest) {
       })
       .populate({
         path: 'comments',
+        model: Comment,
         populate: {
           path: 'userId',
           model: User,
