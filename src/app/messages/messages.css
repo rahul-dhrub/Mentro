@@ -1,0 +1,19 @@
+.messages-page textarea::placeholder {
+    color: #6b7280 !important;
+    opacity: 1 !important;
+}
+
+.messages-page textarea {
+    color: #1f2937 !important;
+    background-color: #ffffff !important;
+}
+
+.messages-page input::placeholder {
+    color: #6b7280 !important;
+    opacity: 1 !important;
+}
+
+.messages-page input {
+    color: #1f2937 !important;
+    background-color: #ffffff !important;
+}
