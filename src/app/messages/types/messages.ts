@@ -15,6 +15,7 @@ export interface Conversation {
   avatar: string;
   online: boolean;
   isGroup?: boolean;
+  email?: string;
 }
 
 export interface User {

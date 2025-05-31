@@ -8,6 +8,7 @@ interface MessageSidebarProps {
   conversations: Conversation[];
   selectedConversation: string | null;
   onSelectConversation: (id: string) => void;
+  onNewConversation: () => void;
   currentUser: User;
 }
 
@@ -15,6 +16,7 @@ export default function MessageSidebar({
   conversations,
   selectedConversation,
   onSelectConversation,
+  onNewConversation,
   currentUser,
 }: MessageSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,9 +50,20 @@ export default function MessageSidebar({
               <p className="text-xs text-gray-500">{currentUser.email}</p>
             </div>
           </div>
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <FiMoreVertical className="w-5 h-5 text-gray-600" />
-          </button>
+          <div className="flex items-center space-x-2">
+            <button 
+              onClick={onNewConversation}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              title="New Message"
+            >
+              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+              <FiMoreVertical className="w-5 h-5 text-gray-600" />
+            </button>
+          </div>
         </div>
         
         {/* Search Bar */}

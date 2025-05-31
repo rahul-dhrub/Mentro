@@ -4,12 +4,13 @@ import User from '@/models/User';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
     
-    const user = await User.findById(params.id).select('-password');
+    const { id } = await params;
+    const user = await User.findById(id).select('-password');
     if (!user) {
       return NextResponse.json(
         { error: 'User not found' },
@@ -29,7 +30,7 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
@@ -37,7 +38,8 @@ export async function PUT(
     const body = await req.json();
     const { name, bio, profilePicture } = body;
 
-    const user = await User.findById(params.id);
+    const { id } = await params;
+    const user = await User.findById(id);
     if (!user) {
       return NextResponse.json(
         { error: 'User not found' },
@@ -71,12 +73,13 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
     
-    const user = await User.findByIdAndDelete(params.id);
+    const { id } = await params;
+    const user = await User.findByIdAndDelete(id);
     if (!user) {
       return NextResponse.json(
         { error: 'User not found' },

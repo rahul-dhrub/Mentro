@@ -9,7 +9,7 @@ import mongoose from 'mongoose';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { postId: string } }
+  { params }: { params: Promise<{ postId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -24,7 +24,7 @@ export async function POST(
     const imageFiles = formData.getAll('images') as File[];
     
     // Get postId after ensuring params is resolved
-    const postId = params.postId;
+    const { postId } = await params;
 
     if (!content && imageFiles.length === 0) {
       return NextResponse.json(
@@ -107,7 +107,7 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { postId: string } }
+  { params }: { params: Promise<{ postId: string }> }
 ) {
   try {
     await connectDB();
@@ -116,7 +116,7 @@ export async function GET(
     const emailFilter = url.searchParams.get('email');
     
     // Get postId after ensuring params is resolved
-    const postId = params.postId;
+    const { postId } = await params;
 
     // Check if postId is a valid MongoDB ObjectId
     if (!mongoose.Types.ObjectId.isValid(postId)) {
