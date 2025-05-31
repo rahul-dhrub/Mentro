@@ -92,9 +92,15 @@ export default function MessageSidebar({
             <div className="flex items-center space-x-3">
               {/* Avatar */}
               <div className="relative flex-shrink-0">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold">
                   {conversation.isGroup ? (
                     <span className="text-sm">👥</span>
+                  ) : conversation.avatar ? (
+                    <img 
+                      src={conversation.avatar} 
+                      alt={conversation.name}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     conversation.name.charAt(0).toUpperCase()
                   )}

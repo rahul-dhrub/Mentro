@@ -9,6 +9,7 @@ interface ChatAreaProps {
   messages: Message[];
   currentUser: User;
   loading?: boolean;
+  isRealTimeUpdating?: boolean;
   onSendMessage: (message: string) => void;
   onDeleteMessage?: (messageId: string) => void;
   onDeleteConversation?: (conversationId: string) => void;
@@ -19,6 +20,7 @@ export default function ChatArea({
   messages, 
   currentUser, 
   loading = false, 
+  isRealTimeUpdating = false,
   onSendMessage,
   onDeleteMessage,
   onDeleteConversation
@@ -153,9 +155,15 @@ export default function ChatArea({
           <div className="flex items-center space-x-3">
             {/* Avatar */}
             <div className="relative">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+              <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold">
                 {conversation.isGroup ? (
                   <span className="text-sm">👥</span>
+                ) : conversation.avatar ? (
+                  <img 
+                    src={conversation.avatar} 
+                    alt={conversation.name}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   conversation.name.charAt(0).toUpperCase()
                 )}
@@ -167,7 +175,15 @@ export default function ChatArea({
             
             {/* Name and Status */}
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">{conversation.name}</h2>
+              <div className="flex items-center space-x-2">
+                <h2 className="text-lg font-semibold text-gray-900">{conversation.name}</h2>
+                {isRealTimeUpdating && (
+                  <div className="flex items-center space-x-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-green-600 font-medium">Live</span>
+                  </div>
+                )}
+              </div>
               <p className="text-sm text-gray-500">
                 {conversation.isGroup ? 'Group chat' : conversation.online ? 'Online' : 'Last seen recently'}
               </p>
@@ -237,8 +253,16 @@ export default function ChatArea({
             >
               {/* Avatar for received messages */}
               {!message.isOwn && (
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
-                  {message.sender.charAt(0).toUpperCase()}
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
+                  {message.senderImageUrl ? (
+                    <img 
+                      src={message.senderImageUrl} 
+                      alt={message.sender}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    message.sender.charAt(0).toUpperCase()
+                  )}
                 </div>
               )}
               

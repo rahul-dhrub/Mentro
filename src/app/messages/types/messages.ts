@@ -4,6 +4,8 @@ export interface Message {
   timestamp: string;
   sender: string;
   isOwn: boolean;
+  senderImageUrl?: string;
+  receiverImageUrl?: string;
 }
 
 export interface Conversation {

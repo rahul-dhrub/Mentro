@@ -53,21 +53,38 @@ export async function GET(
       );
     }
 
-    // Get query parameters for pagination
+    // Get query parameters for pagination and timestamp filtering
     const url = new URL(req.url);
     const page = parseInt(url.searchParams.get('page') || '1');
     const limit = parseInt(url.searchParams.get('limit') || '50');
+    const since = url.searchParams.get('since');
     const skip = (page - 1) * limit;
 
+    // Build query filter
+    let messageFilter: any = { conversationId };
+    
+    // Add timestamp filter if 'since' parameter is provided
+    if (since) {
+      try {
+        const sinceDate = new Date(since);
+        messageFilter.timestamp = { $gt: sinceDate };
+      } catch (error) {
+        return NextResponse.json(
+          { error: 'Invalid since timestamp format' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Fetch messages for this conversation (sorted by timestamp, newest first)
-    const messages = await Message.find({ conversationId })
+    const messages = await Message.find(messageFilter)
       .sort({ timestamp: -1 })
       .skip(skip)
       .limit(limit)
       .lean();
 
     // Get total count for pagination
-    const totalMessages = await Message.countDocuments({ conversationId });
+    const totalMessages = await Message.countDocuments(messageFilter);
     const totalPages = Math.ceil(totalMessages / limit);
 
     // Format messages for response

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
 import type { UserResource } from '@clerk/types';
 import MessageSidebar from './components/MessageSidebar';
@@ -47,6 +47,10 @@ function MessagesPageContent({ user }: { user: UserResource }) {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
+  const [isRealTimeUpdating, setIsRealTimeUpdating] = useState(false);
+  const isFetchingMessagesRef = useRef(false);
+  const currentConversationRef = useRef<string | null>(null);
+  const lastMessageTimestampRef = useRef<Date | null>(null);
 
   // User data from Clerk
   const userData = {
@@ -58,9 +62,12 @@ function MessagesPageContent({ user }: { user: UserResource }) {
   };
 
   // Fetch conversations from API
-  const fetchConversations = async () => {
+  const fetchConversations = async (isRealTime = false) => {
     try {
-      setLoading(true);
+      if (!isRealTime) {
+        setLoading(true);
+      }
+      
       const response = await fetch('/api/messages/conversations');
       
       if (!response.ok) {
@@ -85,7 +92,13 @@ function MessagesPageContent({ user }: { user: UserResource }) {
         email: conv.otherUser.email,
       }));
       
-      setConversations(transformedConversations);
+      // Only update conversations if they have actually changed to avoid unnecessary re-renders
+      setConversations(prevConversations => {
+        if (JSON.stringify(prevConversations) !== JSON.stringify(transformedConversations)) {
+          return transformedConversations;
+        }
+        return prevConversations;
+      });
       
       // Auto-select first conversation if none selected
       if (transformedConversations.length > 0 && !selectedConversation) {
@@ -93,17 +106,44 @@ function MessagesPageContent({ user }: { user: UserResource }) {
       }
     } catch (err) {
       console.error('Error fetching conversations:', err);
-      setError('Failed to load conversations');
+      if (!isRealTime) {
+        setError('Failed to load conversations');
+      }
     } finally {
-      setLoading(false);
+      if (!isRealTime) {
+        setLoading(false);
+      }
     }
   };
 
   // Fetch messages for a specific conversation
-  const fetchMessages = async (conversationId: string) => {
+  const fetchMessages = useCallback(async (conversationId: string, isRealTime = false) => {
+    // Prevent overlapping calls
+    if (isFetchingMessagesRef.current && !isRealTime) {
+      return;
+    }
+    
     try {
-      setMessagesLoading(true);
-      const response = await fetch(`/api/messages/conversation/${conversationId}`);
+      if (!isRealTime) {
+        isFetchingMessagesRef.current = true;
+        setMessagesLoading(true);
+        // Reset timestamp for full fetch
+        lastMessageTimestampRef.current = null;
+      } else {
+        // For real-time updates, only proceed if not already fetching
+        if (isFetchingMessagesRef.current) {
+          return;
+        }
+        // Real-time indicator will be set conditionally based on new messages
+      }
+      
+      // Build URL with timestamp parameter for incremental updates
+      let url = `/api/messages/conversation/${conversationId}`;
+      if (isRealTime && lastMessageTimestampRef.current) {
+        url += `?since=${lastMessageTimestampRef.current.toISOString()}`;
+      }
+      
+      const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error('Failed to fetch messages');
@@ -112,35 +152,79 @@ function MessagesPageContent({ user }: { user: UserResource }) {
       const data = await response.json();
       
       // Transform API response to match our Message interface
-      const transformedMessages: Message[] = data.messages.map((msg: any) => ({
-        id: msg.id,
-        text: msg.text,
-        timestamp: new Date(msg.timestamp).toLocaleTimeString([], { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        }),
-        sender: msg.isOwn ? userData.fullName : getOtherUserName(conversationId),
-        isOwn: msg.isOwn,
-      }));
+      const transformedMessages: Message[] = data.messages.map((msg: any) => {
+        return {
+          id: msg.id,
+          text: msg.text,
+          timestamp: new Date(msg.timestamp).toLocaleTimeString([], { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          }),
+          sender: msg.isOwn ? userData.fullName : 'Other User',
+          isOwn: msg.isOwn,
+          senderImageUrl: msg.isOwn ? userData.imageUrl : '',
+          receiverImageUrl: msg.isOwn ? '' : userData.imageUrl,
+        };
+      });
       
-      setMessages(transformedMessages);
+      if (isRealTime && transformedMessages.length > 0) {
+        // For real-time updates, append new messages to existing ones
+        setMessages(prevMessages => {
+          const newMessages = transformedMessages.filter(newMsg => 
+            !prevMessages.some(existingMsg => existingMsg.id === newMsg.id)
+          );
+          
+          // Only show real-time indicator if there are actually new messages
+          if (newMessages.length > 0) {
+            setIsRealTimeUpdating(true);
+            setTimeout(() => setIsRealTimeUpdating(false), 500);
+          }
+          
+          return [...prevMessages, ...newMessages];
+        });
+        
+        // Update the last message timestamp
+        const latestMessage = transformedMessages[transformedMessages.length - 1];
+        if (latestMessage) {
+          lastMessageTimestampRef.current = new Date(data.messages[data.messages.length - 1].timestamp);
+        }
+      } else if (!isRealTime) {
+        // For initial load, replace all messages
+        setMessages(transformedMessages);
+        
+        // Set the last message timestamp
+        if (transformedMessages.length > 0) {
+          const latestMessage = data.messages[data.messages.length - 1];
+          lastMessageTimestampRef.current = new Date(latestMessage.timestamp);
+        }
+      }
       
-      // Mark messages as read
-      if (transformedMessages.length > 0) {
+      // Mark messages as read (only for initial load)
+      if (!isRealTime && transformedMessages.length > 0) {
         markMessagesAsRead(conversationId);
       }
     } catch (err) {
       console.error('Error fetching messages:', err);
-      setError('Failed to load messages');
+      if (!isRealTime) {
+        setError('Failed to load messages');
+      }
     } finally {
-      setMessagesLoading(false);
+      if (!isRealTime) {
+        setMessagesLoading(false);
+        isFetchingMessagesRef.current = false;
+      }
     }
-  };
+  }, [userData.fullName, userData.imageUrl]);
 
   // Get other user's name from conversation ID
   const getOtherUserName = (conversationId: string) => {
     const conversation = conversations.find(conv => conv.id === conversationId);
     return conversation?.name || 'Unknown User';
+  };
+
+  // Get conversation data by ID
+  const getConversationData = (conversationId: string) => {
+    return conversations.find(conv => conv.id === conversationId);
   };
 
   // Send a message
@@ -179,9 +263,14 @@ function MessagesPageContent({ user }: { user: UserResource }) {
         }),
         sender: userData.fullName,
         isOwn: true,
+        senderImageUrl: userData.imageUrl,
+        receiverImageUrl: conversation.avatar || '',
       };
       
       setMessages(prev => [...prev, newMessage]);
+      
+      // Update the last message timestamp reference
+      lastMessageTimestampRef.current = new Date(data.data.timestamp);
       
       // Update the conversation's last message
       setConversations(prev => prev.map(conv => 
@@ -289,15 +378,73 @@ function MessagesPageContent({ user }: { user: UserResource }) {
   useEffect(() => {
     if (userData.email) {
       fetchConversations();
+      
+      // Set up interval to fetch conversations every 5 seconds for real-time updates
+      const conversationInterval = setInterval(() => {
+        fetchConversations(true);
+      }, 5000);
+      
+      // Cleanup interval when component unmounts
+      return () => {
+        clearInterval(conversationInterval);
+      };
     }
   }, [userData.email]);
 
   // Fetch messages when conversation changes
   useEffect(() => {
     if (selectedConversation) {
+      // Reset loading states when conversation changes
+      setMessagesLoading(false);
+      setIsRealTimeUpdating(false);
+      isFetchingMessagesRef.current = false;
+      currentConversationRef.current = selectedConversation;
+      lastMessageTimestampRef.current = null; // Reset timestamp for new conversation
+      
       fetchMessages(selectedConversation);
+      
+      // Set up interval to fetch messages every 3 seconds for real-time updates
+      const messageInterval = setInterval(() => {
+        if (currentConversationRef.current) {
+          fetchMessages(currentConversationRef.current, true);
+        }
+      }, 3000);
+      
+      // Cleanup interval when conversation changes or component unmounts
+      return () => {
+        clearInterval(messageInterval);
+        // Reset loading states on cleanup
+        setMessagesLoading(false);
+        setIsRealTimeUpdating(false);
+        isFetchingMessagesRef.current = false;
+        lastMessageTimestampRef.current = null;
+      };
+    } else {
+      // Reset states when no conversation is selected
+      setMessagesLoading(false);
+      setIsRealTimeUpdating(false);
+      isFetchingMessagesRef.current = false;
+      currentConversationRef.current = null;
+      lastMessageTimestampRef.current = null;
     }
   }, [selectedConversation]);
+
+  // Update message data with conversation info when conversations change
+  useEffect(() => {
+    if (messages.length > 0 && selectedConversation) {
+      const conversation = conversations.find(conv => conv.id === selectedConversation);
+      if (conversation) {
+        setMessages(prevMessages => 
+          prevMessages.map(msg => ({
+            ...msg,
+            sender: msg.isOwn ? userData.fullName : conversation.name,
+            senderImageUrl: msg.isOwn ? userData.imageUrl : conversation.avatar || '',
+            receiverImageUrl: msg.isOwn ? conversation.avatar || '' : userData.imageUrl,
+          }))
+        );
+      }
+    }
+  }, [conversations, selectedConversation, userData.fullName, userData.imageUrl]);
 
   const selectedConversationData = conversations.find(conv => conv.id === selectedConversation);
 
@@ -350,6 +497,7 @@ function MessagesPageContent({ user }: { user: UserResource }) {
           messages={messages}
           currentUser={userData}
           loading={messagesLoading}
+          isRealTimeUpdating={isRealTimeUpdating}
           onSendMessage={handleSendMessage}
           onDeleteMessage={handleDeleteMessage}
           onDeleteConversation={handleDeleteConversation}
