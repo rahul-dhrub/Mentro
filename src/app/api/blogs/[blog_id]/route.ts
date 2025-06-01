@@ -6,13 +6,13 @@ import Blog from '@/models/Blog';
 // GET endpoint for fetching a specific blog by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { blog_id: string } }
+  { params }: { params: Promise<{ blog_id: string }> }
 ) {
   try {
     // Connect to database
     await connectDB();
 
-    const { blog_id } = params;
+    const { blog_id } = await params;
 
     if (!blog_id) {
       return NextResponse.json(
@@ -47,7 +47,7 @@ export async function GET(
 // PUT endpoint for updating a blog
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { blog_id: string } }
+  { params }: { params: Promise<{ blog_id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -55,7 +55,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { blog_id } = params;
+    const { blog_id } = await params;
     
     // Parse the request body
     const { title, content, coverImage, tags } = await request.json();
@@ -127,7 +127,7 @@ export async function PUT(
 // DELETE endpoint for deleting a blog
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { blog_id: string } }
+  { params }: { params: Promise<{ blog_id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -135,7 +135,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { blog_id } = params;
+    const { blog_id } = await params;
 
     // Connect to database
     await connectDB();
