@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
+import { useSearchParams } from 'next/navigation';
 import type { UserResource } from '@clerk/types';
 import MessageSidebar from './components/MessageSidebar';
 import ChatArea from './components/ChatArea';
@@ -40,6 +41,7 @@ export default function MessagesPage() {
 }
 
 function MessagesPageContent({ user }: { user: UserResource }) {
+  const searchParams = useSearchParams();
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -60,6 +62,17 @@ function MessagesPageContent({ user }: { user: UserResource }) {
     imageUrl: user.imageUrl || '',
     fullName: user.fullName || user.username || 'User'
   };
+
+  // Handle deep linking to specific conversation
+  useEffect(() => {
+    const conversationParam = searchParams.get('conversation');
+    if (conversationParam && conversations.length > 0) {
+      const targetConversation = conversations.find(conv => conv.id === conversationParam);
+      if (targetConversation) {
+        setSelectedConversation(conversationParam);
+      }
+    }
+  }, [searchParams, conversations]);
 
   // Fetch conversations from API
   const fetchConversations = async (isRealTime = false) => {

@@ -35,7 +35,7 @@ const RelatedPosts: React.FC<RelatedPostsProps> = ({ relatedBlogs, formatDate })
                 {relatedBlogs.length > 0 ? (
                     relatedBlogs.map((relatedBlog) => (
                         <Link 
-                            href={`/blogs/${relatedBlog.author.id}/${relatedBlog._id || relatedBlog.id}`} 
+                            href={`/blogs/${relatedBlog._id || relatedBlog.id}`} 
                             key={relatedBlog._id || relatedBlog.id}
                             className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full border border-gray-200"
                         >

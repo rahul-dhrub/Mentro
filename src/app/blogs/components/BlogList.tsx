@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { Blog } from '../[user_id]/mockData';
+import { Blog } from '../[blog_id]/mockData';
+import { FiClock, FiUser, FiTag } from 'react-icons/fi';
 
 interface BlogListProps {
     blogs: Blog[];
@@ -11,88 +12,113 @@ interface BlogListProps {
 }
 
 const BlogList: React.FC<BlogListProps> = ({ blogs, isLoading, formatDate }) => {
-    const [showBlogs, setShowBlogs] = useState<boolean>(true);
-
     return (
         <div className="bg-white/95 backdrop-blur-sm p-6 rounded-lg shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-semibold text-black">Recent Blogs</h2>
-                <button 
-                    onClick={() => setShowBlogs(!showBlogs)}
-                    className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 flex items-center"
-                >
-                    {showBlogs ? (
-                        <>
-                            <span className="mr-1">Hide</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </>
-                    ) : (
-                        <>
-                            <span className="mr-1">Show</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                            </svg>
-                        </>
-                    )}
-                </button>
-            </div>
-
-            {showBlogs && (
+            {isLoading && blogs.length === 0 ? (
+                <div className="flex justify-center py-20">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                        <p className="text-gray-600">Loading blogs...</p>
+                    </div>
+                </div>
+            ) : blogs.length === 0 ? (
+                <div className="text-center py-16 bg-gray-50 rounded-lg">
+                    <div className="mx-auto h-24 w-24 text-gray-400 mb-4">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No blogs found</h3>
+                    <p className="text-gray-500">Be the first to share your knowledge!</p>
+                </div>
+            ) : (
                 <>
-                    {isLoading && blogs.length === 0 ? (
-                        <div className="flex justify-center py-20">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                    {/* Header with count */}
+                    <div className="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 className="text-2xl font-semibold text-gray-900">
+                                {blogs.length} {blogs.length === 1 ? 'Blog' : 'Blogs'}
+                            </h2>
+                            <p className="text-sm text-gray-600 mt-1">Latest articles first</p>
                         </div>
-                    ) : blogs.length === 0 ? (
-                        <div className="text-center py-16 bg-gray-50 rounded-lg">
-                            <h3 className="text-lg font-medium text-gray-900">No blogs yet</h3>
-                            <p className="mt-1 text-gray-500">Be the first to share your knowledge!</p>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {blogs.map((blog) => (
-                                <Link href={`/blogs/${blog.author.id}/${blog._id || blog.id}`} key={blog._id || blog.id}>
-                                    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 h-full flex flex-col border border-gray-200">
-                                        <div className="h-48 overflow-hidden">
-                                            <img
-                                                src={blog.coverImage}
-                                                alt={blog.title}
-                                                className="w-full h-full object-cover"
-                                            />
+                    </div>
+
+                    {/* Grid of blogs */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {blogs.map((blog) => (
+                            <Link 
+                                href={`/blogs/${blog._id || blog.id}`} 
+                                key={blog._id || blog.id}
+                                className="group"
+                            >
+                                <article className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 h-full flex flex-col border border-gray-100 group-hover:border-gray-200">
+                                    {/* Cover Image */}
+                                    <div className="h-48 overflow-hidden bg-gray-100">
+                                        <img
+                                            src={blog.coverImage}
+                                            alt={blog.title}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                        />
+                                    </div>
+                                    
+                                    {/* Content */}
+                                    <div className="p-6 flex-grow flex flex-col">
+                                        {/* Tags */}
+                                        <div className="flex flex-wrap gap-2 mb-3">
+                                            {blog.tags.slice(0, 2).map((tag, index) => (
+                                                <span
+                                                    key={index}
+                                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
+                                                >
+                                                    <FiTag className="w-3 h-3 mr-1" />
+                                                    {tag}
+                                                </span>
+                                            ))}
+                                            {blog.tags.length > 2 && (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 border border-gray-200">
+                                                    +{blog.tags.length - 2} more
+                                                </span>
+                                            )}
                                         </div>
-                                        <div className="p-5 flex-grow">
-                                            <div className="flex space-x-2 mb-3">
-                                                {blog.tags.slice(0, 3).map((tag, index) => (
-                                                    <span
-                                                        key={index}
-                                                        className="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-md"
-                                                    >
-                                                        {tag}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                            <h3 className="text-xl font-semibold text-gray-900 mb-2">{blog.title}</h3>
-                                            <p className="text-gray-600 mb-4 line-clamp-3">{blog.excerpt}</p>
-                                            <div className="flex items-center justify-between mt-auto">
+                                        
+                                        {/* Title */}
+                                        <h3 className="text-xl font-semibold text-gray-900 mb-3 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                                            {blog.title}
+                                        </h3>
+                                        
+                                        {/* Excerpt */}
+                                        <p className="text-gray-600 mb-4 line-clamp-3 flex-grow text-sm leading-relaxed">
+                                            {blog.excerpt}
+                                        </p>
+                                        
+                                        {/* Footer */}
+                                        <div className="mt-auto">
+                                            {/* Author and Date */}
+                                            <div className="flex items-center justify-between mb-3">
                                                 <div className="flex items-center">
                                                     <img
                                                         src={blog.author.avatar}
                                                         alt={blog.author.name}
-                                                        className="w-8 h-8 rounded-full mr-2"
+                                                        className="w-8 h-8 rounded-full mr-3 border-2 border-white shadow-sm"
                                                     />
-                                                    <span className="text-sm text-gray-700">{blog.author.name}</span>
+                                                    <div>
+                                                        <p className="text-sm font-medium text-gray-900">{blog.author.name}</p>
+                                                        <p className="text-xs text-gray-500">{formatDate(blog.createdAt)}</p>
+                                                    </div>
                                                 </div>
-                                                <div className="text-sm text-gray-500">{formatDate(blog.createdAt)}</div>
                                             </div>
-                                            <div className="mt-2 text-sm text-gray-500">{blog.readTime} min read</div>
+                                            
+                                            {/* Read Time */}
+                                            <div className="flex items-center text-xs text-gray-500">
+                                                <FiClock className="w-3 h-3 mr-1" />
+                                                {blog.readTime} min read
+                                            </div>
                                         </div>
                                     </div>
-                                </Link>
-                            ))}
-                        </div>
-                    )}
+                                </article>
+                            </Link>
+                        ))}
+                    </div>
                 </>
             )}
         </div>

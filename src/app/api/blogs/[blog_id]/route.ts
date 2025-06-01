@@ -1,33 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import connectDB from '@/lib/db';
 import Blog from '@/models/Blog';
 
-// GET endpoint for fetching a specific blog
+// GET endpoint for fetching a specific blog by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { user_id: string; blog_id: string } }
+  { params }: { params: { blog_id: string } }
 ) {
   try {
-    const { user_id, blog_id } = params;
-
     // Connect to database
     await connectDB();
 
-    // Find blog by ID
+    const { blog_id } = params;
+
+    if (!blog_id) {
+      return NextResponse.json(
+        { error: 'Blog ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Fetch blog from database
     const blog = await Blog.findById(blog_id);
 
-    // If blog not found or doesn't belong to the specified user
-    if (!blog || blog.author.id !== user_id) {
+    if (!blog) {
       return NextResponse.json(
         { error: 'Blog not found' },
         { status: 404 }
       );
     }
 
-    // Return blog
-    return NextResponse.json({ blog });
+    // Return the blog
+    return NextResponse.json({
+      blog
+    });
   } catch (error) {
-    console.error('Error fetching blog:', error);
+    console.error('Error in blog detail API route:', error);
     return NextResponse.json(
       { error: 'Failed to fetch blog' },
       { status: 500 }
@@ -38,10 +47,15 @@ export async function GET(
 // PUT endpoint for updating a blog
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { user_id: string; blog_id: string } }
+  { params }: { params: { blog_id: string } }
 ) {
   try {
-    const { user_id, blog_id } = params;
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { blog_id } = params;
     
     // Parse the request body
     const { title, content, coverImage, tags } = await request.json();
@@ -52,8 +66,8 @@ export async function PUT(
     // Find blog by ID
     const blog = await Blog.findById(blog_id);
 
-    // If blog not found or doesn't belong to the specified user
-    if (!blog || blog.author.id !== user_id) {
+    // If blog not found or doesn't belong to the current user
+    if (!blog || blog.author.id !== userId) {
       return NextResponse.json(
         { error: 'Blog not found or unauthorized' },
         { status: 404 }
@@ -113,10 +127,15 @@ export async function PUT(
 // DELETE endpoint for deleting a blog
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { user_id: string; blog_id: string } }
+  { params }: { params: { blog_id: string } }
 ) {
   try {
-    const { user_id, blog_id } = params;
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { blog_id } = params;
 
     // Connect to database
     await connectDB();
@@ -124,8 +143,8 @@ export async function DELETE(
     // Find blog by ID
     const blog = await Blog.findById(blog_id);
 
-    // If blog not found or doesn't belong to the specified user
-    if (!blog || blog.author.id !== user_id) {
+    // If blog not found or doesn't belong to the current user
+    if (!blog || blog.author.id !== userId) {
       return NextResponse.json(
         { error: 'Blog not found or unauthorized' },
         { status: 404 }

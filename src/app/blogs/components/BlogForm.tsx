@@ -9,9 +9,10 @@ import CoverImageUpload from './CoverImageUpload';
 interface BlogFormProps {
     userId: string | null | undefined;
     isSignedIn: boolean | undefined;
+    onBlogCreated?: () => void;
 }
 
-const BlogForm: React.FC<BlogFormProps> = ({ userId, isSignedIn }) => {
+const BlogForm: React.FC<BlogFormProps> = ({ userId, isSignedIn, onBlogCreated }) => {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [coverImage, setCoverImage] = useState('');
@@ -68,8 +69,13 @@ const BlogForm: React.FC<BlogFormProps> = ({ userId, isSignedIn }) => {
             setTags('');
             setErrorMessage('');
 
-            // Redirect to the new blog
-            router.push(`/blogs/${newBlog.author.id}/${newBlog._id}`);
+            // Call callback if provided, otherwise redirect to the new blog
+            if (onBlogCreated) {
+                onBlogCreated();
+            } else {
+                // Fallback: redirect to the new blog with updated URL structure
+                router.push(`/blogs/${newBlog._id}`);
+            }
 
         } catch (error) {
             console.error('Error creating blog:', error);
