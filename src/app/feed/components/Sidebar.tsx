@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { FiUsers, FiStar, FiBookOpen, FiAward, FiMail, FiLinkedin, FiTwitter } from 'react-icons/fi';
 import { Author } from '../types';
 
@@ -21,6 +22,12 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ author, stats, socialLinks, onShowPublications }: SidebarProps) {
+  const router = useRouter();
+
+  const handleBlogsClick = () => {
+    router.push('/blogs');
+  };
+
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm p-6 w-80">
       {/* Profile Section */}
@@ -50,7 +57,10 @@ export default function Sidebar({ author, stats, socialLinks, onShowPublications
           <p className="text-2xl font-semibold text-gray-900">{stats.rating}</p>
           <p className="text-sm text-gray-500">Rating</p>
         </div>
-        <div className="bg-gray-50 rounded-lg p-4 text-center">
+        <div 
+          className="bg-gray-50 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-100 transition-colors"
+          onClick={handleBlogsClick}
+        >
           <FiBookOpen className="mx-auto mb-2 text-green-500" size={24} />
           <p className="text-2xl font-semibold text-gray-900">{stats.blogs}</p>
           <p className="text-sm text-gray-500">Blogs</p>
@@ -68,13 +78,13 @@ export default function Sidebar({ author, stats, socialLinks, onShowPublications
       {/* Quick Links */}
       <div className="space-y-3 mb-6">
         <h3 className="font-semibold text-gray-900 mb-2">Quick Links</h3>
-        <a
-          href="#"
-          className="flex items-center text-gray-600 hover:text-blue-600 transition-colors"
+        <button
+          onClick={handleBlogsClick}
+          className="flex items-center text-gray-600 hover:text-blue-600 transition-colors w-full text-left"
         >
           <FiBookOpen className="mr-2" />
           View All Blogs
-        </a>
+        </button>
         <a
           href="#"
           className="flex items-center text-gray-600 hover:text-blue-600 transition-colors"

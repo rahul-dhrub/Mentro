@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@clerk/nextjs';
+import { FiX, FiArrowLeft } from 'react-icons/fi';
 import CreatePost from './components/CreatePost';
 import PostCard from './components/PostCard';
 import Sidebar from './components/Sidebar';
@@ -10,6 +11,7 @@ import RightSidebar from './components/RightSidebar';
 import Navbar from './components/Navbar';
 import CourseSidebar from './components/CourseSidebar';
 import PublicationsModal from './components/PublicationsModal';
+import SearchBar from './components/SearchBar';
 import UserProfile from './components/UserProfile';
 import HashtagFeed from './components/HashtagFeed';
 import { Post, Author, Publication } from './types';
@@ -400,6 +402,7 @@ export default function FeedPage() {
       />
       
       <div className="pt-16 flex max-w-7xl mx-auto">
+        {/* Left Sidebar - Hidden on mobile, visible on desktop */}
         <div className="hidden lg:block w-80 flex-shrink-0">
           <div className="sticky top-20 h-[calc(100vh-80px)] overflow-y-auto pr-2">
             <Sidebar
@@ -419,10 +422,68 @@ export default function FeedPage() {
             />
           </div>
         </div>
+
+        {/* Mobile Sidebar Overlay */}
+        {isSidebarVisible && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            {/* Backdrop - Only covers the area to the right of sidebar */}
+            <div 
+              className="fixed left-80 top-16 right-0 bottom-0 bg-black bg-opacity-20"
+              onClick={toggleSidebar}
+            ></div>
+            
+            {/* Sidebar Content */}
+            <div className="fixed left-0 top-16 bottom-0 w-80 bg-white shadow-xl overflow-y-auto border-r border-gray-200">
+              {/* Sidebar Header with Close Button */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white sticky top-0 z-10">
+                <h2 className="text-lg font-semibold text-gray-900">Menu</h2>
+                <button
+                  onClick={toggleSidebar}
+                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Close Sidebar"
+                >
+                  <FiX size={20} />
+                </button>
+              </div>
+              
+              <div className="p-4">
+                {/* Mobile Search Bar */}
+                <div className="mb-6">
+                  <SearchBar
+                    onUserSelect={(userId) => {
+                      handleUserSelect(userId);
+                      toggleSidebar(); // Close sidebar after selection
+                    }}
+                    onHashtagSelect={(hashtag) => {
+                      handleHashtagSelect(hashtag);
+                      toggleSidebar(); // Close sidebar after selection
+                    }}
+                    isSearchActive={isSearchActive}
+                    setIsSearchActive={setIsSearchActive}
+                  />
+                </div>
+                
+                <Sidebar
+                  author={currentUser}
+                  stats={{
+                    followers: currentUser.followers || 128,
+                    rating: 4.8,
+                    blogs: currentUser.posts || 12,
+                    publications: publications.length,
+                  }}
+                  socialLinks={{
+                    email: currentUser.email,
+                    linkedin: 'https://linkedin.com/in/example',
+                    twitter: 'https://twitter.com/example',
+                  }}
+                  onShowPublications={() => setIsPublicationsModalOpen(true)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
         
-        <main className={`flex-1 transition-all duration-300 ${
-          isSidebarVisible ? 'ml-64' : 'ml-0'
-        } lg:mr-80 p-6`}>
+        <main className="flex-1 lg:mr-80 p-6">
           {renderMainContent()}
         </main>
         

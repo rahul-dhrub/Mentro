@@ -69,13 +69,15 @@ export default function Navbar({
         <div className="flex justify-between items-center h-16">
           {/* Left Side - Logo and Menu */}
           <div className="flex items-center space-x-4">
-            <button
-              onClick={onSidebarToggle}
-              className="p-2 text-gray-600 hover:text-blue-600"
-              title={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
-            >
-              <FiMenu size={24} />
-            </button>
+            {!isSidebarVisible && (
+              <button
+                onClick={onSidebarToggle}
+                className="lg:hidden p-2 text-gray-600 hover:text-blue-600"
+                title="Show Sidebar"
+              >
+                <FiMenu size={24} />
+              </button>
+            )}
             <Link href="/" className="flex items-center space-x-2">
               <FiBook className="text-blue-600" size={24} />
               <span className="text-xl font-semibold text-gray-900">Mentro</span>

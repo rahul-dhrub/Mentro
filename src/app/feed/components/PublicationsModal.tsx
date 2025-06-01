@@ -109,7 +109,7 @@ const PublicationsModal: React.FC<PublicationsModalProps> = ({
                       name="title"
                       value={newPublication.title}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
                       placeholder="Publication title"
                       required
                     />
@@ -122,7 +122,7 @@ const PublicationsModal: React.FC<PublicationsModalProps> = ({
                       name="url"
                       value={newPublication.url}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
                       placeholder="https://example.com/publication"
                       required
                     />
@@ -136,7 +136,7 @@ const PublicationsModal: React.FC<PublicationsModalProps> = ({
                         name="journal"
                         value={newPublication.journal}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
                         placeholder="Journal or conference name"
                       />
                     </div>
@@ -148,7 +148,7 @@ const PublicationsModal: React.FC<PublicationsModalProps> = ({
                         name="year"
                         value={newPublication.year}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
                         placeholder="Publication year"
                         min="1900"
                         max={new Date().getFullYear()}
@@ -163,7 +163,7 @@ const PublicationsModal: React.FC<PublicationsModalProps> = ({
                       name="authors"
                       value={newPublication.authors?.join(', ')}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
                       placeholder="Author 1, Author 2, Author 3"
                     />
                   </div>
@@ -175,7 +175,7 @@ const PublicationsModal: React.FC<PublicationsModalProps> = ({
                       value={newPublication.abstract}
                       onChange={handleInputChange}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
                       placeholder="Brief summary of the publication"
                     />
                   </div>

@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { FiArrowLeft } from 'react-icons/fi';
 import Lottie from "lottie-react";
 
 interface BackgroundProps {
@@ -9,6 +11,11 @@ interface BackgroundProps {
 
 const Background: React.FC<BackgroundProps> = ({ children }) => {
     const [animationData, setAnimationData] = useState<any>(null);
+    const router = useRouter();
+
+    const handleBackClick = () => {
+        router.push('/feed');
+    };
 
     useEffect(() => {
         // Fetch animation data from public folder
@@ -31,7 +38,16 @@ const Background: React.FC<BackgroundProps> = ({ children }) => {
                 )}
             </div>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-8 bg-white/90 p-4 rounded-lg shadow-sm">Academic Blogs</h1>
+                <div className="flex items-center mb-8 bg-white/90 p-4 rounded-lg shadow-sm">
+                    <button
+                        onClick={handleBackClick}
+                        className="mr-4 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="Back to Feed"
+                    >
+                        <FiArrowLeft size={24} />
+                    </button>
+                    <h1 className="text-3xl font-bold text-gray-900">Academic Blogs</h1>
+                </div>
                 {children}
             </div>
         </>

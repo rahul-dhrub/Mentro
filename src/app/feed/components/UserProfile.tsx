@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FiMapPin, FiUsers, FiEdit, FiCalendar, FiBook, FiAward, FiFileText } from 'react-icons/fi';
+import { FiMapPin, FiUsers, FiEdit, FiCalendar, FiBook, FiAward, FiFileText, FiUserPlus } from 'react-icons/fi';
 import { Author, Post, UserProfile as UserProfileType, Blog } from '../types';
 import { mockAuthors, mockPosts, mockPublications } from '../mockData';
 import PostCard from './PostCard';
@@ -134,7 +134,7 @@ export default function UserProfile({
               {userProfile.id !== currentUser.id && (
                 <button
                   onClick={handleFollow}
-                  className={`mt-4 md:mt-0 px-6 py-2 rounded-full font-semibold transition-colors ${
+                  className={`mt-4 md:mt-0 px-6 py-1.5 rounded-full font-medium text-sm transition-colors ${
                     isFollowing
                       ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
                       : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -153,15 +153,24 @@ export default function UserProfile({
             {/* Stats */}
             <div className="flex justify-center md:justify-start space-x-6">
               <div className="text-center">
-                <div className="text-xl font-bold text-gray-900">{userProfile.posts}</div>
+                <div className="flex items-center justify-center mb-1">
+                  <FiEdit className="w-4 h-4 text-gray-600 mr-1" />
+                  <div className="text-xl font-bold text-gray-900">{userProfile.posts}</div>
+                </div>
                 <div className="text-sm text-gray-500">Posts</div>
               </div>
               <div className="text-center">
-                <div className="text-xl font-bold text-gray-900">{userProfile.followers}</div>
+                <div className="flex items-center justify-center mb-1">
+                  <FiUsers className="w-4 h-4 text-gray-600 mr-1" />
+                  <div className="text-xl font-bold text-gray-900">{userProfile.followers}</div>
+                </div>
                 <div className="text-sm text-gray-500">Followers</div>
               </div>
               <div className="text-center">
-                <div className="text-xl font-bold text-gray-900">{userProfile.following}</div>
+                <div className="flex items-center justify-center mb-1">
+                  <FiUserPlus className="w-4 h-4 text-gray-600 mr-1" />
+                  <div className="text-xl font-bold text-gray-900">{userProfile.following}</div>
+                </div>
                 <div className="text-sm text-gray-500">Following</div>
               </div>
             </div>
