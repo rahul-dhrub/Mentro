@@ -7,7 +7,11 @@ export const mockAuthors: Author[] = [
     email: 'sarah.johnson@university.edu',
     avatar: 'https://media.istockphoto.com/id/814423752/photo/eye-of-model-with-colorful-art-make-up-close-up.jpg?s=612x612&w=0&k=20&c=l15OdMWjgCKycMMShP8UK94ELVlEGvt7GmB_esHWPYE=',
     title: 'Professor of Computer Science',
-    department: 'Computer Science'
+    department: 'Computer Science',
+    bio: 'Research in AI, Machine Learning, and Data Science. Passionate about teaching and innovation.',
+    followers: 245,
+    following: 89,
+    posts: 42
   },
   {
     id: '2',
@@ -15,7 +19,11 @@ export const mockAuthors: Author[] = [
     email: 'michael.chen@university.edu',
     avatar: 'https://static.vecteezy.com/system/resources/thumbnails/036/324/708/small/ai-generated-picture-of-a-tiger-walking-in-the-forest-photo.jpg',
     title: 'Associate Professor',
-    department: 'Electrical Engineering'
+    department: 'Electrical Engineering',
+    bio: 'Circuit design expert, IoT researcher, and electronics enthusiast.',
+    followers: 189,
+    following: 134,
+    posts: 28
   },
   {
     id: '3',
@@ -23,7 +31,35 @@ export const mockAuthors: Author[] = [
     email: 'emily.rodriguez@university.edu',
     avatar: 'https://media.istockphoto.com/id/1419410282/photo/silent-forest-in-spring-with-beautiful-bright-sun-rays.jpg?s=612x612&w=0&k=20&c=UHeb1pGOw6ozr6utsenXHhV19vW6oiPIxDqhKCS2Llk=',
     title: 'Assistant Professor',
-    department: 'Mathematics'
+    department: 'Mathematics',
+    bio: 'Pure mathematics, topology, and mathematical modeling researcher.',
+    followers: 167,
+    following: 76,
+    posts: 35
+  },
+  {
+    id: '4',
+    name: 'Dr. Alex Thompson',
+    email: 'alex.thompson@university.edu',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
+    title: 'Professor of Physics',
+    department: 'Physics',
+    bio: 'Quantum mechanics, particle physics, and theoretical research.',
+    followers: 312,
+    following: 156,
+    posts: 67
+  },
+  {
+    id: '5',
+    name: 'Dr. Lisa Wang',
+    email: 'lisa.wang@university.edu',
+    avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b5bc?w=150&h=150&fit=crop&crop=face',
+    title: 'Associate Professor',
+    department: 'Chemistry',
+    bio: 'Organic chemistry, drug discovery, and molecular research.',
+    followers: 198,
+    following: 92,
+    posts: 51
   }
 ];
 
@@ -134,4 +170,16 @@ export const mockPublications = [
     citationCount: 15,
     abstract: 'This paper explores the challenges and opportunities of implementing explainable AI systems in healthcare settings, with a focus on clinical decision support.'
   }
+];
+
+// Add hashtags data for search
+export const mockHashtags = [
+  { id: '1', name: '#AI', posts: 156, description: 'Artificial Intelligence discussions and research' },
+  { id: '2', name: '#MachineLearning', posts: 124, description: 'Machine Learning techniques and applications' },
+  { id: '3', name: '#Research', posts: 89, description: 'Academic research and publications' },
+  { id: '4', name: '#Teaching', posts: 67, description: 'Teaching methods and educational content' },
+  { id: '5', name: '#Engineering', posts: 78, description: 'Engineering projects and innovations' },
+  { id: '6', name: '#Mathematics', posts: 45, description: 'Mathematical concepts and theorems' },
+  { id: '7', name: '#Physics', posts: 52, description: 'Physics experiments and theories' },
+  { id: '8', name: '#Chemistry', posts: 38, description: 'Chemistry research and discoveries' }
 ]; 

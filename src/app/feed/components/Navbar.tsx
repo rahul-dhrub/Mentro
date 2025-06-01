@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { FiBell, FiBook, FiCalendar, FiMessageSquare, FiSettings, FiUser, FiLogOut, FiMenu } from 'react-icons/fi';
+import { FiBell, FiBook, FiCalendar, FiMessageSquare, FiSettings, FiUser, FiLogOut, FiMenu, FiX } from 'react-icons/fi';
+import SearchBar from './SearchBar';
 
 interface NavbarProps {
   user: {
@@ -13,9 +14,23 @@ interface NavbarProps {
   };
   onSidebarToggle: () => void;
   isSidebarVisible: boolean;
+  onUserSelect: (userId: string) => void;
+  onHashtagSelect: (hashtag: string) => void;
+  isSearchActive: boolean;
+  setIsSearchActive: (active: boolean) => void;
+  onBackToFeed: () => void;
 }
 
-export default function Navbar({ user, onSidebarToggle, isSidebarVisible }: NavbarProps) {
+export default function Navbar({ 
+  user, 
+  onSidebarToggle, 
+  isSidebarVisible, 
+  onUserSelect, 
+  onHashtagSelect,
+  isSearchActive,
+  setIsSearchActive,
+  onBackToFeed
+}: NavbarProps) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -43,6 +58,11 @@ export default function Navbar({ user, onSidebarToggle, isSidebarVisible }: Navb
     }
   ];
 
+  const handleBackToFeed = () => {
+    setIsSearchActive(false);
+    onBackToFeed();
+  };
+
   return (
     <nav className="bg-white/90 backdrop-blur-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
       <div className="max-w-7xl mx-auto px-4">
@@ -60,6 +80,17 @@ export default function Navbar({ user, onSidebarToggle, isSidebarVisible }: Navb
               <FiBook className="text-blue-600" size={24} />
               <span className="text-xl font-semibold text-gray-900">Mentro</span>
             </Link>
+            
+            {/* Back to Feed button when search is active */}
+            {isSearchActive && (
+              <button
+                onClick={handleBackToFeed}
+                className="flex items-center space-x-2 px-3 py-1 text-sm text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-full transition-colors"
+              >
+                <FiX size={16} />
+                <span>Back to Feed</span>
+              </button>
+            )}
           </div>
 
           {/* Navigation Links */}
@@ -76,6 +107,16 @@ export default function Navbar({ user, onSidebarToggle, isSidebarVisible }: Navb
             <Link href="/resources" className="text-gray-600 hover:text-blue-600">
               Resources
             </Link>
+            
+            {/* Search Bar - after Resources */}
+            <div className="w-80">
+              <SearchBar
+                onUserSelect={onUserSelect}
+                onHashtagSelect={onHashtagSelect}
+                isSearchActive={isSearchActive}
+                setIsSearchActive={setIsSearchActive}
+              />
+            </div>
           </div>
 
           {/* Right Side Actions */}

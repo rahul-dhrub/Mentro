@@ -5,6 +5,10 @@ export interface Author {
   title?: string;
   department?: string;
   avatar: string;
+  followers?: number;
+  following?: number;
+  bio?: string;
+  posts?: number;
 }
 
 export type MediaType = 'image' | 'video' | 'pdf' | 'document' | 'emoji';
@@ -52,4 +56,49 @@ export interface Publication {
   authors?: string[];
   citationCount?: number;
   abstract?: string;
+}
+
+export interface SearchResult {
+  type: 'user' | 'hashtag';
+  id: string;
+  name: string;
+  avatar?: string;
+  title?: string;
+  department?: string;
+  followers?: number;
+  posts?: number;
+  description?: string;
+}
+
+export interface UserProfile extends Author {
+  userPosts: Post[];
+  publications?: Publication[];
+  courses?: Course[];
+  blogs?: Blog[];
+  isFollowing?: boolean;
+}
+
+export interface Course {
+  id: string;
+  title: string;
+  code: string;
+  students: number;
+  progress: number;
+}
+
+export interface Blog {
+  id: string;
+  _id?: string; // MongoDB document ID
+  title: string;
+  content: string;
+  coverImage: string;
+  excerpt: string;
+  author: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+  createdAt: string;
+  tags: string[];
+  readTime: number;
 } 

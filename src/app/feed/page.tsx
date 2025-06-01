@@ -10,6 +10,8 @@ import RightSidebar from './components/RightSidebar';
 import Navbar from './components/Navbar';
 import CourseSidebar from './components/CourseSidebar';
 import PublicationsModal from './components/PublicationsModal';
+import UserProfile from './components/UserProfile';
+import HashtagFeed from './components/HashtagFeed';
 import { Post, Author, Publication } from './types';
 import { mockAuthors, mockPublications } from './mockData';
 import Lottie from "lottie-react";
@@ -54,6 +56,12 @@ export default function FeedPage() {
   const { userId, isLoaded, isSignedIn } = useAuth();
   const [isPublicationsModalOpen, setIsPublicationsModalOpen] = useState(false);
   const [publications, setPublications] = useState<Publication[]>([]);
+
+  // Search-related state
+  const [viewMode, setViewMode] = useState<'feed' | 'user' | 'hashtag'>('feed');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedHashtag, setSelectedHashtag] = useState<string | null>(null);
+  const [isSearchActive, setIsSearchActive] = useState(false);
 
   // Fetch current user data
   useEffect(() => {
@@ -200,6 +208,28 @@ export default function FeedPage() {
     fetchPosts();
   }, [isPersonalPosts]);
 
+  // Search handlers
+  const handleUserSelect = (userId: string) => {
+    setSelectedUserId(userId);
+    setSelectedHashtag(null);
+    setViewMode('user');
+    setIsSearchActive(true);
+  };
+
+  const handleHashtagSelect = (hashtag: string) => {
+    setSelectedHashtag(hashtag);
+    setSelectedUserId(null);
+    setViewMode('hashtag');
+    setIsSearchActive(true);
+  };
+
+  const handleBackToFeed = () => {
+    setViewMode('feed');
+    setSelectedUserId(null);
+    setSelectedHashtag(null);
+    setIsSearchActive(false);
+  };
+
   const handleTogglePersonalPosts = (isPersonal: boolean) => {
     setIsPersonalPosts(isPersonal);
   };
@@ -209,139 +239,62 @@ export default function FeedPage() {
   };
 
   const handlePostCreate = (newPost: Post) => {
-    setPosts([newPost, ...posts]);
+    setPosts(prev => [newPost, ...prev]);
   };
 
   const handleLike = (postId: string) => {
-    setPosts(posts.map(post =>
-      post.id === postId
-        ? { ...post, likes: post.likes + 1 }
-        : post
-    ));
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.id === postId ? { ...post, likes: post.likes + 1 } : post
+      )
+    );
   };
 
   const handleComment = (postId: string, content: string) => {
-    setPosts(posts.map(post =>
-      post.id === postId
-        ? {
-          ...post,
-          comments: [
-            {
-              id: Date.now().toString(),
-              author: currentUser,
-              content,
-              timestamp: 'Just now',
-              likes: 0
-            },
-            ...post.comments
-          ]
-        }
-        : post
-    ));
+    const newComment = {
+      id: Date.now().toString(),
+      author: currentUser,
+      content,
+      timestamp: new Date().toLocaleString(),
+      likes: 0
+    };
+
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.id === postId 
+          ? { ...post, comments: [...post.comments, newComment] }
+          : post
+      )
+    );
   };
 
   const handleShare = (postId: string) => {
-    console.log('Sharing post:', postId);
+    console.log('Shared post:', postId);
   };
 
-  const facultyStats = {
-    followers: 1250,
-    rating: 4.8,
-    blogs: 45,
-    publications: 28
-  };
-
-  const socialLinks = {
-    email: 'sarah.johnson@university.edu',
-    linkedin: 'https://linkedin.com/in/sarahjohnson',
-    twitter: 'https://twitter.com/sarahjohnson'
-  };
-
-  const upcomingClasses = [
-    {
-      id: '1',
-      title: 'Advanced Machine Learning',
-      time: '10:00 AM - 11:30 AM',
-      room: 'CS-101',
-      students: 35
-    },
-    {
-      id: '2',
-      title: 'Data Structures',
-      time: '2:00 PM - 3:30 PM',
-      room: 'CS-203',
-      students: 42
-    },
-    {
-      id: '3',
-      title: 'Software Engineering',
-      time: '4:00 PM - 5:30 PM',
-      room: 'CS-105',
-      students: 28
-    }
-  ];
-
-  const messages = [
-    {
-      id: '1',
-      sender: {
-        name: 'Dr. Michael Chen',
-        avatar: mockAuthors[0].avatar
-      },
-      content: 'Can we discuss the research proposal tomorrow?',
-      time: '5m ago',
-      unread: true
-    },
-    {
-      id: '2',
-      sender: {
-        name: 'Dr. Emily Rodriguez',
-        avatar: mockAuthors[0].avatar
-      },
-      content: 'The workshop materials are ready for review.',
-      time: '1h ago',
-      unread: false
-    },
-    {
-      id: '3',
-      sender: {
-        name: 'John Smith',
-        avatar: 'https://ui-avatars.com/api/?name=John+Smith'
-      },
-      content: 'Thank you for the feedback on my thesis!',
-      time: '2h ago',
-      unread: false
-    }
-  ];
-
-  // Fetch publications
-  useEffect(() => {
-    const fetchPublications = async () => {
-      try {
-        // Try to fetch publications from API
-        const response = await fetch('/api/publications');
-        
-        if (response.ok) {
-          const data = await response.json();
-          setPublications(data.publications);
-        } else {
-          // Fall back to mock data
-          setPublications(mockPublications);
-        }
-      } catch (error) {
-        console.error('Error fetching publications:', error);
-        // Use mock data if API fails
+  // Publications handling
+  const fetchPublications = async () => {
+    try {
+      const response = await fetch('/api/publications');
+      if (!response.ok) {
+        console.log('API error, using mock publications');
         setPublications(mockPublications);
+        return;
       }
-    };
-    
+      const data = await response.json();
+      setPublications(data.publications || []);
+    } catch (error) {
+      console.error('Error fetching publications:', error);
+      setPublications(mockPublications);
+    }
+  };
+
+  useEffect(() => {
     fetchPublications();
   }, []);
 
-  // Handle adding a new publication
   const handleAddPublication = async (newPublication: Omit<Publication, 'id'>) => {
     try {
-      // Try to add publication via API
       const response = await fetch('/api/publications', {
         method: 'POST',
         headers: {
@@ -349,124 +302,182 @@ export default function FeedPage() {
         },
         body: JSON.stringify(newPublication),
       });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setPublications(prev => [...prev, data.publication]);
-      } else {
-        // For mock purposes, we'll just add it to the state with a fake ID
-        const mockId = `mock-${Date.now()}`;
-        setPublications(prev => [...prev, { 
-          id: mockId, 
-          ...newPublication 
-        }]);
+
+      if (!response.ok) {
+        throw new Error('Failed to add publication');
       }
+
+      const data = await response.json();
+      setPublications(prev => [data.publication, ...prev]);
+      setIsPublicationsModalOpen(false);
     } catch (error) {
       console.error('Error adding publication:', error);
-      // For mock purposes, we'll just add it to the state with a fake ID
-      const mockId = `mock-${Date.now()}`;
-      setPublications(prev => [...prev, { 
-        id: mockId, 
-        ...newPublication 
-      }]);
+      const mockPublication = {
+        id: Date.now().toString(),
+        ...newPublication
+      };
+      setPublications(prev => [mockPublication, ...prev]);
+      setIsPublicationsModalOpen(false);
     }
   };
 
+  // Render different views based on search state
+  const renderMainContent = () => {
+    if (viewMode === 'user' && selectedUserId) {
+      return (
+        <UserProfile
+          userId={selectedUserId}
+          currentUser={currentUser}
+          onLike={handleLike}
+          onComment={handleComment}
+          onShare={handleShare}
+        />
+      );
+    }
+
+    if (viewMode === 'hashtag' && selectedHashtag) {
+      return (
+        <HashtagFeed
+          hashtag={selectedHashtag}
+          currentUser={currentUser}
+          onLike={handleLike}
+          onComment={handleComment}
+          onShare={handleShare}
+        />
+      );
+    }
+
+    // Default feed view
+    return (
+      <>
+        <CreatePost 
+          currentUser={currentUser} 
+          onPostCreate={handlePostCreate}
+        />
+        
+        <div className="space-y-6">
+          {posts.map(post => (
+            <PostCard
+              key={post.id}
+              post={post}
+              currentUser={currentUser}
+              onLike={handleLike}
+              onComment={handleComment}
+              onShare={handleShare}
+            />
+          ))}
+          
+          {isLoading && (
+            <div className="flex justify-center py-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                <p className="text-gray-600">Loading more posts...</p>
+              </div>
+            </div>
+          )}
+          
+          <div ref={observerTarget} className="h-4" />
+        </div>
+      </>
+    );
+  };
+
   return (
-    <>
-      <div className="fixed inset-0 -z-10">
-        {animationData && (
-          <Lottie
-            animationData={animationData}
-            loop
-            autoplay
-            style={{ height: "100vh", width: "100vw", backgroundColor: "white" }}
-          />
-        )}
-      </div>
-      <Navbar
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <Navbar 
         user={{
           name: currentUser.name,
-          avatar: currentUser.avatar || '',
+          avatar: currentUser.avatar,
           title: currentUser.title || 'Faculty Member'
-        }}
-        onSidebarToggle={toggleSidebar}
+        }} 
+        onSidebarToggle={toggleSidebar} 
         isSidebarVisible={isSidebarVisible}
+        onUserSelect={handleUserSelect}
+        onHashtagSelect={handleHashtagSelect}
+        isSearchActive={isSearchActive}
+        setIsSearchActive={setIsSearchActive}
+        onBackToFeed={handleBackToFeed}
       />
-      <div className="flex min-h-screen pt-16">
-        <CourseSidebar
-          courses={mockCourses}
-          isVisible={isSidebarVisible}
-          onClose={() => setIsSidebarVisible(false)}
-        />
-        <div className="flex-1 flex gap-8 max-w-7xl mx-auto px-4">
-          {/* Left Sidebar */}
-          <div className="hidden lg:block w-80 flex-shrink-0">
-            <div className="sticky top-20 h-[calc(100vh-80px)] overflow-y-auto pr-2">
-              <Sidebar
-                author={currentUser}
-                stats={{
-                  followers: 128,
-                  rating: 4.8,
-                  blogs: 12,
-                  publications: publications.length,
-                }}
-                socialLinks={{
-                  email: currentUser.email,
-                  linkedin: 'https://linkedin.com/in/example',
-                  twitter: 'https://twitter.com/example',
-                }}
-                onShowPublications={() => setIsPublicationsModalOpen(true)}
-              />
-            </div>
-          </div>
-
-          {/* Main Content - Scrollable */}
-          <div className="flex-1 max-w-2xl w-full mx-auto">
-            <CreatePost
-              currentUser={currentUser}
-              onPostCreate={handlePostCreate}
-              onTogglePersonalPosts={handleTogglePersonalPosts}
+      
+      <div className="pt-16 flex max-w-7xl mx-auto">
+        <div className="hidden lg:block w-80 flex-shrink-0">
+          <div className="sticky top-20 h-[calc(100vh-80px)] overflow-y-auto pr-2">
+            <Sidebar
+              author={currentUser}
+              stats={{
+                followers: currentUser.followers || 128,
+                rating: 4.8,
+                blogs: currentUser.posts || 12,
+                publications: publications.length,
+              }}
+              socialLinks={{
+                email: currentUser.email,
+                linkedin: 'https://linkedin.com/in/example',
+                twitter: 'https://twitter.com/example',
+              }}
+              onShowPublications={() => setIsPublicationsModalOpen(true)}
             />
-            <div className="space-y-6">
-              {posts.map(post => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  currentUser={currentUser}
-                  onLike={handleLike}
-                  onComment={handleComment}
-                  onShare={handleShare}
-                />
-              ))}
-            </div>
-            {isLoading && (
-              <div className="flex justify-center py-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              </div>
-            )}
-            <div ref={observerTarget} className="h-4" />
           </div>
-
-          {/* Right Sidebar */}
-          <div className="hidden xl:block w-80 flex-shrink-0">
-            <div className="sticky top-20 h-[calc(100vh-80px)] overflow-y-auto pl-2">
-              <RightSidebar
-                messages={messages}
-                upcomingClasses={upcomingClasses}
-              />
-            </div>
+        </div>
+        
+        <main className={`flex-1 transition-all duration-300 ${
+          isSidebarVisible ? 'ml-64' : 'ml-0'
+        } lg:mr-80 p-6`}>
+          {renderMainContent()}
+        </main>
+        
+        <div className="hidden lg:block w-80 flex-shrink-0">
+          <div className="sticky top-20 h-[calc(100vh-80px)] overflow-y-auto pl-2">
+            <RightSidebar 
+              upcomingClasses={[
+                {
+                  id: '1',
+                  title: 'Advanced Machine Learning',
+                  time: '10:00 AM - 11:30 AM',
+                  room: 'CS-101',
+                  students: 35
+                },
+                {
+                  id: '2',
+                  title: 'Data Structures',
+                  time: '2:00 PM - 3:30 PM',
+                  room: 'CS-203',
+                  students: 42
+                }
+              ]}
+              messages={[
+                {
+                  id: '1',
+                  sender: {
+                    name: 'Dr. Michael Chen',
+                    avatar: mockAuthors[1].avatar
+                  },
+                  content: 'Can we discuss the research proposal tomorrow?',
+                  time: '5m ago',
+                  unread: true
+                },
+                {
+                  id: '2',
+                  sender: {
+                    name: 'Dr. Emily Rodriguez',
+                    avatar: mockAuthors[2].avatar
+                  },
+                  content: 'The workshop materials are ready for review.',
+                  time: '1h ago',
+                  unread: false
+                }
+              ]}
+            />
           </div>
         </div>
       </div>
 
-      {/* Publications Modal */}
       <PublicationsModal
         isOpen={isPublicationsModalOpen}
         onClose={() => setIsPublicationsModalOpen(false)}
         publications={publications}
         onAddPublication={handleAddPublication}
       />
-    </>
+    </div>
   );
 }
