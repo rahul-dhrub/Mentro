@@ -22,6 +22,12 @@ export default function BlogDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [relatedBlogs, setRelatedBlogs] = useState<Blog[]>([]);
   
+  // Handle blog deletion
+  const handleBlogDelete = () => {
+    // Redirect to main blogs page after deletion
+    router.push('/blogs');
+  };
+
   useEffect(() => {
     const fetchBlog = async () => {
       setIsLoading(true);
@@ -144,7 +150,10 @@ export default function BlogDetailPage() {
         
         <div className="p-8">
           <BlogContent content={blog.content} />
-          <BlogActions />
+          <BlogActions 
+            blog={blog} 
+            onDelete={handleBlogDelete}
+          />
         </div>
       </article>
       
