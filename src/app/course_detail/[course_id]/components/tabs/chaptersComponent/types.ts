@@ -17,10 +17,10 @@ export interface ChaptersTabProps {
   expandedChapters: Set<string>;
   onAddChapter: (chapterData: { title: string; description: string }) => Promise<void>;
   onToggleChapter: (chapterId: string) => void;
-  onEditChapter: (chapterId: string) => void;
+  onEditChapter: (chapterId: string, chapterData: { title: string; description: string; isPublished: boolean }) => Promise<void>;
   onDeleteChapter: (chapterId: string) => void;
   onAddLesson: (chapterId: string, lessonData: any) => Promise<void>;
-  onEditLesson: (chapterId: string, lessonId: string) => void;
+  onEditLesson: (chapterId: string, lessonId: string, lessonData: any) => Promise<void>;
   onDeleteLesson: (chapterId: string, lessonId: string) => void;
 }
 
@@ -36,6 +36,15 @@ export interface LessonModalProps {
   onClose: () => void;
   chapterId: string | null;
   onAddLesson: (chapterId: string, lessonData: any) => Promise<void>;
+}
+
+export interface LessonEditModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  chapterId: string;
+  lessonId: string;
+  lesson: any | null;
+  onEditLesson: (chapterId: string, lessonId: string, lessonData: any) => Promise<void>;
 }
 
 export interface ContentFormProps {

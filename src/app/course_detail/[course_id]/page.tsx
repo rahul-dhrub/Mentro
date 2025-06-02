@@ -36,6 +36,8 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
     deleteChapter,
     addLesson,
     deleteLesson,
+    editChapter,
+    editLesson,
   } = useChaptersAndLessons(courseId || '');
   
   // Chapter UI state
@@ -123,8 +125,12 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
     });
   };
 
-  const handleEditChapter = (chapterId: string) => {
-    console.log('Edit chapter:', chapterId);
+  const handleEditChapter = async (chapterId: string, chapterData: { title: string; description: string; isPublished: boolean }) => {
+    try {
+      await editChapter(chapterId, chapterData);
+    } catch (error) {
+      console.error('Failed to edit chapter:', error);
+    }
   };
 
   const handleDeleteChapter = async (chapterId: string) => {
@@ -143,8 +149,12 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
     }
   };
 
-  const handleEditLesson = (chapterId: string, lessonId: string) => {
-    console.log('Edit lesson:', lessonId, 'in chapter:', chapterId);
+  const handleEditLesson = async (chapterId: string, lessonId: string, lessonData: any) => {
+    try {
+      await editLesson(chapterId, lessonId, lessonData);
+    } catch (error) {
+      console.error('Failed to edit lesson:', error);
+    }
   };
 
   const handleDeleteLesson = async (chapterId: string, lessonId: string) => {

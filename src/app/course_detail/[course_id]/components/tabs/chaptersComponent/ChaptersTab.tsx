@@ -3,6 +3,8 @@ import { FiPlus, FiX } from 'react-icons/fi';
 import { ChaptersTabProps } from './types';
 import ChapterItem from '../../ChapterItem';
 import LessonModal from './LessonModal';
+import ChapterEditModal from './ChapterEditModal';
+import LessonEditModal from './LessonEditModal';
 
 export default function ChaptersTab({
   chapters,
@@ -23,6 +25,12 @@ export default function ChaptersTab({
   const [isCreatingChapter, setIsCreatingChapter] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   
+  // Edit modal states
+  const [showChapterEditModal, setShowChapterEditModal] = useState(false);
+  const [chapterToEdit, setChapterToEdit] = useState<any>(null);
+  const [showLessonEditModal, setShowLessonEditModal] = useState(false);
+  const [lessonToEdit, setLessonToEdit] = useState<{chapterId: string, lessonId: string, lesson: any} | null>(null);
+  
   // Delete confirmation modal states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [chapterToDelete, setChapterToDelete] = useState<{id: string, title: string} | null>(null);
@@ -36,6 +44,25 @@ export default function ChaptersTab({
   const handleAddLessonClick = (chapterId: string) => {
     setCurrentChapterId(chapterId);
     setShowLessonModal(true);
+  };
+  
+  const handleEditChapterClick = (chapterId: string) => {
+    const chapter = chapters.find(c => c.id === chapterId);
+    if (chapter) {
+      setChapterToEdit(chapter);
+      setShowChapterEditModal(true);
+    }
+  };
+
+  const handleEditLessonClick = (chapterId: string, lessonId: string) => {
+    const chapter = chapters.find(c => c.id === chapterId);
+    if (chapter) {
+      const lesson = chapter.lessons.find(l => l.id === lessonId);
+      if (lesson) {
+        setLessonToEdit({ chapterId, lessonId, lesson });
+        setShowLessonEditModal(true);
+      }
+    }
   };
   
   const handleAddChapter = async () => {
@@ -310,10 +337,10 @@ export default function ChaptersTab({
             chapter={chapter}
             isExpanded={expandedChapters.has(chapter.id)}
             onToggle={() => onToggleChapter(chapter.id)}
-            onEdit={() => onEditChapter(chapter.id)}
+            onEdit={() => handleEditChapterClick(chapter.id)}
             onDelete={() => handleDeleteClick(chapter.id)}
             onAddLesson={() => handleAddLessonClick(chapter.id)}
-            onEditLesson={(lessonId) => onEditLesson(chapter.id, lessonId)}
+            onEditLesson={(lessonId) => handleEditLessonClick(chapter.id, lessonId)}
             onDeleteLesson={(lessonId) => handleLessonDeleteClick(chapter.id, lessonId)}
           />
         ))}
@@ -326,6 +353,36 @@ export default function ChaptersTab({
         chapterId={currentChapterId}
         onAddLesson={onAddLesson}
       />
+      
+      {/* Chapter Edit Modal */}
+      {showChapterEditModal && chapterToEdit && (
+        <ChapterEditModal
+          isOpen={showChapterEditModal}
+          onClose={() => setShowChapterEditModal(false)}
+          chapter={chapterToEdit}
+          onEditChapter={async (chapterId, chapterData) => {
+            await onEditChapter(chapterId, chapterData);
+            setShowChapterEditModal(false);
+            setChapterToEdit(null);
+          }}
+        />
+      )}
+      
+      {/* Lesson Edit Modal */}
+      {showLessonEditModal && lessonToEdit && (
+        <LessonEditModal
+          isOpen={showLessonEditModal}
+          onClose={() => setShowLessonEditModal(false)}
+          chapterId={lessonToEdit.chapterId}
+          lessonId={lessonToEdit.lessonId}
+          lesson={lessonToEdit.lesson}
+          onEditLesson={async (chapterId, lessonId, lessonData) => {
+            await onEditLesson(chapterId, lessonId, lessonData);
+            setShowLessonEditModal(false);
+            setLessonToEdit(null);
+          }}
+        />
+      )}
     </div>
   );
 } 

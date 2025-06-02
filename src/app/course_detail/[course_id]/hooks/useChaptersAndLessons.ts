@@ -151,6 +151,42 @@ export default function useChaptersAndLessons(courseId: string) {
     }
   };
 
+  const editChapter = async (chapterId: string, chapterData: { title: string; description: string; isPublished?: boolean }) => {
+    try {
+      const response = await fetch(`/api/chapters/${chapterId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(chapterData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update chapter');
+      }
+
+      const updatedChapter = await response.json();
+      
+      setChapters(prev => 
+        prev.map(chapter => 
+          chapter.id === chapterId 
+            ? { 
+                ...chapter, 
+                title: updatedChapter.title,
+                description: updatedChapter.description,
+                isPublished: updatedChapter.isPublished
+              }
+            : chapter
+        )
+      );
+      
+      return updatedChapter;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update chapter');
+      throw err;
+    }
+  };
+
   const addLesson = async (chapterId: string, lessonData: any) => {
     try {
       const response = await fetch('/api/lessons', {
@@ -228,6 +264,59 @@ export default function useChaptersAndLessons(courseId: string) {
     }
   };
 
+  const editLesson = async (chapterId: string, lessonId: string, lessonData: any) => {
+    try {
+      const response = await fetch(`/api/lessons/${lessonId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(lessonData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update lesson');
+      }
+
+      const updatedLesson = await response.json();
+      
+      const transformedLesson: Lesson = {
+        id: updatedLesson._id,
+        _id: updatedLesson._id,
+        title: updatedLesson.title,
+        description: updatedLesson.description,
+        duration: updatedLesson.duration,
+        isPublished: updatedLesson.isPublished,
+        isLive: updatedLesson.isLive,
+        lessonContents: updatedLesson.lessonContents || [],
+        liveScheduleDate: updatedLesson.liveScheduleDate,
+        liveScheduleTime: updatedLesson.liveScheduleTime,
+        liveScheduleLink: updatedLesson.liveScheduleLink,
+        timezone: updatedLesson.timezone,
+        assignments: updatedLesson.assignments || [],
+        quizzes: updatedLesson.quizzes || [],
+      };
+
+      setChapters(prev => 
+        prev.map(chapter => 
+          chapter.id === chapterId 
+            ? {
+                ...chapter,
+                lessons: chapter.lessons.map(lesson => 
+                  lesson.id === lessonId ? transformedLesson : lesson
+                )
+              }
+            : chapter
+        )
+      );
+      
+      return transformedLesson;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update lesson');
+      throw err;
+    }
+  };
+
   useEffect(() => {
     if (courseId) {
       fetchChapters();
@@ -240,8 +329,10 @@ export default function useChaptersAndLessons(courseId: string) {
     error,
     addChapter,
     deleteChapter,
+    editChapter,
     addLesson,
     deleteLesson,
+    editLesson,
     refetchChapters: fetchChapters,
   };
 } 
