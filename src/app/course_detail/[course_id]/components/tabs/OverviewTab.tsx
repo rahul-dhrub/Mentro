@@ -4,7 +4,7 @@ import StatCard from '../StatCard';
 import { initializeVideoUpload, uploadVideoToBunny, waitForVideoProcessing } from '../../../../utils/videoUpload';
 
 interface OverviewTabProps {
-  onAddChapter: () => void;
+  onAddChapter: (chapterData: { title: string; description: string }) => Promise<void>;
   onCreateAssignment: () => void;
   onCreateQuiz: () => void;
   onTabChange: (tab: string) => void;
@@ -135,10 +135,7 @@ export default function OverviewTab({
 
       <StatCard title="Quick Actions" icon={<FiPlus className="text-blue-500" size={24} />}>
         <button 
-          onClick={() => {
-            onTabChange('chapters');
-            onAddChapter();
-          }}
+          onClick={() => onTabChange('chapters')}
           className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
         >
           Add New Chapter

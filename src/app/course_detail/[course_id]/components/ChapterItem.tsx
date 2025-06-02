@@ -1,5 +1,9 @@
 import React from 'react';
-import { FiChevronDown, FiClock, FiEdit2, FiTrash2, FiPlus } from 'react-icons/fi';
+import Link from 'next/link';
+import { FiChevronDown, FiClock, FiEdit2, FiTrash2, FiPlus, FiEye } from 'react-icons/fi';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { Chapter, Lesson } from '../types';
 
 interface ChapterItemProps {
@@ -37,7 +41,39 @@ export default function ChapterItem({
             </button>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">{chapter.title}</h3>
-              <p className="text-gray-600 mt-1">{chapter.description}</p>
+              <div className="text-gray-600 mt-1 prose prose-sm prose-gray max-w-none">
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw]}
+                  components={{
+                    p: ({children}) => <p className="text-gray-600 mb-1">{children}</p>,
+                    strong: ({children}) => <strong className="font-semibold text-gray-700">{children}</strong>,
+                    em: ({children}) => <em className="italic text-gray-600">{children}</em>,
+                    u: ({children}) => <u className="underline text-gray-600">{children}</u>,
+                    a: ({href, children}) => (
+                      <a href={href} className="text-blue-600 hover:text-blue-800 underline" target="_blank" rel="noopener noreferrer">
+                        {children}
+                      </a>
+                    ),
+                    code: ({children}) => (
+                      <code className="bg-gray-100 text-gray-700 px-1 py-0.5 rounded text-xs font-mono">
+                        {children}
+                      </code>
+                    ),
+                    ul: ({children}) => <ul className="list-disc list-inside text-gray-600">{children}</ul>,
+                    ol: ({children}) => <ol className="list-decimal list-inside text-gray-600">{children}</ol>,
+                    li: ({children}) => <li className="text-gray-600">{children}</li>,
+                    h1: ({children}) => <h1 className="text-base font-semibold text-gray-700 mb-1">{children}</h1>,
+                    h2: ({children}) => <h2 className="text-base font-semibold text-gray-700 mb-1">{children}</h2>,
+                    h3: ({children}) => <h3 className="text-sm font-semibold text-gray-700 mb-1">{children}</h3>,
+                    mark: ({children}) => <mark className="bg-yellow-200 text-gray-700 px-1 rounded">{children}</mark>,
+                    del: ({children}) => <del className="line-through text-gray-500">{children}</del>,
+                    ins: ({children}) => <ins className="underline decoration-green-500 text-gray-600">{children}</ins>,
+                  }}
+                >
+                  {chapter.description || ''}
+                </ReactMarkdown>
+              </div>
             </div>
           </div>
           <div className="flex items-center space-x-4">
@@ -70,11 +106,50 @@ export default function ChapterItem({
           </div>
           <div className="space-y-4">
             {chapter.lessons.map((lesson) => (
-              <div key={lesson.id} className="bg-gray-50 rounded-lg p-4">
+              <div key={lesson.id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h5 className="text-sm font-medium text-gray-900">{lesson.title}</h5>
-                    <p className="text-sm text-gray-600 mt-1">{lesson.description}</p>
+                  <div className="flex-1">
+                    <Link 
+                      href={`/lesson/${lesson._id || lesson.id}`}
+                      className="block hover:text-blue-600 transition-colors"
+                    >
+                      <h5 className="text-sm font-medium text-gray-900 hover:text-blue-600 cursor-pointer">
+                        {lesson.title}
+                      </h5>
+                      <div className="text-sm text-gray-600 mt-1 prose prose-sm prose-gray max-w-none">
+                        <ReactMarkdown 
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeRaw]}
+                          components={{
+                            p: ({children}) => <p className="text-sm text-gray-600 mb-1">{children}</p>,
+                            strong: ({children}) => <strong className="font-medium text-gray-700">{children}</strong>,
+                            em: ({children}) => <em className="italic text-gray-600">{children}</em>,
+                            u: ({children}) => <u className="underline text-gray-600">{children}</u>,
+                            a: ({href, children}) => (
+                              <a href={href} className="text-blue-600 hover:text-blue-800 underline" target="_blank" rel="noopener noreferrer">
+                                {children}
+                              </a>
+                            ),
+                            code: ({children}) => (
+                              <code className="bg-gray-200 text-gray-700 px-1 py-0.5 rounded text-xs font-mono">
+                                {children}
+                              </code>
+                            ),
+                            ul: ({children}) => <ul className="list-disc list-inside text-sm text-gray-600">{children}</ul>,
+                            ol: ({children}) => <ol className="list-decimal list-inside text-sm text-gray-600">{children}</ol>,
+                            li: ({children}) => <li className="text-sm text-gray-600">{children}</li>,
+                            h1: ({children}) => <h1 className="text-sm font-medium text-gray-700 mb-1">{children}</h1>,
+                            h2: ({children}) => <h2 className="text-sm font-medium text-gray-700 mb-1">{children}</h2>,
+                            h3: ({children}) => <h3 className="text-xs font-medium text-gray-700 mb-1">{children}</h3>,
+                            mark: ({children}) => <mark className="bg-yellow-200 text-gray-700 px-1 rounded">{children}</mark>,
+                            del: ({children}) => <del className="line-through text-gray-500">{children}</del>,
+                            ins: ({children}) => <ins className="underline decoration-green-500 text-gray-600">{children}</ins>,
+                          }}
+                        >
+                          {lesson.description || ''}
+                        </ReactMarkdown>
+                      </div>
+                    </Link>
                   </div>
                   <div className="flex items-center space-x-4">
                     <span className="text-xs text-gray-500 flex items-center">
@@ -84,6 +159,13 @@ export default function ChapterItem({
                     <span className={`text-xs ${lesson.isPublished ? 'text-green-600' : 'text-yellow-600'}`}>
                       {lesson.isPublished ? 'Published' : 'Draft'}
                     </span>
+                    <Link 
+                      href={`/lesson/${lesson._id || lesson.id}`}
+                      className="text-gray-600 hover:text-gray-900 cursor-pointer"
+                      title="View Lesson"
+                    >
+                      <FiEye size={16} />
+                    </Link>
                     <button 
                       onClick={() => onEditLesson(lesson.id)} 
                       className="text-blue-600 hover:text-blue-900 cursor-pointer"
@@ -101,6 +183,9 @@ export default function ChapterItem({
                 <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500">
                   <span>{lesson.assignments?.length || 0} Assignments</span>
                   <span>{lesson.quizzes?.length || 0} Quizzes</span>
+                  {lesson.lessonContents && lesson.lessonContents.length > 0 && (
+                    <span>{lesson.lessonContents.length} Content Items</span>
+                  )}
                 </div>
               </div>
             ))}

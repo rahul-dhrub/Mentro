@@ -20,6 +20,7 @@ export default function ChaptersTab({
   const [showChapterModal, setShowChapterModal] = useState(false);
   const [chapterTitle, setChapterTitle] = useState('');
   const [chapterDescription, setChapterDescription] = useState('');
+  const [isCreatingChapter, setIsCreatingChapter] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   
   // Delete confirmation modal states
@@ -37,14 +38,23 @@ export default function ChaptersTab({
     setShowLessonModal(true);
   };
   
-  const handleAddChapter = () => {
+  const handleAddChapter = async () => {
     if (chapterTitle.trim()) {
-      console.log('Adding chapter:', { title: chapterTitle, description: chapterDescription });
-      // Here you would actually add the chapter
-      onAddChapter();
-      setChapterTitle('');
-      setChapterDescription('');
-      setShowChapterModal(false);
+      try {
+        setIsCreatingChapter(true);
+        await onAddChapter({ 
+          title: chapterTitle, 
+          description: chapterDescription 
+        });
+        setChapterTitle('');
+        setChapterDescription('');
+        setShowChapterModal(false);
+      } catch (error) {
+        console.error('Error creating chapter:', error);
+        // You could show an error message to the user here
+      } finally {
+        setIsCreatingChapter(false);
+      }
     }
   };
   
@@ -116,6 +126,7 @@ export default function ChaptersTab({
               <button 
                 onClick={() => setShowChapterModal(false)}
                 className="text-gray-500 hover:text-gray-700 cursor-pointer"
+                disabled={isCreatingChapter}
               >
                 <FiX size={24} />
               </button>
@@ -134,6 +145,7 @@ export default function ChaptersTab({
                   onChange={(e) => setChapterTitle(e.target.value)}
                   placeholder="Introduction to the Course"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                  disabled={isCreatingChapter}
                 />
               </div>
               <div>
@@ -147,6 +159,7 @@ export default function ChaptersTab({
                   placeholder="Provide a brief description of this chapter..."
                   rows={4}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                  disabled={isCreatingChapter}
                 />
               </div>
               
@@ -154,14 +167,19 @@ export default function ChaptersTab({
                 <button
                   onClick={() => setShowChapterModal(false)}
                   className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
+                  disabled={isCreatingChapter}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleAddChapter}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  disabled={isCreatingChapter || !chapterTitle.trim()}
                 >
-                  Add Chapter
+                  {isCreatingChapter && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  )}
+                  <span>{isCreatingChapter ? 'Creating...' : 'Add Chapter'}</span>
                 </button>
               </div>
             </div>

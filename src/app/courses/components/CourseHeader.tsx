@@ -1,4 +1,7 @@
 import { FiStar, FiClock, FiUsers } from 'react-icons/fi';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { Course } from '../types';
 
 interface CourseHeaderProps {
@@ -13,7 +16,39 @@ export default function CourseHeader({ course }: CourseHeaderProps) {
           {/* Course Info */}
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-gray-900 mb-4">{course.title}</h1>
-            <p className="text-lg text-gray-800 mb-6">{course.description}</p>
+            <div className="text-lg text-gray-800 mb-6 prose prose-gray max-w-none">
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw]}
+                components={{
+                  p: ({children}) => <p className="text-lg text-gray-800 mb-2">{children}</p>,
+                  strong: ({children}) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                  em: ({children}) => <em className="italic text-gray-800">{children}</em>,
+                  u: ({children}) => <u className="underline text-gray-800">{children}</u>,
+                  a: ({href, children}) => (
+                    <a href={href} className="text-blue-600 hover:text-blue-800 underline" target="_blank" rel="noopener noreferrer">
+                      {children}
+                    </a>
+                  ),
+                  code: ({children}) => (
+                    <code className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-base font-mono">
+                      {children}
+                    </code>
+                  ),
+                  ul: ({children}) => <ul className="list-disc list-inside text-lg text-gray-800">{children}</ul>,
+                  ol: ({children}) => <ol className="list-decimal list-inside text-lg text-gray-800">{children}</ol>,
+                  li: ({children}) => <li className="text-lg text-gray-800">{children}</li>,
+                  h1: ({children}) => <h1 className="text-xl font-semibold text-gray-900 mb-2">{children}</h1>,
+                  h2: ({children}) => <h2 className="text-lg font-semibold text-gray-900 mb-2">{children}</h2>,
+                  h3: ({children}) => <h3 className="text-base font-semibold text-gray-900 mb-1">{children}</h3>,
+                  mark: ({children}) => <mark className="bg-yellow-200 text-gray-800 px-1 rounded">{children}</mark>,
+                  del: ({children}) => <del className="line-through text-gray-600">{children}</del>,
+                  ins: ({children}) => <ins className="underline decoration-green-500 text-gray-800">{children}</ins>,
+                }}
+              >
+                {course.description || ''}
+              </ReactMarkdown>
+            </div>
             <div className="flex items-center space-x-6 text-sm text-gray-700 mb-6">
               <div className="flex items-center">
                 <FiStar className="text-yellow-400 mr-1" />

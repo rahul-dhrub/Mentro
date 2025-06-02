@@ -1,11 +1,20 @@
 export interface Chapter {
   id: string;
+  _id?: string;
   title: string;
   description: string;
-  videoUrl: string;
   duration: string;
   isPublished: boolean;
   lessons: Lesson[];
+  order?: number;
+}
+
+export interface LessonContent {
+  id: string;
+  title: string;
+  url: string;
+  type: 'video' | 'image' | 'link' | 'pdf' | 'document';
+  order: number;
 }
 
 export interface VideoContent {
@@ -20,15 +29,18 @@ export interface VideoContent {
 
 export interface Lesson {
   id: string;
+  _id?: string;
   title: string;
   description: string;
   duration: string;
   isPublished: boolean;
   isLive?: boolean;
+  lessonContents?: LessonContent[];
   videoContents?: VideoContent[];
   liveScheduleDate?: string;
   liveScheduleTime?: string;
   liveScheduleLink?: string;
+  timezone?: string;
   assignments?: Assignment[];
   quizzes?: Quiz[];
 }

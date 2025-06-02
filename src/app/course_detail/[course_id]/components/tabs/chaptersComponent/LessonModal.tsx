@@ -41,7 +41,7 @@ interface LessonModalProps {
   isOpen: boolean;
   onClose: () => void;
   chapterId: string | null;
-  onAddLesson: (chapterId: string) => void;
+  onAddLesson: (chapterId: string, lessonData: any) => void;
 }
 
 export default function LessonModal({ 
@@ -235,7 +235,7 @@ export default function LessonModal({
     console.log('Saving lesson with timezone conversion:', lessonData);
     
     // Call the parent handler with the new lesson data
-    onAddLesson(chapterId);
+    onAddLesson(chapterId, lessonData);
     
     // Close modal and reset form
     onClose();
