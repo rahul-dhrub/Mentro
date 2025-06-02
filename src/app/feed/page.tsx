@@ -483,12 +483,12 @@ export default function FeedPage() {
           </div>
         )}
         
-        <main className="flex-1 lg:mr-80 p-6">
+        <main className="flex-1 lg:mr-72 p-6">
           {renderMainContent()}
         </main>
         
-        <div className="hidden lg:block w-80 flex-shrink-0">
-          <div className="sticky top-20 h-[calc(100vh-80px)] overflow-y-auto pl-2">
+        <div className="hidden lg:block w-72 flex-shrink-0">
+          <div className="sticky top-20 h-[calc(100vh-80px)] overflow-y-auto">
             <RightSidebar 
               upcomingClasses={[
                 {

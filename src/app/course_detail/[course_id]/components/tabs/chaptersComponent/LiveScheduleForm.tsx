@@ -2,20 +2,12 @@ import React from 'react';
 import { SiZoom, SiGooglemeet } from 'react-icons/si';
 
 interface LiveScheduleFormProps {
-  scheduleDate: string;
-  scheduleTime: string;
   scheduleLink: string;
-  onScheduleDateChange: (date: string) => void;
-  onScheduleTimeChange: (time: string) => void;
   onScheduleLinkChange: (link: string) => void;
 }
 
 export default function LiveScheduleForm({
-  scheduleDate,
-  scheduleTime,
   scheduleLink,
-  onScheduleDateChange,
-  onScheduleTimeChange,
   onScheduleLinkChange
 }: LiveScheduleFormProps) {
   const handleCreateMeetingLink = (platform: 'zoom' | 'meet' | 'mentro') => {
@@ -38,33 +30,7 @@ export default function LiveScheduleForm({
   
   return (
     <div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="schedule-date" className="block text-sm font-medium text-gray-700 mb-1">
-            Date
-          </label>
-          <input
-            id="schedule-date"
-            type="date"
-            value={scheduleDate}
-            onChange={(e) => onScheduleDateChange(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
-          />
-        </div>
-        <div>
-          <label htmlFor="schedule-time" className="block text-sm font-medium text-gray-700 mb-1">
-            Time
-          </label>
-          <input
-            id="schedule-time"
-            type="time"
-            value={scheduleTime}
-            onChange={(e) => onScheduleTimeChange(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
-          />
-        </div>
-      </div>
-      <div className="mt-4">
+      <div>
         <label htmlFor="schedule-link" className="block text-sm font-medium text-gray-700 mb-1">
           Meeting Link
         </label>

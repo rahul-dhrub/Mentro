@@ -1,11 +1,41 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FiX, FiVideo, FiCalendar } from 'react-icons/fi';
+import { FiX, FiVideo, FiCalendar, FiClock, FiGlobe } from 'react-icons/fi';
 import { FaBold, FaItalic, FaUnderline, FaListUl, FaListOl, FaLink, FaHeading } from 'react-icons/fa';
 import { ContentType, LessonContent } from './types';
 import ContentForm from './ContentForm';
 import LiveScheduleForm from './LiveScheduleForm';
 import MDEditor from '@uiw/react-md-editor';
 import './markdown-styles.css';
+
+// Common timezone options - All 24 major world timezones
+const timezones = [
+  { value: 'Pacific/Kwajalein', label: 'UTC-12: Marshall Islands', offset: -12 },
+  { value: 'Pacific/Midway', label: 'UTC-11: Samoa, Midway Island', offset: -11 },
+  { value: 'Pacific/Honolulu', label: 'UTC-10: Hawaii', offset: -10 },
+  { value: 'America/Anchorage', label: 'UTC-9: Alaska', offset: -9 },
+  { value: 'America/Los_Angeles', label: 'UTC-8: Pacific Time (US & Canada)', offset: -8 },
+  { value: 'America/Denver', label: 'UTC-7: Mountain Time (US & Canada)', offset: -7 },
+  { value: 'America/Chicago', label: 'UTC-6: Central Time (US & Canada)', offset: -6 },
+  { value: 'America/New_York', label: 'UTC-5: Eastern Time (US & Canada)', offset: -5 },
+  { value: 'America/Caracas', label: 'UTC-4: Atlantic Time, Venezuela', offset: -4 },
+  { value: 'America/Sao_Paulo', label: 'UTC-3: Brazil, Argentina', offset: -3 },
+  { value: 'Atlantic/South_Georgia', label: 'UTC-2: South Georgia', offset: -2 },
+  { value: 'Atlantic/Azores', label: 'UTC-1: Azores, Cape Verde', offset: -1 },
+  { value: 'UTC', label: 'UTC+0: Greenwich Mean Time, London', offset: 0 },
+  { value: 'Europe/Paris', label: 'UTC+1: Central European Time', offset: 1 },
+  { value: 'Europe/Athens', label: 'UTC+2: Eastern European Time', offset: 2 },
+  { value: 'Europe/Moscow', label: 'UTC+3: Moscow, East Africa', offset: 3 },
+  { value: 'Asia/Dubai', label: 'UTC+4: UAE, Azerbaijan', offset: 4 },
+  { value: 'Asia/Karachi', label: 'UTC+5: Pakistan, Kazakhstan', offset: 5 },
+  { value: 'Asia/Kolkata', label: 'UTC+5:30: India, Sri Lanka', offset: 5.5 },
+  { value: 'Asia/Dhaka', label: 'UTC+6: Bangladesh, Central Asia', offset: 6 },
+  { value: 'Asia/Bangkok', label: 'UTC+7: Thailand, Vietnam', offset: 7 },
+  { value: 'Asia/Shanghai', label: 'UTC+8: China, Singapore', offset: 8 },
+  { value: 'Asia/Tokyo', label: 'UTC+9: Japan, Korea', offset: 9 },
+  { value: 'Australia/Sydney', label: 'UTC+10: Eastern Australia', offset: 10 },
+  { value: 'Pacific/Noumea', label: 'UTC+11: New Caledonia', offset: 11 },
+  { value: 'Pacific/Auckland', label: 'UTC+12: New Zealand, Fiji', offset: 12 },
+];
 
 interface LessonModalProps {
   isOpen: boolean;
@@ -26,6 +56,11 @@ export default function LessonModal({
   const [lessonTitle, setLessonTitle] = useState('');
   const [lessonDescription, setLessonDescription] = useState('');
   const [lessonDuration, setLessonDuration] = useState('');
+  const [lessonDate, setLessonDate] = useState('');
+  const [lessonTime, setLessonTime] = useState('');
+  const [selectedTimezone, setSelectedTimezone] = useState('UTC');
+  const [utcDate, setUtcDate] = useState('');
+  const [utcTime, setUtcTime] = useState('');
   const [lessonContents, setLessonContents] = useState<LessonContent[]>([]);
   const [liveScheduleDate, setLiveScheduleDate] = useState('');
   const [liveScheduleTime, setLiveScheduleTime] = useState('');
@@ -40,13 +75,40 @@ export default function LessonModal({
     }
   }, [isOpen]);
   
+  // Update UTC values whenever local date, time, or timezone changes
+  useEffect(() => {
+    if (lessonDate && lessonTime) {
+      const utcDateTime = getUTCDateTime();
+      if (utcDateTime) {
+        setUtcDate(utcDateTime.date);
+        setUtcTime(utcDateTime.time);
+      } else {
+        setUtcDate('');
+        setUtcTime('');
+      }
+    } else {
+      setUtcDate('');
+      setUtcTime('');
+    }
+  }, [lessonDate, lessonTime, selectedTimezone]);
+  
   const resetForm = () => {
+    // Get current UTC date and format it for HTML date input (YYYY-MM-DD)
+    const currentUTCDate = new Date().toISOString().split('T')[0];
+    // Get current UTC time and format it for HTML time input (HH:MM)
+    const currentUTCTime = new Date().toISOString().split('T')[1].substring(0, 5);
+    
     setLessonTitle('');
     setLessonDescription('');
     setLessonDuration('');
+    setLessonDate(currentUTCDate);
+    setLessonTime(currentUTCTime);
+    setSelectedTimezone('UTC');
+    setUtcDate(currentUTCDate);
+    setUtcTime(currentUTCTime);
     setLessonContents([]);
     setActiveModalTab('recorded');
-    setLiveScheduleDate('');
+    setLiveScheduleDate(currentUTCDate);
     setLiveScheduleTime('');
     setLiveScheduleLink('');
   };
@@ -107,22 +169,70 @@ export default function LessonModal({
     });
   };
   
+  // Function to convert local datetime to UTC
+  const getUTCDateTime = () => {
+    if (!lessonDate || !lessonTime) return null;
+    
+    try {
+      // Find the selected timezone
+      const timezone = timezones.find(tz => tz.value === selectedTimezone);
+      if (!timezone) return null;
+      
+      // Parse the date and time components
+      const [year, month, day] = lessonDate.split('-').map(Number);
+      const [hour, minute] = lessonTime.split(':').map(Number);
+      
+      // Create a Date object in UTC for the selected date/time
+      // We treat the input as if it's in the selected timezone
+      const localDateTime = new Date(year, month - 1, day, hour, minute, 0);
+      
+      // Convert to UTC by subtracting the timezone offset
+      // Offset is in hours, convert to milliseconds
+      const offsetInMs = timezone.offset * 60 * 60 * 1000;
+      const utcDateTime = new Date(localDateTime.getTime() - offsetInMs);
+      
+      // Format the UTC date and time
+      const utcYear = utcDateTime.getFullYear();
+      const utcMonth = String(utcDateTime.getMonth() + 1).padStart(2, '0');
+      const utcDay = String(utcDateTime.getDate()).padStart(2, '0');
+      const utcHour = String(utcDateTime.getHours()).padStart(2, '0');
+      const utcMinute = String(utcDateTime.getMinutes()).padStart(2, '0');
+      
+      return {
+        date: `${utcYear}-${utcMonth}-${utcDay}`,
+        time: `${utcHour}:${utcMinute}`,
+        fullDateTime: utcDateTime.toISOString()
+      };
+    } catch (error) {
+      console.error('Error converting to UTC:', error);
+      return null;
+    }
+  };
+  
   const handleSaveLesson = () => {
     if (!lessonTitle.trim() || !chapterId) return;
     
-    // Create lesson object based on selected tab
+    // Create lesson object with both local and UTC datetime
     const lessonData = {
       title: lessonTitle,
       description: lessonDescription,
       duration: lessonDuration,
+      // Local timezone data
+      localDate: lessonDate,
+      localTime: lessonTime,
+      timezone: selectedTimezone,
+      // UTC data (for storage and global consistency)
+      utcDate: utcDate,
+      utcTime: utcTime,
+      utcDateTime: utcDate && utcTime ? `${utcDate}T${utcTime}:00.000Z` : null,
       isLive: activeModalTab === 'live',
       lessonContents, // Include lesson contents for both recorded and live lessons
       ...(activeModalTab === 'live' 
-        ? { liveScheduleDate, liveScheduleTime, liveScheduleLink }
+        ? { liveScheduleLink }
         : {})
     };
     
-    console.log('Saving lesson:', lessonData);
+    console.log('Saving lesson with timezone conversion:', lessonData);
     
     // Call the parent handler with the new lesson data
     onAddLesson(chapterId);
@@ -327,6 +437,110 @@ export default function LessonModal({
             />
           </div>
           
+          {/* Date, Time and Timezone Fields */}
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label htmlFor="lesson-date" className="block text-sm font-medium text-gray-700 mb-1">
+                Date
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiCalendar className="text-gray-500" size={18} />
+                </div>
+                <input
+                  id="lesson-date"
+                  type="date"
+                  value={lessonDate}
+                  onChange={(e) => setLessonDate(e.target.value)}
+                  className="w-full pl-10 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                />
+              </div>
+            </div>
+            <div>
+              <label htmlFor="lesson-time" className="block text-sm font-medium text-gray-700 mb-1">
+                Time
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiClock className="text-gray-500" size={18} />
+                </div>
+                <input
+                  id="lesson-time"
+                  type="time"
+                  value={lessonTime}
+                  onChange={(e) => setLessonTime(e.target.value)}
+                  className="w-full pl-10 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                />
+              </div>
+            </div>
+            <div>
+              <label htmlFor="timezone" className="block text-sm font-medium text-gray-700 mb-1">
+                Timezone
+              </label>
+              <select
+                id="timezone"
+                value={selectedTimezone}
+                onChange={(e) => setSelectedTimezone(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 bg-white"
+              >
+                {timezones.map((tz) => (
+                  <option key={tz.value} value={tz.value}>
+                    {tz.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          {/* UTC Converted Values Display */}
+          {lessonDate && lessonTime && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center mb-3">
+                <FiGlobe className="text-blue-600 mr-2" size={18} />
+                <h4 className="text-lg font-semibold text-blue-800">Converted UTC Date & Time</h4>
+              </div>
+              
+              {(() => {
+                const utcDateTime = getUTCDateTime();
+                if (utcDateTime) {
+                  return (
+                    <div className="grid grid-cols-2 gap-4 mb-3">
+                      <div className="bg-white rounded-lg p-3 border border-blue-100">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Local Time</label>
+                        <div className="text-sm font-medium text-gray-800">
+                          {lessonDate} {lessonTime}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {timezones.find(tz => tz.value === selectedTimezone)?.label}
+                        </div>
+                      </div>
+                      
+                      <div className="bg-blue-600 rounded-lg p-3 text-white">
+                        <label className="block text-xs font-medium text-blue-100 mb-1">UTC Time</label>
+                        <div className="text-sm font-bold">
+                          {utcDateTime.date} {utcDateTime.time}
+                        </div>
+                        <div className="text-xs text-blue-200 mt-1">
+                          Coordinated Universal Time
+                        </div>
+                      </div>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-3">
+                      Unable to convert to UTC. Please check your date and time values.
+                    </div>
+                  );
+                }
+              })()}
+              
+              <div className="text-xs text-blue-700 bg-blue-100 rounded p-2">
+                <strong>Note:</strong> The lesson will be stored and scheduled in UTC time. Students in different timezones will see the lesson time converted to their local timezone.
+              </div>
+            </div>
+          )}
+          
           {/* Tab-specific fields */}
           {activeModalTab === 'recorded' ? (
             <ContentForm
@@ -338,11 +552,7 @@ export default function LessonModal({
           ) : (
             <>
               <LiveScheduleForm
-                scheduleDate={liveScheduleDate}
-                scheduleTime={liveScheduleTime}
                 scheduleLink={liveScheduleLink}
-                onScheduleDateChange={setLiveScheduleDate}
-                onScheduleTimeChange={setLiveScheduleTime}
                 onScheduleLinkChange={setLiveScheduleLink}
               />
               
