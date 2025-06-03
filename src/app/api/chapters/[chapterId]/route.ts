@@ -60,4 +60,29 @@ export async function DELETE(
     console.error('Error deleting chapter:', error);
     return NextResponse.json({ error: 'Failed to delete chapter' }, { status: 500 });
   }
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ chapterId: string }> }
+) {
+  try {
+    await connectDB();
+    
+    // Ensure all models are registered
+    ensureModelsRegistered();
+    
+    const { chapterId } = await params;
+    
+    const chapter = await Chapter.findById(chapterId);
+    
+    if (!chapter) {
+      return NextResponse.json({ error: 'Chapter not found' }, { status: 404 });
+    }
+    
+    return NextResponse.json(chapter);
+  } catch (error) {
+    console.error('Error fetching chapter:', error);
+    return NextResponse.json({ error: 'Failed to fetch chapter' }, { status: 500 });
+  }
 } 

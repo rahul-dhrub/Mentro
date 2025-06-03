@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FiX, FiPlus, FiTrash2, FiEdit2, FiSave, FiUpload } from 'react-icons/fi';
+import { FiX, FiPlus, FiTrash2, FiEdit2, FiSave, FiUpload, FiFileText, FiCheckSquare, FiUser, FiClock, FiCalendar } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -8,6 +8,7 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { uploadFileToBunnyStorage } from '../../../utils/fileUpload';
 import { bunnyClient } from '../../../../lib/bunny';
+import { assignmentAPI, quizAPI } from '@/lib/api';
 
 interface LessonContent {
   id: string;
@@ -15,6 +16,29 @@ interface LessonContent {
   url: string;
   type: 'video' | 'image' | 'link' | 'pdf';
   order: number;
+}
+
+interface Assignment {
+  _id: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  totalMarks: number;
+  isPublished: boolean;
+  courseId: string;
+  lessonId?: string;
+}
+
+interface Quiz {
+  _id: string;
+  title: string;
+  description: string;
+  duration: number;
+  totalMarks: number;
+  totalQuestions: number;
+  isPublished: boolean;
+  courseId: string;
+  lessonId?: string;
 }
 
 interface Lesson {
@@ -30,6 +54,10 @@ interface Lesson {
   liveScheduleTime?: string;
   liveScheduleLink?: string;
   timezone?: string;
+  assignments?: string[];
+  quizzes?: string[];
+  chapterId?: string;
+  courseId?: string;
 }
 
 interface LessonEditModalProps {
@@ -37,6 +65,7 @@ interface LessonEditModalProps {
   onClose: () => void;
   lesson: Lesson;
   onSave: (updatedLesson: Partial<Lesson>) => Promise<void>;
+  courseId?: string;
 }
 
 // Import UploadModal (we'll need to import the actual component)
@@ -247,7 +276,8 @@ export default function LessonEditModal({
   isOpen,
   onClose,
   lesson,
-  onSave
+  onSave,
+  courseId
 }: LessonEditModalProps) {
   const [lessonTitle, setLessonTitle] = useState('');
   const [titleDescription, setTitleDescription] = useState('');
@@ -271,6 +301,14 @@ export default function LessonEditModal({
   const [newContentType, setNewContentType] = useState<'video' | 'image' | 'link' | 'pdf'>('video');
   const [showUploadModal, setShowUploadModal] = useState(false);
   
+  // Assignments and Quizzes states
+  const [availableAssignments, setAvailableAssignments] = useState<Assignment[]>([]);
+  const [availableQuizzes, setAvailableQuizzes] = useState<Quiz[]>([]);
+  const [linkedAssignments, setLinkedAssignments] = useState<string[]>([]);
+  const [linkedQuizzes, setLinkedQuizzes] = useState<string[]>([]);
+  const [loadingAssignments, setLoadingAssignments] = useState(false);
+  const [loadingQuizzes, setLoadingQuizzes] = useState(false);
+  
   // Description textarea ref for auto-resize
   const descriptionTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -283,6 +321,126 @@ export default function LessonEditModal({
       // Set the height to match the scrollHeight, with min and max constraints
       const newHeight = Math.max(120, Math.min(textarea.scrollHeight, 400));
       textarea.style.height = `${newHeight}px`;
+    }
+  };
+
+  // Fetch courseId from chapterId if needed
+  const fetchCourseIdFromChapter = async (chapterId: string): Promise<string | null> => {
+    try {
+      
+      const response = await fetch(`/api/chapters/${chapterId}`);
+      if (response.ok) {
+        const chapter = await response.json();
+        return chapter.courseId;
+      } else {
+        console.error('Failed to fetch chapter:', response.status, response.statusText);
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error fetching chapter:', error);
+      return null;
+    }
+  };
+
+  // Fetch available assignments and quizzes
+  const fetchAvailableAssignmentsAndQuizzes = async () => {
+    // Try to get courseId from props first
+    let courseIdToUse = courseId;
+
+    // If no courseId from props, try lesson.courseId
+    if (!courseIdToUse && lesson.courseId) {
+      courseIdToUse = lesson.courseId;
+    }
+    
+    // If still no courseId, try to get it from chapterId
+    if (!courseIdToUse && lesson.chapterId) {
+      const fetchedCourseId = await fetchCourseIdFromChapter(lesson.chapterId);
+      if (fetchedCourseId) {
+        courseIdToUse = fetchedCourseId;
+      } else {
+        console.warn('Could not fetch courseId from chapterId');
+      }
+    }
+    
+    if (!courseIdToUse) {
+      console.error('No courseId available - cannot filter assignments/quizzes properly');
+      // We'll still try to fetch all and show a warning
+    }
+    
+    try {
+      setLoadingAssignments(true);
+      setLoadingQuizzes(true);
+
+      // Fetch assignments
+      let assignmentsResult;
+      
+      if (courseIdToUse) {
+        assignmentsResult = await assignmentAPI.getAll(courseIdToUse);
+      } else {
+        assignmentsResult = await assignmentAPI.getAll();
+      }
+      
+      
+      if (assignmentsResult.success && assignmentsResult.data) {
+        
+        // Filter assignments: show unlinked ones OR ones linked to current lesson
+        // Only show assignments that belong to the correct course
+        const assignments = (assignmentsResult.data || []).filter((assignment: Assignment) => {
+          const isUnlinked = !assignment.lessonId;
+          const isLinkedToCurrentLesson = assignment.lessonId === lesson._id;
+          
+          // IMPORTANT: Only show assignments that belong to the correct course
+          const matchesCourse = courseIdToUse ? assignment.courseId === courseIdToUse : true;
+          
+          const shouldShow = matchesCourse && (isUnlinked || isLinkedToCurrentLesson);
+          
+          return shouldShow;
+        });
+        
+        setAvailableAssignments(assignments);
+      } else {
+        console.error('Failed to fetch assignments:', assignmentsResult.error);
+        setAvailableAssignments([]);
+      }
+
+      // Fetch quizzes with same logic
+      let quizzesResult;
+      
+      if (courseIdToUse) {
+        quizzesResult = await quizAPI.getAll(courseIdToUse);
+      } else {
+        quizzesResult = await quizAPI.getAll();
+      }
+      
+      if (quizzesResult.success && quizzesResult.data) {
+        
+        // Filter quizzes: show unlinked ones OR ones linked to current lesson
+        // Only show quizzes that belong to the correct course
+        const quizzes = (quizzesResult.data || []).filter((quiz: Quiz) => {
+          const isUnlinked = !quiz.lessonId;
+          const isLinkedToCurrentLesson = quiz.lessonId === lesson._id;
+          
+          // IMPORTANT: Only show quizzes that belong to the correct course
+          const matchesCourse = courseIdToUse ? quiz.courseId === courseIdToUse : true;
+          
+          const shouldShow = matchesCourse && (isUnlinked || isLinkedToCurrentLesson);
+          
+          return shouldShow;
+        });
+        
+        setAvailableQuizzes(quizzes);
+      } else {
+        console.error('Failed to fetch quizzes:', quizzesResult.error);
+        setAvailableQuizzes([]);
+      }
+    } catch (error) {
+      console.error('Error fetching assignments and quizzes:', error);
+      setAvailableAssignments([]);
+      setAvailableQuizzes([]);
+    } finally {
+      setLoadingAssignments(false);
+      setLoadingQuizzes(false);
     }
   };
 
@@ -300,6 +458,13 @@ export default function LessonEditModal({
       setLiveScheduleLink(lesson.liveScheduleLink || '');
       setTimezone(lesson.timezone || 'UTC');
       setLessonContents(lesson.lessonContents ? [...lesson.lessonContents] : []);
+      setLinkedAssignments(lesson.assignments || []);
+      setLinkedQuizzes(lesson.quizzes || []);
+
+      // Fetch available assignments and quizzes when lesson changes
+      fetchAvailableAssignmentsAndQuizzes();
+    } else {
+      console.log('No lesson data provided');
     }
   }, [lesson]);
 
@@ -314,6 +479,16 @@ export default function LessonEditModal({
   useEffect(() => {
     adjustTextareaHeight();
   }, [lessonDescription]);
+
+  // Also add debugging to track when the assignments-quizzes tab is clicked
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    
+    if (tab === 'assignments-quizzes') {
+      fetchAvailableAssignmentsAndQuizzes();
+    }
+  };
+
 
   const handleSaveLesson = async () => {
     if (lessonTitle.trim()) {
@@ -332,6 +507,8 @@ export default function LessonEditModal({
           liveScheduleLink: isLive ? liveScheduleLink : undefined,
           timezone: isLive ? timezone : undefined,
           lessonContents: lessonContents,
+          assignments: linkedAssignments,
+          quizzes: linkedQuizzes,
         };
 
         await onSave(updatedLessonData);
@@ -403,6 +580,23 @@ export default function LessonEditModal({
     }
   };
 
+  // Assignment and Quiz management functions
+  const handleToggleAssignment = (assignmentId: string) => {
+    setLinkedAssignments(prev => 
+      prev.includes(assignmentId) 
+        ? prev.filter(id => id !== assignmentId)
+        : [...prev, assignmentId]
+    );
+  };
+
+  const handleToggleQuiz = (quizId: string) => {
+    setLinkedQuizzes(prev => 
+      prev.includes(quizId) 
+        ? prev.filter(id => id !== quizId)
+        : [...prev, quizId]
+    );
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -423,7 +617,7 @@ export default function LessonEditModal({
         {/* Tab Navigation */}
         <div className="flex border-b border-gray-200">
           <button
-            onClick={() => setActiveTab('basic')}
+            onClick={() => handleTabChange('basic')}
             className={`px-6 py-3 text-sm font-medium ${
               activeTab === 'basic'
                 ? 'text-blue-600 border-b-2 border-blue-600'
@@ -433,7 +627,7 @@ export default function LessonEditModal({
             Basic Info
           </button>
           <button
-            onClick={() => setActiveTab('content')}
+            onClick={() => handleTabChange('content')}
             className={`px-6 py-3 text-sm font-medium ${
               activeTab === 'content'
                 ? 'text-blue-600 border-b-2 border-blue-600'
@@ -441,6 +635,16 @@ export default function LessonEditModal({
             }`}
           >
             Content ({lessonContents.length})
+          </button>
+          <button
+            onClick={() => handleTabChange('assignments-quizzes')}
+            className={`px-6 py-3 text-sm font-medium ${
+              activeTab === 'assignments-quizzes'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Assignments & Quizzes ({linkedAssignments.length + linkedQuizzes.length})
           </button>
         </div>
 
@@ -827,6 +1031,184 @@ export default function LessonEditModal({
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {activeTab === 'assignments-quizzes' && (
+            <div className="space-y-6">
+              {/* Assignments Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-lg font-medium text-gray-900">Available Assignments</h4>
+                  <span className="text-sm text-gray-500">
+                    {linkedAssignments.length} selected
+                  </span>
+                </div>
+
+                {loadingAssignments ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : availableAssignments.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <FiFileText size={48} className="mx-auto mb-4 text-gray-300" />
+                    <p className="text-lg">No assignments available</p>
+                    <p className="text-sm">Create assignments in the course to add them to this lesson</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {availableAssignments.map((assignment) => (
+                      <div
+                        key={assignment._id}
+                        className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                          linkedAssignments.includes(assignment._id)
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => handleToggleAssignment(assignment._id)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                checked={linkedAssignments.includes(assignment._id)}
+                                onChange={() => handleToggleAssignment(assignment._id)}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                              />
+                              <div>
+                                <h5 className="font-medium text-gray-900">{assignment.title}</h5>
+                                {assignment.description && (
+                                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                                    {assignment.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="mt-3 flex items-center space-x-4 text-xs text-gray-500">
+                              <span className="flex items-center space-x-1">
+                                <FiCalendar size={12} />
+                                <span>Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
+                              </span>
+                              <span className="flex items-center space-x-1">
+                                <FiCheckSquare size={12} />
+                                <span>{assignment.totalMarks} marks</span>
+                              </span>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                assignment.isPublished 
+                                  ? 'bg-green-100 text-green-700' 
+                                  : 'bg-gray-100 text-gray-700'
+                              }`}>
+                                {assignment.isPublished ? 'Published' : 'Draft'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-gray-200"></div>
+
+              {/* Quizzes Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-lg font-medium text-gray-900">Available Quizzes</h4>
+                  <span className="text-sm text-gray-500">
+                    {linkedQuizzes.length} selected
+                  </span>
+                </div>
+
+                {loadingQuizzes ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : availableQuizzes.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <FiCheckSquare size={48} className="mx-auto mb-4 text-gray-300" />
+                    <p className="text-lg">No quizzes available</p>
+                    <p className="text-sm">Create quizzes in the course to add them to this lesson</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {availableQuizzes.map((quiz) => (
+                      <div
+                        key={quiz._id}
+                        className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                          linkedQuizzes.includes(quiz._id)
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => handleToggleQuiz(quiz._id)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                checked={linkedQuizzes.includes(quiz._id)}
+                                onChange={() => handleToggleQuiz(quiz._id)}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                              />
+                              <div>
+                                <h5 className="font-medium text-gray-900">{quiz.title}</h5>
+                                {quiz.description && (
+                                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                                    {quiz.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="mt-3 flex items-center space-x-4 text-xs text-gray-500">
+                              <span className="flex items-center space-x-1">
+                                <FiClock size={12} />
+                                <span>{quiz.duration} min</span>
+                              </span>
+                              <span className="flex items-center space-x-1">
+                                <FiCheckSquare size={12} />
+                                <span>{quiz.totalQuestions} questions</span>
+                              </span>
+                              <span className="flex items-center space-x-1">
+                                <FiUser size={12} />
+                                <span>{quiz.totalMarks} marks</span>
+                              </span>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                quiz.isPublished 
+                                  ? 'bg-green-100 text-green-700' 
+                                  : 'bg-gray-100 text-gray-700'
+                              }`}>
+                                {quiz.isPublished ? 'Published' : 'Draft'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Summary */}
+              {(linkedAssignments.length > 0 || linkedQuizzes.length > 0) && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h5 className="font-medium text-blue-900 mb-2">Selected Items Summary</h5>
+                  <div className="space-y-2">
+                    {linkedAssignments.length > 0 && (
+                      <p className="text-sm text-blue-700">
+                        <strong>{linkedAssignments.length}</strong> assignment{linkedAssignments.length !== 1 ? 's' : ''} selected
+                      </p>
+                    )}
+                    {linkedQuizzes.length > 0 && (
+                      <p className="text-sm text-blue-700">
+                        <strong>{linkedQuizzes.length}</strong> quiz{linkedQuizzes.length !== 1 ? 'zes' : ''} selected
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

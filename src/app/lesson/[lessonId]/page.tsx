@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FiPlay, FiFile, FiExternalLink, FiClock, FiCalendar, FiDownload, FiEdit2, FiRefreshCw, FiArrowLeft } from 'react-icons/fi';
+import { FiPlay, FiFile, FiExternalLink, FiClock, FiCalendar, FiDownload, FiEdit2, FiRefreshCw, FiArrowLeft, FiCheckSquare, FiFileText, FiUser } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -10,6 +10,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import LessonEditModal from './components/LessonEditModal';
+import { assignmentAPI, quizAPI } from '@/lib/api';
 
 interface LessonContent {
   id: string;
@@ -17,6 +18,29 @@ interface LessonContent {
   url: string;
   type: 'video' | 'image' | 'link' | 'pdf';
   order: number;
+}
+
+interface Assignment {
+  _id: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  totalMarks: number;
+  isPublished: boolean;
+  courseId: string;
+  lessonId?: string;
+}
+
+interface Quiz {
+  _id: string;
+  title: string;
+  description: string;
+  duration: number;
+  totalMarks: number;
+  totalQuestions: number;
+  isPublished: boolean;
+  courseId: string;
+  lessonId?: string;
 }
 
 interface Lesson {
@@ -32,6 +56,10 @@ interface Lesson {
   liveScheduleTime?: string;
   liveScheduleLink?: string;
   timezone?: string;
+  assignments?: string[];
+  quizzes?: string[];
+  chapterId?: string;
+  courseId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -229,12 +257,76 @@ export default function LessonPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedContent, setSelectedContent] = useState<LessonContent | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  
+  // Assignments and Quizzes state
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [loadingAssignments, setLoadingAssignments] = useState(false);
+  const [loadingQuizzes, setLoadingQuizzes] = useState(false);
 
   useEffect(() => {
     if (lessonId) {
       fetchLesson();
     }
   }, [lessonId]);
+
+  // Fetch courseId from chapterId if needed
+  const fetchCourseIdFromChapter = async (chapterId: string): Promise<string | null> => {
+    try {
+      const response = await fetch(`/api/chapters/${chapterId}`);
+      if (response.ok) {
+        const chapter = await response.json();
+        return chapter.courseId;
+      }
+    } catch (error) {
+      console.error('Error fetching chapter:', error);
+    }
+    return null;
+  };
+
+  // Fetch assignments and quizzes linked to this lesson
+  const fetchAssignmentsAndQuizzes = async (lesson: Lesson) => {
+    if (!lesson._id) return;
+
+    try {
+      setLoadingAssignments(true);
+      setLoadingQuizzes(true);
+
+      // Get courseId to fetch from the correct course
+      let courseId = lesson.courseId;
+      if (!courseId && lesson.chapterId) {
+        const fetchedCourseId = await fetchCourseIdFromChapter(lesson.chapterId);
+        courseId = fetchedCourseId || undefined;
+      }
+
+      if (courseId) {
+        // Fetch assignments and filter by lesson's linked assignments
+        const assignmentsResult = await assignmentAPI.getAll(courseId);
+        if (assignmentsResult.success && assignmentsResult.data) {
+          // Filter assignments that are linked to this lesson
+          const linkedAssignments = assignmentsResult.data.filter((assignment: Assignment) => 
+            lesson.assignments && lesson.assignments.includes(assignment._id)
+          );
+          setAssignments(linkedAssignments);
+        }
+
+        // Fetch quizzes and filter by lesson's linked quizzes
+        const quizzesResult = await quizAPI.getAll(courseId);
+        if (quizzesResult.success && quizzesResult.data) {
+          // Filter quizzes that are linked to this lesson
+          const linkedQuizzes = quizzesResult.data.filter((quiz: Quiz) => 
+            lesson.quizzes && lesson.quizzes.includes(quiz._id)
+          );
+          setQuizzes(linkedQuizzes);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching assignments and quizzes:', error);
+    } finally {
+      setLoadingAssignments(false);
+      setLoadingQuizzes(false);
+    }
+  };
 
   const fetchLesson = async () => {
     try {
@@ -246,13 +338,15 @@ export default function LessonPage() {
       }
       
       const data = await response.json();
-      console.log(data);
       setLesson(data);
       
       // Auto-select first content if available
       if (data.lessonContents && data.lessonContents.length > 0) {
         setSelectedContent(data.lessonContents[0]);
       }
+
+      // Fetch assignments and quizzes
+      await fetchAssignmentsAndQuizzes(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -307,6 +401,18 @@ export default function LessonPage() {
     } else {
       router.push('/'); // Fallback to home page
     }
+  };
+
+  const handleOpenAssignment = (assignment: Assignment) => {
+    // Open assignment in new tab
+    const assignmentUrl = `/assignment/${assignment._id}`;
+    window.open(assignmentUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleOpenQuiz = (quiz: Quiz) => {
+    // Open quiz in new tab
+    const quizUrl = `/quiz/${quiz._id}`;
+    window.open(quizUrl, '_blank', 'noopener,noreferrer');
   };
 
   const renderContentIcon = (type: string) => {
@@ -506,7 +612,8 @@ export default function LessonPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Content Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-6">
+            {/* Lesson Content */}
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Lesson Content</h3>
               <div className="space-y-2">
@@ -538,6 +645,112 @@ export default function LessonPage() {
                   <p className="text-gray-500 text-sm italic">No content available</p>
                 )}
               </div>
+            </div>
+
+            {/* Assignments Section */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Assignments</h3>
+                <span className="text-sm text-gray-500">
+                  {assignments.length} item{assignments.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              
+              {loadingAssignments ? (
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                </div>
+              ) : assignments.length === 0 ? (
+                <p className="text-gray-500 text-sm italic">No assignments linked to this lesson</p>
+              ) : (
+                <div className="space-y-2">
+                  {assignments.map((assignment) => (
+                    <button
+                      key={assignment._id}
+                      onClick={() => handleOpenAssignment(assignment)}
+                      className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <FiFileText className="w-5 h-5 text-orange-500 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {assignment.title}
+                          </p>
+                          <div className="flex items-center space-x-3 mt-1">
+                            <p className="text-xs text-gray-500">
+                              Due: {new Date(assignment.dueDate).toLocaleDateString()}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {assignment.totalMarks} marks
+                            </p>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              assignment.isPublished 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-gray-100 text-gray-700'
+                            }`}>
+                              {assignment.isPublished ? 'Published' : 'Draft'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Quizzes Section */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Quizzes</h3>
+                <span className="text-sm text-gray-500">
+                  {quizzes.length} item{quizzes.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              
+              {loadingQuizzes ? (
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                </div>
+              ) : quizzes.length === 0 ? (
+                <p className="text-gray-500 text-sm italic">No quizzes linked to this lesson</p>
+              ) : (
+                <div className="space-y-2">
+                  {quizzes.map((quiz) => (
+                    <button
+                      key={quiz._id}
+                      onClick={() => handleOpenQuiz(quiz)}
+                      className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <FiCheckSquare className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {quiz.title}
+                          </p>
+                          <div className="flex items-center space-x-3 mt-1">
+                            <p className="text-xs text-gray-500 flex items-center space-x-1">
+                              <FiClock className="w-3 h-3" />
+                              <span>{quiz.duration} min</span>
+                            </p>
+                            <p className="text-xs text-gray-500 flex items-center space-x-1">
+                              <FiUser className="w-3 h-3" />
+                              <span>{quiz.totalQuestions} questions</span>
+                            </p>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              quiz.isPublished 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-gray-100 text-gray-700'
+                            }`}>
+                              {quiz.isPublished ? 'Published' : 'Draft'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
