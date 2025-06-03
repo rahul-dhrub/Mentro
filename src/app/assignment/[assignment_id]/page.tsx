@@ -1172,7 +1172,7 @@ export default function AssignmentDetail() {
 $$
 \int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
 $$"
-                        className="w-full resize-none border-0 outline-none text-gray-700 placeholder-gray-400 overflow-hidden"
+                        className="w-full resize-none border-0 outline-none text-gray-700 placeholder-gray-400 overflow-y-auto"
                       />
                     </div>
                   ) : (
@@ -1705,7 +1705,7 @@ $$"
 $$
 \int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
 $$"
-                        className="w-full resize-none border-0 outline-none text-gray-700 placeholder-gray-400 overflow-hidden"
+                        className="w-full resize-none border-0 outline-none text-gray-700 placeholder-gray-400 overflow-y-auto"
                       />
                     </div>
                   ) : (

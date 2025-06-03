@@ -14,6 +14,7 @@ interface Lesson {
   _id?: string;
   id: string;
   title: string;
+  titleDescription?: string;
   description: string;
   duration: string;
   isPublished: boolean;
@@ -67,6 +68,7 @@ export default function useChaptersAndLessons(courseId: string) {
           id: lesson._id,
           _id: lesson._id,
           title: lesson.title,
+          titleDescription: lesson.titleDescription,
           description: lesson.description,
           duration: lesson.duration,
           isPublished: lesson.isPublished,
@@ -204,6 +206,7 @@ export default function useChaptersAndLessons(courseId: string) {
         id: newLesson._id,
         _id: newLesson._id,
         title: newLesson.title,
+        titleDescription: newLesson.titleDescription,
         description: newLesson.description,
         duration: newLesson.duration,
         isPublished: newLesson.isPublished,
@@ -278,6 +281,7 @@ export default function useChaptersAndLessons(courseId: string) {
         id: updatedLesson._id,
         _id: updatedLesson._id,
         title: updatedLesson.title,
+        titleDescription: updatedLesson.titleDescription,
         description: updatedLesson.description,
         duration: updatedLesson.duration,
         isPublished: updatedLesson.isPublished,

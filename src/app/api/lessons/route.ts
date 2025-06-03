@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { 
       title, 
+      titleDescription,
       description, 
       duration, 
       chapterId, 
@@ -51,9 +52,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Title and chapter ID are required' }, { status: 400 });
     }
     
-    // Create new lesson
-    const lesson = new Lesson({
+    // Create lesson data object
+    const lessonData = {
       title,
+      titleDescription: titleDescription || '',
       description: description || '',
       duration: duration || '0 min',
       chapterId,
@@ -64,11 +66,20 @@ export async function POST(request: NextRequest) {
       liveScheduleLink,
       timezone,
       utcDateTime,
-      order: 0, // Will be updated when we get the count
-    });
+      order: 0,
+    };
     
-    await lesson.save();
+    // Create new lesson
+    const lesson = new Lesson(lessonData);
     
+    try {
+      await lesson.save();
+    } catch (saveError) {
+      console.error('Error saving lesson:', saveError);
+      console.error('Validation errors:', lesson.errors);
+      throw saveError;
+    }
+        
     // Add lesson to chapter's lessons array
     await Chapter.findByIdAndUpdate(
       chapterId,

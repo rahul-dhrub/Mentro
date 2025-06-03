@@ -1,5 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FiX, FiPlus, FiTrash2, FiEdit2, FiSave, FiUpload } from 'react-icons/fi';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import { uploadFileToBunnyStorage } from '../../../utils/fileUpload';
 import { bunnyClient } from '../../../../lib/bunny';
 
@@ -14,6 +20,7 @@ interface LessonContent {
 interface Lesson {
   _id: string;
   title: string;
+  titleDescription?: string;
   description: string;
   duration: string;
   isPublished: boolean;
@@ -243,6 +250,7 @@ export default function LessonEditModal({
   onSave
 }: LessonEditModalProps) {
   const [lessonTitle, setLessonTitle] = useState('');
+  const [titleDescription, setTitleDescription] = useState('');
   const [lessonDescription, setLessonDescription] = useState('');
   const [lessonDuration, setLessonDuration] = useState('');
   const [isPublished, setIsPublished] = useState(false);
@@ -262,11 +270,27 @@ export default function LessonEditModal({
   const [newContentUrl, setNewContentUrl] = useState('');
   const [newContentType, setNewContentType] = useState<'video' | 'image' | 'link' | 'pdf'>('video');
   const [showUploadModal, setShowUploadModal] = useState(false);
+  
+  // Description textarea ref for auto-resize
+  const descriptionTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea function
+  const adjustTextareaHeight = () => {
+    const textarea = descriptionTextareaRef.current;
+    if (textarea) {
+      // Reset height to auto to get the correct scrollHeight
+      textarea.style.height = 'auto';
+      // Set the height to match the scrollHeight, with min and max constraints
+      const newHeight = Math.max(120, Math.min(textarea.scrollHeight, 400));
+      textarea.style.height = `${newHeight}px`;
+    }
+  };
 
   // Populate form when lesson changes
   useEffect(() => {
     if (lesson) {
       setLessonTitle(lesson.title || '');
+      setTitleDescription(lesson.titleDescription || '');
       setLessonDescription(lesson.description || '');
       setLessonDuration(lesson.duration || '');
       setIsPublished(lesson.isPublished || false);
@@ -286,6 +310,11 @@ export default function LessonEditModal({
     }
   }, [isOpen]);
 
+  // Auto-resize description textarea when content changes
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [lessonDescription]);
+
   const handleSaveLesson = async () => {
     if (lessonTitle.trim()) {
       try {
@@ -293,6 +322,7 @@ export default function LessonEditModal({
         
         const updatedLessonData = {
           title: lessonTitle,
+          titleDescription,
           description: lessonDescription,
           duration: lessonDuration,
           isPublished,
@@ -437,18 +467,98 @@ export default function LessonEditModal({
                 </div>
                 
                 <div>
+                  <label htmlFor="edit-title-description" className="block text-sm font-medium text-gray-700 mb-2">
+                    Title Description
+                  </label>
+                  <input
+                    id="edit-title-description"
+                    type="text"
+                    value={titleDescription}
+                    onChange={(e) => setTitleDescription(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                    placeholder="Enter title description"
+                    disabled={isUpdating}
+                  />
+                </div>
+                
+                <div>
                   <label htmlFor="edit-lesson-description" className="block text-sm font-medium text-gray-700 mb-2">
                     Lesson Description
                   </label>
-                  <textarea
-                    id="edit-lesson-description"
-                    value={lessonDescription}
-                    onChange={(e) => setLessonDescription(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 resize-none"
-                    rows={6}
-                    placeholder="Enter lesson description (supports markdown)"
-                    disabled={isUpdating}
-                  />
+                  
+                  {/* Description Input */}
+                  <div className="mb-4">
+                    <label className="block text-xs font-medium text-gray-500 mb-2">
+                      Description (Markdown & LaTeX supported)
+                    </label>
+                    <textarea
+                      id="edit-lesson-description"
+                      value={lessonDescription}
+                      onChange={(e) => {
+                        setLessonDescription(e.target.value);
+                        // Trigger auto-resize after state update
+                        setTimeout(adjustTextareaHeight, 0);
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 resize-none font-mono overflow-y-auto"
+                      style={{ minHeight: '120px', maxHeight: '400px' }}
+                      placeholder="Enter lesson description (Markdown & LaTeX supported)&#10;&#10;Use $math$ for inline equations or $$math$$ for block equations.&#10;Example: $x = y + z$ or $$\\int x dx = \\frac{x^2}{2} + C$$"
+                      disabled={isUpdating}
+                      ref={descriptionTextareaRef}
+                      onInput={adjustTextareaHeight}
+                    />
+                  </div>
+                  
+                  {/* LaTeX Preview */}
+                  {lessonDescription && (
+                    <div className="mb-4">
+                      <label className="block text-xs font-medium text-gray-500 mb-2">
+                        Preview
+                      </label>
+                      <div className="border border-gray-300 rounded-lg p-4 bg-gray-50 shadow-inner max-h-64 overflow-y-auto prose prose-sm max-w-none">
+                        <ReactMarkdown 
+                          remarkPlugins={[remarkGfm, remarkMath]}
+                          rehypePlugins={[rehypeRaw, rehypeKatex]}
+                          components={{
+                            h1: ({children}) => <h1 className="text-lg font-bold text-gray-800 mb-2">{children}</h1>,
+                            h2: ({children}) => <h2 className="text-base font-semibold text-gray-800 mb-2">{children}</h2>,
+                            h3: ({children}) => <h3 className="text-sm font-medium text-gray-800 mb-1">{children}</h3>,
+                            p: ({children}) => <p className="text-gray-700 mb-2 leading-relaxed">{children}</p>,
+                            strong: ({children}) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                            em: ({children}) => <em className="italic text-gray-700">{children}</em>,
+                            ul: ({children}) => <ul className="list-disc list-inside text-gray-700 mb-2 space-y-1">{children}</ul>,
+                            ol: ({children}) => <ol className="list-decimal list-inside text-gray-700 mb-2 space-y-1">{children}</ol>,
+                            li: ({children}) => <li className="text-gray-700">{children}</li>,
+                            a: ({href, children}) => (
+                              <a 
+                                href={href} 
+                                className="text-blue-600 hover:text-blue-800 underline" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                              >
+                                {children}
+                              </a>
+                            ),
+                            code: ({children}) => (
+                              <code className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-xs font-mono">
+                                {children}
+                              </code>
+                            ),
+                            pre: ({children}) => (
+                              <pre className="bg-gray-100 text-gray-800 p-2 rounded text-xs font-mono overflow-x-auto mb-2">
+                                {children}
+                              </pre>
+                            ),
+                            blockquote: ({children}) => (
+                              <blockquote className="border-l-4 border-gray-300 pl-3 italic text-gray-600 mb-2">
+                                {children}
+                              </blockquote>
+                            )
+                          }}
+                          children={lessonDescription}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>

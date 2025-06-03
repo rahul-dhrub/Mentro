@@ -5,6 +5,12 @@ import { ContentType, LessonContent } from './types';
 import ContentForm from './ContentForm';
 import LiveScheduleForm from './LiveScheduleForm';
 import MDEditor from '@uiw/react-md-editor';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import './markdown-styles.css';
 
 // Common timezone options - All 24 major world timezones
@@ -54,6 +60,7 @@ export default function LessonModal({
   
   // Form states
   const [lessonTitle, setLessonTitle] = useState('');
+  const [titleDescription, setTitleDescription] = useState('');
   const [lessonDescription, setLessonDescription] = useState('');
   const [lessonDuration, setLessonDuration] = useState('');
   const [lessonDate, setLessonDate] = useState('');
@@ -99,6 +106,7 @@ export default function LessonModal({
     const currentUTCTime = new Date().toISOString().split('T')[1].substring(0, 5);
     
     setLessonTitle('');
+    setTitleDescription('');
     setLessonDescription('');
     setLessonDuration('');
     setLessonDate(currentUTCDate);
@@ -215,6 +223,7 @@ export default function LessonModal({
     // Create lesson object with both local and UTC datetime
     const lessonData = {
       title: lessonTitle,
+      titleDescription: titleDescription,
       description: lessonDescription,
       duration: lessonDuration,
       // Local timezone data
@@ -332,6 +341,20 @@ export default function LessonModal({
           </div>
           
           <div>
+            <label htmlFor="title-description" className="block text-sm font-medium text-gray-700 mb-1">
+              Title Description
+            </label>
+            <input
+              id="title-description"
+              type="text"
+              value={titleDescription}
+              onChange={(e) => setTitleDescription(e.target.value)}
+              placeholder="Enter title description"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+            />
+          </div>
+          
+          <div>
             <label htmlFor="lesson-description" className="block text-sm font-medium text-gray-700 mb-1">
               Description
             </label>
@@ -394,7 +417,7 @@ export default function LessonModal({
                 <FaLink size={16} />
               </button>
               <div className="ml-auto text-xs text-gray-700 font-semibold">
-                Markdown formatting supported
+                Markdown & LaTeX formatting supported
               </div>
             </div>
             <div className="flex flex-col">
@@ -402,7 +425,7 @@ export default function LessonModal({
                 id="lesson-description"
                 value={lessonDescription}
                 onChange={(e) => setLessonDescription(e.target.value)}
-                placeholder="Enter lesson description (Markdown supported)"
+                placeholder="Enter lesson description (Markdown & LaTeX supported)&#10;&#10;Use $math$ for inline equations or $$math$$ for block equations.&#10;Example: $x = y + z$ or $$\\int x dx = \\frac{x^2}{2} + C$$"
                 rows={5}
                 className="w-full px-4 py-2 border border-gray-300 rounded-b-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 font-mono"
               />
@@ -412,10 +435,46 @@ export default function LessonModal({
                     Preview
                   </label>
                   <div className="border border-gray-400 rounded-lg p-4 bg-white shadow-inner prose prose-headings:text-gray-800 prose-p:text-gray-700 prose-strong:text-black prose-em:text-gray-800 prose-ul:text-gray-700 prose-ol:text-gray-700 prose-a:text-blue-600 max-w-none">
-                    <MDEditor.Markdown 
-                      source={lessonDescription} 
-                      style={{ backgroundColor: 'white' }}
-                      className="white-markdown-preview"
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm, remarkMath]}
+                      rehypePlugins={[rehypeRaw, rehypeKatex]}
+                      components={{
+                        h1: ({children}) => <h1 className="text-xl font-bold text-gray-800 mb-3">{children}</h1>,
+                        h2: ({children}) => <h2 className="text-lg font-semibold text-gray-800 mb-2">{children}</h2>,
+                        h3: ({children}) => <h3 className="text-base font-medium text-gray-800 mb-2">{children}</h3>,
+                        p: ({children}) => <p className="text-gray-700 mb-3 leading-relaxed">{children}</p>,
+                        strong: ({children}) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                        em: ({children}) => <em className="italic text-gray-700">{children}</em>,
+                        ul: ({children}) => <ul className="list-disc list-inside text-gray-700 mb-3 space-y-1">{children}</ul>,
+                        ol: ({children}) => <ol className="list-decimal list-inside text-gray-700 mb-3 space-y-1">{children}</ol>,
+                        li: ({children}) => <li className="text-gray-700">{children}</li>,
+                        a: ({href, children}) => (
+                          <a 
+                            href={href} 
+                            className="text-blue-600 hover:text-blue-800 underline" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                          >
+                            {children}
+                          </a>
+                        ),
+                        code: ({children}) => (
+                          <code className="bg-gray-100 text-gray-800 px-2 py-1 rounded font-mono text-sm">
+                            {children}
+                          </code>
+                        ),
+                        pre: ({children}) => (
+                          <pre className="bg-gray-100 text-gray-800 p-3 rounded-lg font-mono text-sm overflow-x-auto mb-3">
+                            {children}
+                          </pre>
+                        ),
+                        blockquote: ({children}) => (
+                          <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-600 mb-3">
+                            {children}
+                          </blockquote>
+                        )
+                      }}
+                      children={lessonDescription}
                     />
                   </div>
                 </div>

@@ -31,6 +31,7 @@ export interface Lesson {
   id: string;
   _id?: string;
   title: string;
+  titleDescription?: string;
   description: string;
   duration: string;
   isPublished: boolean;

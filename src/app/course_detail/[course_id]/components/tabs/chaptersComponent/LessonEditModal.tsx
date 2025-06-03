@@ -11,6 +11,7 @@ export default function LessonEditModal({
   onEditLesson
 }: LessonEditModalProps) {
   const [lessonTitle, setLessonTitle] = useState('');
+  const [titleDescription, setTitleDescription] = useState('');
   const [lessonDescription, setLessonDescription] = useState('');
   const [lessonDuration, setLessonDuration] = useState('');
   const [isPublished, setIsPublished] = useState(false);
@@ -26,6 +27,7 @@ export default function LessonEditModal({
   useEffect(() => {
     if (lesson) {
       setLessonTitle(lesson.title || '');
+      setTitleDescription(lesson.titleDescription || '');
       setLessonDescription(lesson.description || '');
       setLessonDuration(lesson.duration || '');
       setIsPublished(lesson.isPublished || false);
@@ -51,6 +53,7 @@ export default function LessonEditModal({
         
         const lessonData = {
           title: lessonTitle,
+          titleDescription: titleDescription,
           description: lessonDescription,
           duration: lessonDuration,
           isPublished,
@@ -107,6 +110,21 @@ export default function LessonEditModal({
               onChange={(e) => setLessonTitle(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
               placeholder="Enter lesson title"
+              disabled={isUpdating}
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="edit-title-description" className="block text-sm font-medium text-gray-700 mb-2">
+              Title Description
+            </label>
+            <input
+              id="edit-title-description"
+              type="text"
+              value={titleDescription}
+              onChange={(e) => setTitleDescription(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+              placeholder="Enter title description"
               disabled={isUpdating}
             />
           </div>

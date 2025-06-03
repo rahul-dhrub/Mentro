@@ -36,11 +36,17 @@ export default function ChapterItem({
 }: ChapterItemProps) {
   return (
     <div className="bg-white rounded-lg shadow overflow-visible">
-      <div className="p-6 border-b border-gray-200">
+      <div 
+        className="p-6 border-b border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors"
+        onClick={onToggle}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4 flex-1">
             <button
-              onClick={onToggle}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle();
+              }}
               className="text-gray-500 hover:text-gray-700 transition-transform cursor-pointer"
               style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
             >
@@ -88,10 +94,22 @@ export default function ChapterItem({
               <FiClock className="mr-1" />
               {chapter.duration}
             </span>
-            <button onClick={onEdit} className="text-blue-600 hover:text-blue-900 cursor-pointer">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }} 
+              className="text-blue-600 hover:text-blue-900 cursor-pointer"
+            >
               <FiEdit2 size={18} />
             </button>
-            <button onClick={onDelete} className="text-red-600 hover:text-red-900 cursor-pointer">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }} 
+              className="text-red-600 hover:text-red-900 cursor-pointer"
+            >
               <FiTrash2 size={18} />
             </button>
           </div>
@@ -129,39 +147,13 @@ export default function ChapterItem({
                       <h5 className="text-sm font-medium text-gray-900 hover:text-blue-600 cursor-pointer">
                         {lesson.title}
                       </h5>
-                      <div className="text-sm text-gray-600 mt-1 prose prose-sm prose-gray max-w-none">
-                        <ReactMarkdown 
-                          remarkPlugins={[remarkGfm]}
-                          rehypePlugins={[rehypeRaw]}
-                          components={{
-                            p: ({children}) => <p className="text-sm text-gray-600 mb-1">{children}</p>,
-                            strong: ({children}) => <strong className="font-medium text-gray-700">{children}</strong>,
-                            em: ({children}) => <em className="italic text-gray-600">{children}</em>,
-                            u: ({children}) => <u className="underline text-gray-600">{children}</u>,
-                            a: ({href, children}) => (
-                              <a href={href} className="text-blue-600 hover:text-blue-800 underline" target="_blank" rel="noopener noreferrer">
-                                {children}
-                              </a>
-                            ),
-                            code: ({children}) => (
-                              <code className="bg-gray-200 text-gray-700 px-1 py-0.5 rounded text-xs font-mono">
-                                {children}
-                              </code>
-                            ),
-                            ul: ({children}) => <ul className="list-disc list-inside text-sm text-gray-600">{children}</ul>,
-                            ol: ({children}) => <ol className="list-decimal list-inside text-sm text-gray-600">{children}</ol>,
-                            li: ({children}) => <li className="text-sm text-gray-600">{children}</li>,
-                            h1: ({children}) => <h1 className="text-sm font-medium text-gray-700 mb-1">{children}</h1>,
-                            h2: ({children}) => <h2 className="text-sm font-medium text-gray-700 mb-1">{children}</h2>,
-                            h3: ({children}) => <h3 className="text-xs font-medium text-gray-700 mb-1">{children}</h3>,
-                            mark: ({children}) => <mark className="bg-yellow-200 text-gray-700 px-1 rounded">{children}</mark>,
-                            del: ({children}) => <del className="line-through text-gray-500">{children}</del>,
-                            ins: ({children}) => <ins className="underline decoration-green-500 text-gray-600">{children}</ins>,
-                          }}
-                        >
-                          {lesson.description || ''}
-                        </ReactMarkdown>
-                      </div>
+                      {(lesson.titleDescription || lesson.description) && (
+                        <div className="text-sm text-gray-600 mt-1">
+                          {lesson.titleDescription || (lesson.description?.length > 100 
+                            ? `${lesson.description.substring(0, 100)}...` 
+                            : lesson.description)}
+                        </div>
+                      )}
                     </Link>
                   </div>
                   

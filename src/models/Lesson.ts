@@ -11,6 +11,7 @@ export interface ILessonContent {
 export interface ILesson extends Document {
   _id: string;
   title: string;
+  titleDescription?: string;
   description: string;
   duration: string;
   isPublished: boolean;
@@ -67,6 +68,11 @@ const LessonSchema = new Schema<ILesson>(
       required: true,
       trim: true,
     },
+    titleDescription: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     description: {
       type: String,
       default: '',
@@ -119,6 +125,9 @@ const LessonSchema = new Schema<ILesson>(
   },
   {
     timestamps: true,
+    // Ensure all fields are included in JSON output
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
   }
 );
 

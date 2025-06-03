@@ -6,6 +6,9 @@ import { FiPlay, FiFile, FiExternalLink, FiClock, FiCalendar, FiDownload, FiEdit
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import LessonEditModal from './components/LessonEditModal';
 
 interface LessonContent {
@@ -19,6 +22,7 @@ interface LessonContent {
 interface Lesson {
   _id: string;
   title: string;
+  titleDescription?: string;
   description: string;
   duration: string;
   isPublished: boolean;
@@ -462,84 +466,10 @@ export default function LessonPage() {
               
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">{lesson.title}</h1>
-                {lesson.description && (
-                  <div className="text-gray-600 mb-4 prose prose-gray max-w-none">
-                    <ReactMarkdown 
-                      remarkPlugins={[remarkGfm]}
-                      rehypePlugins={[rehypeRaw]}
-                      components={{
-                        // Custom styling for markdown elements
-                        h1: ({children}) => <h1 className="text-2xl font-bold text-gray-800 mb-3">{children}</h1>,
-                        h2: ({children}) => <h2 className="text-xl font-semibold text-gray-800 mb-2">{children}</h2>,
-                        h3: ({children}) => <h3 className="text-lg font-semibold text-gray-800 mb-2">{children}</h3>,
-                        p: ({children}) => <p className="text-gray-600 mb-2">{children}</p>,
-                        strong: ({children}) => <strong className="font-semibold text-gray-800">{children}</strong>,
-                        em: ({children}) => <em className="italic text-gray-700">{children}</em>,
-                        u: ({children}) => <u className="underline text-gray-700">{children}</u>,
-                        ul: ({children}) => <ul className="list-disc list-inside text-gray-600 mb-2">{children}</ul>,
-                        ol: ({children}) => <ol className="list-decimal list-inside text-gray-600 mb-2">{children}</ol>,
-                        li: ({children}) => <li className="mb-1">{children}</li>,
-                        a: ({href, children}) => (
-                          <a 
-                            href={href} 
-                            className="text-blue-600 hover:text-blue-800 underline" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                          >
-                            {children}
-                          </a>
-                        ),
-                        code: ({children}) => (
-                          <code className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-sm font-mono">
-                            {children}
-                          </code>
-                        ),
-                        pre: ({children}) => (
-                          <pre className="bg-gray-100 text-gray-800 p-3 rounded text-sm font-mono overflow-x-auto mb-3">
-                            {children}
-                          </pre>
-                        ),
-                        blockquote: ({children}) => (
-                          <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-600 mb-3">
-                            {children}
-                          </blockquote>
-                        ),
-                        table: ({children}) => (
-                          <table className="min-w-full divide-y divide-gray-200 mb-3">
-                            {children}
-                          </table>
-                        ),
-                        thead: ({children}) => (
-                          <thead className="bg-gray-50">
-                            {children}
-                          </thead>
-                        ),
-                        tbody: ({children}) => (
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {children}
-                          </tbody>
-                        ),
-                        th: ({children}) => (
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {children}
-                          </th>
-                        ),
-                        td: ({children}) => (
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {children}
-                          </td>
-                        ),
-                        // Support additional HTML tags
-                        mark: ({children}) => <mark className="bg-yellow-200 text-gray-800 px-1 rounded">{children}</mark>,
-                        del: ({children}) => <del className="line-through text-gray-500">{children}</del>,
-                        ins: ({children}) => <ins className="underline decoration-green-500 text-gray-700">{children}</ins>,
-                        sub: ({children}) => <sub className="text-xs align-sub">{children}</sub>,
-                        sup: ({children}) => <sup className="text-xs align-super">{children}</sup>,
-                      }}
-                    >
-                      {lesson.description}
-                    </ReactMarkdown>
-                  </div>
+                {lesson.titleDescription && (
+                  <p className="text-lg text-gray-700 mb-3 font-medium">
+                    {lesson.titleDescription}
+                  </p>
                 )}
                 <div className="flex items-center space-x-6 text-sm text-gray-500">
                   <div className="flex items-center space-x-1">
@@ -632,6 +562,88 @@ export default function LessonPage() {
               <div className="h-96 lg:h-[600px]">
                 {renderMainContent()}
               </div>
+              {lesson.description && (
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">Description</h4>
+                  <div className="text-gray-600 mb-4 prose prose-gray max-w-none">
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm, remarkMath]}
+                      rehypePlugins={[rehypeRaw, rehypeKatex]}
+                      components={{
+                        // Custom styling for markdown elements
+                        h1: ({children}) => <h1 className="text-2xl font-bold text-gray-800 mb-3">{children}</h1>,
+                        h2: ({children}) => <h2 className="text-xl font-semibold text-gray-800 mb-2">{children}</h2>,
+                        h3: ({children}) => <h3 className="text-lg font-semibold text-gray-800 mb-2">{children}</h3>,
+                        p: ({children}) => <p className="text-gray-600 mb-2">{children}</p>,
+                        strong: ({children}) => <strong className="font-semibold text-gray-800">{children}</strong>,
+                        em: ({children}) => <em className="italic text-gray-700">{children}</em>,
+                        u: ({children}) => <u className="underline text-gray-700">{children}</u>,
+                        ul: ({children}) => <ul className="list-disc list-inside text-gray-600 mb-2">{children}</ul>,
+                        ol: ({children}) => <ol className="list-decimal list-inside text-gray-600 mb-2">{children}</ol>,
+                        li: ({children}) => <li className="mb-1">{children}</li>,
+                        a: ({href, children}) => (
+                          <a 
+                            href={href} 
+                            className="text-blue-600 hover:text-blue-800 underline" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                          >
+                            {children}
+                          </a>
+                        ),
+                        code: ({children}) => (
+                          <code className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-sm font-mono">
+                            {children}
+                          </code>
+                        ),
+                        pre: ({children}) => (
+                          <pre className="bg-gray-100 text-gray-800 p-3 rounded text-sm font-mono overflow-x-auto mb-3">
+                            {children}
+                          </pre>
+                        ),
+                        blockquote: ({children}) => (
+                          <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-600 mb-3">
+                            {children}
+                          </blockquote>
+                        ),
+                        table: ({children}) => (
+                          <table className="min-w-full divide-y divide-gray-200 mb-3">
+                            {children}
+                          </table>
+                        ),
+                        thead: ({children}) => (
+                          <thead className="bg-gray-50">
+                            {children}
+                          </thead>
+                        ),
+                        tbody: ({children}) => (
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {children}
+                          </tbody>
+                        ),
+                        th: ({children}) => (
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            {children}
+                          </th>
+                        ),
+                        td: ({children}) => (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {children}
+                          </td>
+                        ),
+                        // Support additional HTML tags
+                        mark: ({children}) => <mark className="bg-yellow-200 text-gray-800 px-1 rounded">{children}</mark>,
+                        del: ({children}) => <del className="line-through text-gray-500">{children}</del>,
+                        ins: ({children}) => <ins className="underline decoration-green-500 text-gray-700">{children}</ins>,
+                        sub: ({children}) => <sub className="text-xs align-sub">{children}</sub>,
+                        sup: ({children}) => <sup className="text-xs align-super">{children}</sup>,
+                      }}
+                    >
+                      {lesson.description}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
