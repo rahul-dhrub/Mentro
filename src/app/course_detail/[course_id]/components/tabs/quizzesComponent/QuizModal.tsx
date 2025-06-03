@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FiX, FiCalendar, FiClock } from 'react-icons/fi';
 import { FaBold, FaItalic, FaUnderline, FaListUl, FaListOl, FaLink, FaHeading } from 'react-icons/fa';
+import { TbMath, TbMathFunction } from 'react-icons/tb';
 import MDEditor from '@uiw/react-md-editor';
+import 'katex/dist/katex.min.css';
+import katex from 'katex';
 import '../chaptersComponent/markdown-styles.css';
 import { Quiz } from '../../../types';
 import { Question, QuizModalProps, MultipleChoiceQuestion, MultiselectQuestion, TitaQuestion, DescriptiveQuestion } from './types';
@@ -25,10 +28,34 @@ export default function QuizModal({
   
   // Scheduling states
   const [isScheduled, setIsScheduled] = useState(false);
-  const [startDate, setStartDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [startDate, setStartDate] = useState(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
+  const [startTime, setStartTime] = useState(() => {
+    const now = new Date();
+    const startTime = new Date(now.getTime() + 30 * 60 * 1000); // Add 30 minutes
+    const hours = String(startTime.getHours()).padStart(2, '0');
+    const minutes = String(startTime.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
+  const [endTime, setEndTime] = useState(() => {
+    const now = new Date();
+    const endTime = new Date(now.getTime() + 90 * 60 * 1000); // Add 90 minutes (30 min buffer + 60 min duration)
+    const hours = String(endTime.getHours()).padStart(2, '0');
+    const minutes = String(endTime.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  });
   
   // Media content states
   const [contents, setContents] = useState<LessonContent[]>([]);
@@ -42,6 +69,65 @@ export default function QuizModal({
     }
   }, [isOpen]);
   
+  // Effect to render LaTeX in preview
+  useEffect(() => {
+    if (description && typeof window !== 'undefined') {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        renderLatexInPreview();
+      }, 100);
+    }
+  }, [description]);
+
+  const renderLatexInPreview = () => {
+    try {
+      const previewContainer = document.querySelector('.quiz-description-preview');
+      if (!previewContainer) return;
+
+      // Find all potential math expressions
+      const mathInlineElements = previewContainer.querySelectorAll('code');
+      const mathBlockElements = previewContainer.querySelectorAll('pre code');
+
+      // Process inline math ($...$)
+      mathInlineElements.forEach((element) => {
+        const text = element.textContent || '';
+        if (text.startsWith('$') && text.endsWith('$') && text.length > 2) {
+          const mathContent = text.slice(1, -1);
+          try {
+            const rendered = katex.renderToString(mathContent, {
+              throwOnError: false,
+              displayMode: false,
+            });
+            element.innerHTML = rendered;
+            element.classList.add('math-inline');
+          } catch (err) {
+            console.warn('KaTeX inline render error:', err);
+          }
+        }
+      });
+
+      // Process block math ($$...$$)
+      mathBlockElements.forEach((element) => {
+        const text = element.textContent || '';
+        if (text.startsWith('$$') && text.endsWith('$$') && text.length > 4) {
+          const mathContent = text.slice(2, -2);
+          try {
+            const rendered = katex.renderToString(mathContent, {
+              throwOnError: false,
+              displayMode: true,
+            });
+            element.innerHTML = rendered;
+            element.classList.add('math-block');
+          } catch (err) {
+            console.warn('KaTeX block render error:', err);
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error rendering LaTeX:', error);
+    }
+  };
+  
   const resetForm = () => {
     setTitle('');
     setDescription('');
@@ -49,10 +135,13 @@ export default function QuizModal({
     setQuestions([]);
     setIsPublished(false);
     setIsScheduled(false);
-    setStartDate('');
-    setStartTime('');
-    setEndDate('');
-    setEndTime('');
+    
+    // Reset scheduling times to current date/time (using helper functions)
+    setStartDate(getCurrentDateString());
+    setStartTime(getDefaultStartTime());
+    setEndDate(getCurrentDateString());
+    setEndTime(getDefaultEndTime());
+    
     setContents([]);
     setIsLoading(false);
     setError(null);
@@ -60,7 +149,12 @@ export default function QuizModal({
   
   // Text formatting functions
   const insertTextFormat = (format: string) => {
-    let selectedText = window.getSelection()?.toString() || '';
+    const textarea = document.getElementById('quiz-description') as HTMLTextAreaElement;
+    if (!textarea) return;
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
     let newText = '';
     
     switch (format) {
@@ -89,29 +183,25 @@ export default function QuizModal({
       case 'link':
         newText = selectedText ? `[${selectedText}](url)` : '[Link text](https://example.com)';
         break;
+      case 'inlineMath':
+        newText = selectedText ? `$${selectedText}$` : '$x = y$';
+        break;
+      case 'blockMath':
+        newText = selectedText ? `$$\n${selectedText}\n$$` : '$$\n\\frac{x^2 + y^2}{z}\n$$';
+        break;
       default:
         newText = selectedText;
     }
     
-    setDescription(prev => {
-      if (selectedText) {
-        // Replace selected text with formatted text
-        const selection = window.getSelection();
-        const range = selection?.getRangeAt(0);
-        if (!range || !selection) return prev + newText;
-        
-        // Get the start and end indices of the selection in the textarea value
-        const textarea = document.getElementById('quiz-description') as HTMLTextAreaElement;
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        
-        // Replace the selected text with the formatted text
-        return prev.substring(0, start) + newText + prev.substring(end);
-      } else {
-        // No selection, just append
-        return prev + newText;
-      }
-    });
+    // Insert the new text at cursor position
+    const newValue = description.substring(0, start) + newText + description.substring(end);
+    setDescription(newValue);
+    
+    // Set cursor position after the inserted text
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + newText.length, start + newText.length);
+    }, 0);
   };
   
   const handleAddQuestion = (questionData: Omit<MultipleChoiceQuestion | MultiselectQuestion | TitaQuestion | DescriptiveQuestion, 'id' | 'order'>) => {
@@ -282,11 +372,50 @@ export default function QuizModal({
     return `${hours}:${minutes}`;
   };
   
+  // Helper to get default start time (current time + 30 minutes)
+  const getDefaultStartTime = (): string => {
+    const now = new Date();
+    const startTime = new Date(now.getTime() + 30 * 60 * 1000); // Add 30 minutes
+    const hours = String(startTime.getHours()).padStart(2, '0');
+    const minutes = String(startTime.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+  
+  // Helper to get default end time (current time + 90 minutes)
+  const getDefaultEndTime = (): string => {
+    const now = new Date();
+    const endTime = new Date(now.getTime() + 90 * 60 * 1000); // Add 90 minutes (30 min buffer + 60 min duration)
+    const hours = String(endTime.getHours()).padStart(2, '0');
+    const minutes = String(endTime.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+  
   if (!isOpen) return null;
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-lg max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
+        {/* Custom styles for LaTeX rendering */}
+        <style jsx>{`
+          .quiz-description-preview .math-block {
+            display: block;
+            margin: 1em 0;
+            text-align: center;
+          }
+          
+          .quiz-description-preview .math-inline {
+            display: inline;
+          }
+          
+          .quiz-description-preview .katex {
+            font-size: 1.1em;
+          }
+          
+          .quiz-description-preview .katex-display {
+            margin: 1em 0;
+          }
+        `}</style>
+        
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-semibold text-gray-900">Add New Quiz</h3>
           <button 
@@ -382,8 +511,25 @@ export default function QuizModal({
               >
                 <FaLink size={16} />
               </button>
+              <div className="h-8 w-px bg-gray-500 mx-1"></div>
+              <button 
+                type="button" 
+                onClick={() => insertTextFormat('inlineMath')}
+                className="p-2 bg-gray-700 text-white hover:bg-blue-600 rounded-md flex items-center justify-center transition-colors shadow-sm border border-gray-600"
+                title="Inline Math ($x$)"
+              >
+                <TbMath size={16} />
+              </button>
+              <button 
+                type="button" 
+                onClick={() => insertTextFormat('blockMath')}
+                className="p-2 bg-gray-700 text-white hover:bg-blue-600 rounded-md flex items-center justify-center transition-colors shadow-sm border border-gray-600"
+                title="Block Math ($$...$$)"
+              >
+                <TbMathFunction size={16} />
+              </button>
               <div className="ml-auto text-xs text-gray-700 font-semibold">
-                Markdown formatting supported
+                Markdown & LaTeX supported
               </div>
             </div>
             <div className="flex flex-col">
@@ -391,7 +537,7 @@ export default function QuizModal({
                 id="quiz-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Enter quiz description (Markdown supported)"
+                placeholder="Enter quiz description (Markdown & LaTeX supported)&#10;&#10;Examples:&#10;Inline math: $x^2 + y^2 = z^2$&#10;Block math: $$\int_0^1 x^2 dx$$&#10;&#10;More examples:&#10;$$f(x) = \frac{ax^2 + bx + c}{dx + e}$$&#10;$\alpha + \beta = \gamma$"
                 rows={4}
                 className="w-full px-4 py-2 border border-gray-300 rounded-b-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 font-mono"
               />
@@ -400,7 +546,7 @@ export default function QuizModal({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Preview
                   </label>
-                  <div className="border border-gray-400 rounded-lg p-4 bg-white shadow-inner prose prose-headings:text-gray-800 prose-p:text-gray-700 prose-strong:text-black prose-em:text-gray-800 prose-ul:text-gray-700 prose-ol:text-gray-700 prose-a:text-blue-600 max-w-none">
+                  <div className="quiz-description-preview border border-gray-400 rounded-lg p-4 bg-white shadow-inner prose prose-headings:text-gray-800 prose-p:text-gray-700 prose-strong:text-black prose-em:text-gray-800 prose-ul:text-gray-700 prose-ol:text-gray-700 prose-a:text-blue-600 max-w-none">
                     <MDEditor.Markdown 
                       source={description} 
                       style={{ backgroundColor: 'white' }}
@@ -564,40 +710,131 @@ export default function QuizModal({
 
           {/* Quiz Summary */}
           {questions.length > 0 && (
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-medium text-blue-800 mb-2">Quiz Summary</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-sm text-blue-600">Total Questions:</span>
-                  <span className="ml-2 text-sm font-medium">{questions.length}</span>
+            <div className="bg-blue-50 border border-blue-200 p-5 rounded-lg shadow-sm">
+              <h4 className="font-semibold text-blue-900 mb-4 text-lg flex items-center">
+                <span className="w-2 h-2 bg-blue-600 rounded-full mr-2"></span>
+                Quiz Summary
+              </h4>
+              
+              {/* Summary Stats - Responsive Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <div className="bg-white p-3 rounded-lg border border-blue-100">
+                  <div className="text-xs text-blue-600 font-medium uppercase tracking-wide">Total Questions</div>
+                  <div className="text-xl font-bold text-blue-900 mt-1">{questions.length}</div>
                 </div>
-                <div>
-                  <span className="text-sm text-blue-600">Total Marks:</span>
-                  <span className="ml-2 text-sm font-medium">
+                <div className="bg-white p-3 rounded-lg border border-blue-100">
+                  <div className="text-xs text-blue-600 font-medium uppercase tracking-wide">Total Marks</div>
+                  <div className="text-xl font-bold text-blue-900 mt-1">
                     {questions.reduce((sum, q) => sum + q.marks, 0)}
-                  </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-sm text-blue-600">Question Types:</span>
-                  <span className="ml-2 text-sm font-medium">
-                    {[...new Set(questions.map(q => q.type))].map(type => 
-                      type === 'multiple_choice' 
+                <div className="bg-white p-3 rounded-lg border border-blue-100 sm:col-span-2 lg:col-span-1">
+                  <div className="text-xs text-blue-600 font-medium uppercase tracking-wide mb-2">Question Types</div>
+                  <div className="flex flex-wrap gap-1">
+                    {[...new Set(questions.map(q => q.type))].map(type => {
+                      const typeLabel = type === 'multiple_choice' 
                         ? 'Multiple Choice' 
                         : type === 'multiselect' 
                           ? 'Multiselect' 
                           : type === 'tita' 
                             ? 'Type Answer' 
-                            : 'Descriptive'
-                    ).join(', ')}
-                  </span>
+                            : 'Descriptive';
+                      const typeColor = type === 'multiple_choice' 
+                        ? 'bg-blue-100 text-blue-700' 
+                        : type === 'multiselect' 
+                          ? 'bg-purple-100 text-purple-700' 
+                          : type === 'tita' 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-orange-100 text-orange-700';
+                      
+                      return (
+                        <span 
+                          key={type}
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${typeColor}`}
+                        >
+                          {typeLabel}
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
+
+              {/* Additional Resources */}
               {contents.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-blue-200">
-                  <span className="text-sm text-blue-600">Additional Resources:</span>
-                  <span className="ml-2 text-sm font-medium">{contents.length} file(s) attached</span>
+                <div className="bg-white p-3 rounded-lg border border-blue-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-blue-600 font-medium uppercase tracking-wide">Additional Resources</div>
+                      <div className="text-sm font-semibold text-blue-900 mt-1">
+                        {contents.length} file{contents.length !== 1 ? 's' : ''} attached
+                      </div>
+                    </div>
+                    <div className="text-blue-600">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  {/* Resource Types Preview */}
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {[...new Set(contents.map(c => c.type))].map(type => {
+                      const typeLabel = type === 'video' ? 'Video' : type === 'image' ? 'Image' : type === 'pdf' ? 'PDF' : 'Link';
+                      const typeColor = type === 'video' 
+                        ? 'bg-red-100 text-red-700' 
+                        : type === 'image' 
+                          ? 'bg-green-100 text-green-700' 
+                          : type === 'pdf' 
+                            ? 'bg-blue-100 text-blue-700' 
+                            : 'bg-purple-100 text-purple-700';
+                      
+                      return (
+                        <span 
+                          key={type}
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${typeColor}`}
+                        >
+                          {typeLabel}
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
+
+              {/* Duration Display */}
+              {duration && (
+                <div className="mt-3 bg-white p-3 rounded-lg border border-blue-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-blue-600 font-medium uppercase tracking-wide">Duration</div>
+                      <div className="text-sm font-semibold text-blue-900 mt-1">{duration} minutes</div>
+                    </div>
+                    <div className="text-blue-600">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Status Indicators */}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                  isPublished 
+                    ? 'bg-green-100 text-green-700 border border-green-200' 
+                    : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                }`}>
+                  {isPublished ? '✓ Will be published' : '○ Draft mode'}
+                </span>
+                
+                {isScheduled && (
+                  <span className="px-3 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700 border border-blue-200">
+                    ⏰ Scheduled
+                  </span>
+                )}
+              </div>
             </div>
           )}
           

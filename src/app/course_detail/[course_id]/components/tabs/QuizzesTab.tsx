@@ -38,6 +38,11 @@ export default function QuizzesTab({ courseId }: QuizzesTabProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [quizToDelete, setQuizToDelete] = useState<{id: string, title: string} | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Bulk delete states
+  const [selectedQuizzes, setSelectedQuizzes] = useState<Set<string>>(new Set());
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   // Fetch quizzes from database
   useEffect(() => {
@@ -87,23 +92,26 @@ export default function QuizzesTab({ courseId }: QuizzesTabProps) {
 
   const handleAddQuiz = async (quizData: any) => {
     try {
-      // Prepare data for database
+      console.log('QuizzesTab - Received quiz data:', quizData);
+      console.log('QuizzesTab - Contents from modal:', quizData.contents);
+      
+      // Prepare data for database according to the schema
       const dbQuizData = {
         title: quizData.title,
-        description: quizData.description,
+        description: quizData.description || '',
+        duration: parseInt(quizData.duration),
+        isPublished: Boolean(quizData.isPublished),
+        scheduled: Boolean(quizData.scheduled),
+        startDateTime: quizData.scheduled ? quizData.startDateTime : undefined,
+        endDateTime: quizData.scheduled ? quizData.endDateTime : undefined,
         questions: quizData.questions || [],
-        duration: quizData.duration,
-        totalMarks: quizData.totalMarks || 0,
-        isPublished: quizData.isPublished || false,
+        contents: quizData.contents || [],
         courseId: courseId,
-        startDate: quizData.startDate,
-        endDate: quizData.endDate,
-        attemptsAllowed: quizData.attemptsAllowed || 1,
-        showResults: quizData.showResults || 'after_submission',
-        passingScore: quizData.passingScore || 0,
-        shuffleQuestions: quizData.shuffleQuestions || false,
-        shuffleOptions: quizData.shuffleOptions || false
+        lessonId: undefined, // Set this if you have lesson context
       };
+
+      console.log('QuizzesTab - Sending to API:', dbQuizData);
+      console.log('QuizzesTab - Contents to API:', dbQuizData.contents);
 
       const result = await quizAPI.create(dbQuizData);
       
@@ -138,10 +146,45 @@ export default function QuizzesTab({ courseId }: QuizzesTabProps) {
       setShowDeleteModal(true);
     }
   };
-  
+
+  const handleQuickDelete = (quizId: string) => {
+    const quiz = quizzes.find(q => q.id === quizId);
+    if (quiz && !quiz.isPublished) {
+      // For unpublished quizzes, show a simpler confirmation
+      if (window.confirm(`Are you sure you want to delete "${quiz.title}"? This action cannot be undone.`)) {
+        handleDirectDelete(quizId);
+      }
+    } else {
+      // For published quizzes, use the full confirmation modal
+      handleDeleteClick(quizId);
+    }
+  };
+
+  const handleDirectDelete = async (quizId: string) => {
+    try {
+      setIsDeleting(true);
+      const result = await quizAPI.delete(quizId);
+      
+      if (result.success) {
+        setQuizzes(prev => prev.filter(q => q.id !== quizId));
+        setError(null);
+        // You could add a success toast here
+        console.log('Quiz deleted successfully');
+      } else {
+        setError(result.error || 'Failed to delete quiz');
+      }
+    } catch (err) {
+      setError('Failed to delete quiz');
+      console.error('Error deleting quiz:', err);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleConfirmDelete = async () => {
     if (quizToDelete && deleteConfirmation === quizToDelete.title) {
       try {
+        setIsDeleting(true);
         const result = await quizAPI.delete(quizToDelete.id);
         
         if (result.success) {
@@ -153,16 +196,65 @@ export default function QuizzesTab({ courseId }: QuizzesTabProps) {
       } catch (err) {
         setError('Failed to delete quiz');
         console.error('Error deleting quiz:', err);
+      } finally {
+        setIsDeleting(false);
+        setShowDeleteModal(false);
+        setQuizToDelete(null);
+        setDeleteConfirmation('');
       }
-      
-      setShowDeleteModal(false);
-      setQuizToDelete(null);
-      setDeleteConfirmation('');
     }
   };
 
   const handleQuizClick = (quizId: string) => {
     router.push(`/quiz/${quizId}`);
+  };
+
+  // Bulk delete functions
+  const handleSelectQuiz = (quizId: string) => {
+    const newSelected = new Set(selectedQuizzes);
+    if (newSelected.has(quizId)) {
+      newSelected.delete(quizId);
+    } else {
+      newSelected.add(quizId);
+    }
+    setSelectedQuizzes(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedQuizzes.size === quizzes.length) {
+      setSelectedQuizzes(new Set());
+    } else {
+      setSelectedQuizzes(new Set(quizzes.map(q => q.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedQuizzes.size === 0) return;
+    
+    try {
+      setIsDeleting(true);
+      const deletePromises = Array.from(selectedQuizzes).map(quizId => 
+        quizAPI.delete(quizId)
+      );
+      
+      const results = await Promise.all(deletePromises);
+      const failedDeletes = results.filter(result => !result.success);
+      
+      if (failedDeletes.length === 0) {
+        setQuizzes(prev => prev.filter(q => !selectedQuizzes.has(q.id)));
+        setSelectedQuizzes(new Set());
+        setError(null);
+        console.log(`Successfully deleted ${selectedQuizzes.size} quizzes`);
+      } else {
+        setError(`Failed to delete ${failedDeletes.length} quizzes`);
+      }
+    } catch (err) {
+      setError('Failed to delete selected quizzes');
+      console.error('Error bulk deleting quizzes:', err);
+    } finally {
+      setIsDeleting(false);
+      setShowBulkDeleteConfirm(false);
+    }
   };
 
   if (loading) {
@@ -200,6 +292,20 @@ export default function QuizzesTab({ courseId }: QuizzesTabProps) {
   }
 
   const columns: Column<Quiz>[] = [
+    {
+      key: 'select',
+      header: '',
+      render: (quiz) => (
+        <input
+          type="checkbox"
+          checked={selectedQuizzes.has(quiz.id)}
+          onChange={() => handleSelectQuiz(quiz.id)}
+          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      className: 'w-12'
+    },
     {
       key: 'title',
       header: 'Title',
@@ -258,15 +364,29 @@ export default function QuizzesTab({ courseId }: QuizzesTabProps) {
       header: 'Actions',
       className: 'text-right',
       render: (quiz) => (
-        <div className="flex justify-end space-x-4">
+        <div className="flex justify-end items-center space-x-2">
+          {/* Edit Button */}
           <button 
             onClick={(e) => {
               e.stopPropagation();
-              handleDeleteClick(quiz.id);
+              handleQuizClick(quiz.id);
             }}
-            className="text-red-600 hover:text-red-900 cursor-pointer"
+            className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors duration-200 cursor-pointer"
+            title="Edit Quiz"
           >
-            <FiTrash2 size={18} />
+            <FiEdit2 size={16} />
+          </button>
+          
+          {/* Delete Button */}
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleQuickDelete(quiz.id);
+            }}
+            className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200 cursor-pointer"
+            title="Delete Quiz"
+          >
+            <FiTrash2 size={16} />
           </button>
         </div>
       )
@@ -276,7 +396,30 @@ export default function QuizzesTab({ courseId }: QuizzesTabProps) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900">Quizzes</h2>
+        <div className="flex items-center space-x-4">
+          <h2 className="text-xl font-semibold text-gray-900">Quizzes</h2>
+          {selectedQuizzes.size > 0 && (
+            <div className="flex items-center space-x-3">
+              <span className="text-sm text-gray-600">
+                {selectedQuizzes.size} selected
+              </span>
+              <button
+                onClick={() => setShowBulkDeleteConfirm(true)}
+                disabled={isDeleting}
+                className="px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-1"
+              >
+                <FiTrash2 size={14} />
+                <span>Delete Selected</span>
+              </button>
+              <button
+                onClick={() => setSelectedQuizzes(new Set())}
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                Clear Selection
+              </button>
+            </div>
+          )}
+        </div>
         <button
           onClick={handleOpenModal}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 cursor-pointer"
@@ -292,6 +435,28 @@ export default function QuizzesTab({ courseId }: QuizzesTabProps) {
         </div>
       )}
       
+      {/* Bulk Selection Controls */}
+      {quizzes.length > 0 && (
+        <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              checked={selectedQuizzes.size === quizzes.length && quizzes.length > 0}
+              onChange={handleSelectAll}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label className="text-sm text-gray-700">
+              Select All ({quizzes.length} quizzes)
+            </label>
+          </div>
+          {selectedQuizzes.size > 0 && (
+            <div className="text-sm text-gray-600">
+              {selectedQuizzes.size} of {quizzes.length} quizzes selected
+            </div>
+          )}
+        </div>
+      )}
+      
       {/* Quiz Modal */}
       <QuizModal
         isOpen={isModalOpen}
@@ -299,57 +464,175 @@ export default function QuizzesTab({ courseId }: QuizzesTabProps) {
         onAddQuiz={handleAddQuiz}
       />
       
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && quizToDelete && (
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-red-600">Delete Quiz</h3>
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <FiTrash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">Delete Multiple Quizzes</h3>
+              </div>
               <button 
-                onClick={() => setShowDeleteModal(false)}
-                className="text-gray-500 hover:text-gray-700 cursor-pointer"
+                onClick={() => !isDeleting && setShowBulkDeleteConfirm(false)}
+                disabled={isDeleting}
+                className="text-gray-400 hover:text-gray-600 cursor-pointer disabled:cursor-not-allowed"
               >
                 <FiX size={24} />
               </button>
             </div>
             
             <div className="space-y-4">
-              <div className="bg-red-50 border border-red-200 rounded-md p-4">
-                <p className="text-sm text-red-700">
-                  <strong>Warning:</strong> This action cannot be undone. This will permanently delete the quiz
-                  and all student attempts.
-                </p>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <FiX className="h-5 w-5 text-red-400" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-red-800">
+                      Warning: This action cannot be undone
+                    </h3>
+                    <div className="mt-2 text-sm text-red-700">
+                      <p>
+                        You are about to permanently delete <strong>{selectedQuizzes.size}</strong> quiz{selectedQuizzes.size > 1 ? 'es' : ''} 
+                        and all associated data including student attempts.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
               
-              <p className="text-sm text-gray-700">
-                To confirm, type <strong className="font-medium">{quizToDelete.title}</strong> in the field below:
-              </p>
+              <div className="max-h-32 overflow-y-auto bg-gray-50 rounded p-2">
+                <div className="text-sm text-gray-700">
+                  <strong>Quizzes to be deleted:</strong>
+                  <ul className="mt-1 space-y-1">
+                    {Array.from(selectedQuizzes).map(quizId => {
+                      const quiz = quizzes.find(q => q.id === quizId);
+                      return quiz ? (
+                        <li key={quizId} className="text-xs">• {quiz.title}</li>
+                      ) : null;
+                    })}
+                  </ul>
+                </div>
+              </div>
               
-              <input
-                type="text"
-                value={deleteConfirmation}
-                onChange={(e) => setDeleteConfirmation(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-700"
-                autoFocus
-              />
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  onClick={() => setShowBulkDeleteConfirm(false)}
+                  disabled={isDeleting}
+                  className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={isDeleting}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors hover:bg-red-700 flex items-center space-x-2"
+                >
+                  {isDeleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiTrash2 size={16} />
+                      <span>Delete {selectedQuizzes.size} Quiz{selectedQuizzes.size > 1 ? 'es' : ''}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Delete Confirmation Modal for single quiz */}
+      {showDeleteModal && quizToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <FiTrash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">Delete Quiz</h3>
+              </div>
+              <button 
+                onClick={() => !isDeleting && setShowDeleteModal(false)}
+                disabled={isDeleting}
+                className="text-gray-400 hover:text-gray-600 cursor-pointer disabled:cursor-not-allowed"
+              >
+                <FiX size={24} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <FiX className="h-5 w-5 text-red-400" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-red-800">
+                      Warning: This action cannot be undone
+                    </h3>
+                    <div className="mt-2 text-sm text-red-700">
+                      <p>
+                        This will permanently delete the quiz "<strong>{quizToDelete.title}</strong>" 
+                        and all associated data including student attempts.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
               
-              <div className="flex justify-end space-x-3 mt-6">
+              <div>
+                <label htmlFor="delete-confirmation" className="block text-sm font-medium text-gray-700 mb-2">
+                  To confirm, type <span className="font-semibold text-gray-900">"{quizToDelete.title}"</span> in the field below:
+                </label>
+                <input
+                  id="delete-confirmation"
+                  type="text"
+                  value={deleteConfirmation}
+                  onChange={(e) => setDeleteConfirmation(e.target.value)}
+                  placeholder={`Type "${quizToDelete.title}" to confirm`}
+                  disabled={isDeleting}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 text-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  autoFocus
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4">
                 <button
                   onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
+                  disabled={isDeleting}
+                  className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleConfirmDelete}
-                  disabled={deleteConfirmation !== quizToDelete.title}
-                  className={`px-4 py-2 bg-red-600 text-white rounded-lg ${
-                    deleteConfirmation === quizToDelete.title 
-                      ? 'hover:bg-red-700 cursor-pointer' 
-                      : 'opacity-50 cursor-not-allowed'
+                  disabled={deleteConfirmation !== quizToDelete.title || isDeleting}
+                  className={`px-4 py-2 bg-red-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2 ${
+                    deleteConfirmation === quizToDelete.title && !isDeleting
+                      ? 'hover:bg-red-700' 
+                      : ''
                   }`}
                 >
-                  Delete Quiz
+                  {isDeleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiTrash2 size={16} />
+                      <span>Delete Quiz</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

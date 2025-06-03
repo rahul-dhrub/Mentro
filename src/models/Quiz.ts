@@ -37,6 +37,16 @@ export interface IDescriptiveQuestion extends IBaseQuestion {
 
 export type IQuestion = IMultipleChoiceQuestion | IMultiselectQuestion | ITitaQuestion | IDescriptiveQuestion;
 
+// Content interface for additional resources
+export interface ILessonContent {
+  id: string;
+  type: 'video' | 'image' | 'pdf' | 'link';
+  title: string;
+  url: string;
+  description?: string;
+  order: number;
+}
+
 export interface IQuiz extends Document {
   _id: string;
   title: string;
@@ -49,6 +59,7 @@ export interface IQuiz extends Document {
   startDateTime?: Date;
   endDateTime?: Date;
   questions: IQuestion[];
+  contents?: ILessonContent[]; // Additional resources
   courseId: string;
   lessonId?: string;
   createdBy: string;
@@ -71,6 +82,43 @@ const OptionSchema = new Schema<IOption>({
     required: true,
     default: false,
   },
+});
+
+// Content Schema for additional resources
+const ContentSchema = new Schema<ILessonContent>({
+  id: {
+    type: String,
+    required: true,
+  },
+  type: {
+    type: String,
+    enum: ['video', 'image', 'pdf', 'link'],
+    required: true,
+  },
+  title: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  url: {
+    type: String,
+    required: true,
+  },
+  description: {
+    type: String,
+    default: '',
+  },
+  order: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
+}, { _id: false });
+
+// Add validation middleware to ContentSchema
+ContentSchema.pre('validate', function(next) {
+  console.log('ContentSchema validation - this:', this);
+  next();
 });
 
 const BaseQuestionSchema = new Schema({
@@ -192,6 +240,10 @@ const QuizSchema = new Schema<IQuiz>(
       type: Schema.Types.Mixed,
       default: {},
     }],
+    contents: {
+      type: [ContentSchema],
+      default: [],
+    },
     courseId: {
       type: String,
       required: true,
@@ -215,6 +267,9 @@ const QuizSchema = new Schema<IQuiz>(
 
 // Pre-save middleware to calculate totals
 QuizSchema.pre('save', function(this: IQuiz, next) {
+  console.log('Pre-save middleware - this.contents:', this.contents);
+  console.log('Pre-save middleware - full quiz object:', this.toObject());
+  
   if (this.questions && this.questions.length > 0) {
     this.totalQuestions = this.questions.length;
     this.totalMarks = this.questions.reduce((sum: number, question: any) => sum + (question.marks || 0), 0);
@@ -223,6 +278,12 @@ QuizSchema.pre('save', function(this: IQuiz, next) {
     this.totalMarks = 0;
   }
   next();
+});
+
+// Post-save middleware to debug the contents field
+QuizSchema.post('save', function(doc) {
+  console.log('Post-save middleware - doc.contents:', doc.contents);
+  console.log('Post-save middleware - full doc:', doc.toObject());
 });
 
 // Validation for scheduled quizzes
@@ -245,4 +306,9 @@ QuizSchema.index({ isPublished: 1 });
 QuizSchema.index({ scheduled: 1, startDateTime: 1 });
 QuizSchema.index({ createdBy: 1 });
 
-export default mongoose.models.Quiz || mongoose.model<IQuiz>('Quiz', QuizSchema); 
+// Clear any existing Quiz model to ensure we use the updated schema
+if (mongoose.models.Quiz) {
+  delete mongoose.models.Quiz;
+}
+
+export default mongoose.model<IQuiz>('Quiz', QuizSchema); 

@@ -2,8 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FiSave, FiEye, FiEdit2, FiClock, FiCalendar, FiArrowLeft, FiUser, FiBookOpen, FiPlay, FiPause, FiCheck, FiX, FiPlusCircle, FiTrash2, FiPlus } from 'react-icons/fi';
+import { FiSave, FiEye, FiEdit2, FiClock, FiCalendar, FiArrowLeft, FiUser, FiBookOpen, FiPlay, FiPause, FiCheck, FiX, FiPlusCircle, FiTrash2, FiPlus, FiLoader, FiVideo, FiImage, FiFile, FiLink, FiExternalLink } from 'react-icons/fi';
+import { quizAPI } from '@/lib/api';
 import dynamic from 'next/dynamic';
+import MediaPreviewModal from './components/MediaPreviewModal';
+import ContentForm from '../../course_detail/[course_id]/components/tabs/chaptersComponent/ContentForm';
+import { LessonContent } from '../../course_detail/[course_id]/components/tabs/chaptersComponent/types';
 
 // Dynamically import MDEditor to avoid SSR issues
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), {
@@ -48,6 +52,14 @@ interface DescriptiveQuestion extends BaseQuestion {
 
 type Question = MultipleChoiceQuestion | MultiselectQuestion | TitaQuestion | DescriptiveQuestion;
 
+interface QuizContent {
+  id: string;
+  title: string;
+  url: string;
+  type: 'video' | 'image' | 'pdf' | 'link';
+  order: number;
+}
+
 interface Quiz {
   id: string;
   title: string;
@@ -63,11 +75,26 @@ interface Quiz {
   courseId?: string;
   courseName?: string;
   attempts?: number;
+  contents?: QuizContent[];
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export default function QuizDetail() {
   const params = useParams();
   const router = useRouter();
+  const quizId = params?.quiz_id as string;
+  
+  // Loading and error states
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  
+  // Media preview states
+  const [selectedContent, setSelectedContent] = useState<QuizContent | null>(null);
+  const [showMediaModal, setShowMediaModal] = useState(false);
+  
   const [isEditing, setIsEditing] = useState(false);
   const [showQuestions, setShowQuestions] = useState(true);
   
@@ -78,6 +105,7 @@ export default function QuizDetail() {
   const [editScheduled, setEditScheduled] = useState(false);
   const [editStartDateTime, setEditStartDateTime] = useState('');
   const [editEndDateTime, setEditEndDateTime] = useState('');
+  const [editContents, setEditContents] = useState<LessonContent[]>([]);
   
   // Question editing states
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
@@ -92,67 +120,56 @@ export default function QuizDetail() {
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [sampleAnswer, setSampleAnswer] = useState('');
   
-  const [quiz, setQuiz] = useState<Quiz>({
-    id: '1',
-    title: 'JavaScript Fundamentals Quiz',
-    description: 'Test your knowledge of JavaScript basics including variables, functions, and control structures',
-    totalQuestions: 5,
-    duration: 30,
-    totalMarks: 50,
-    isPublished: true,
-    scheduled: false,
-    startDateTime: '',
-    endDateTime: '',
-    questions: [
-      {
-        id: 'q1',
-        text: 'What is the correct way to declare a variable in JavaScript?',
-        type: 'multiple_choice',
-        marks: 10,
-        order: 0,
-        options: [
-          { id: 'opt1', text: 'var myVariable;', isCorrect: true },
-          { id: 'opt2', text: 'variable myVariable;', isCorrect: false },
-          { id: 'opt3', text: 'v myVariable;', isCorrect: false },
-          { id: 'opt4', text: 'declare myVariable;', isCorrect: false }
-        ]
-      },
-      {
-        id: 'q2',
-        text: 'Which of the following are valid JavaScript data types? (Select all that apply)',
-        type: 'multiselect',
-        marks: 15,
-        order: 1,
-        options: [
-          { id: 'opt1', text: 'string', isCorrect: true },
-          { id: 'opt2', text: 'number', isCorrect: true },
-          { id: 'opt3', text: 'boolean', isCorrect: true },
-          { id: 'opt4', text: 'character', isCorrect: false },
-          { id: 'opt5', text: 'object', isCorrect: true }
-        ]
-      },
-      {
-        id: 'q3',
-        text: 'What does "NaN" stand for in JavaScript?',
-        type: 'tita',
-        marks: 10,
-        order: 2,
-        correctAnswer: 'Not a Number',
-        caseSensitive: false
-      },
-      {
-        id: 'q4',
-        text: 'Explain the difference between == and === operators in JavaScript.',
-        type: 'descriptive',
-        marks: 15,
-        order: 3,
-        sampleAnswer: '== performs type coercion before comparison, while === checks both value and type without coercion.'
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
+
+  // Fetch quiz data from database
+  useEffect(() => {
+    const fetchQuiz = async () => {
+      if (!quizId) return;
+      
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const result = await quizAPI.getById(quizId);
+        
+        if (result.success && result.data) {
+          const quizData = result.data;
+          
+          // Transform database data to match our interface
+          const transformedQuiz: Quiz = {
+            id: quizData._id,
+            title: quizData.title,
+            description: quizData.description || '',
+            totalQuestions: quizData.totalQuestions || 0,
+            duration: quizData.duration,
+            totalMarks: quizData.totalMarks || 0,
+            isPublished: quizData.isPublished || false,
+            scheduled: quizData.scheduled || false,
+            startDateTime: quizData.startDateTime ? new Date(quizData.startDateTime).toISOString().slice(0, 16) : '',
+            endDateTime: quizData.endDateTime ? new Date(quizData.endDateTime).toISOString().slice(0, 16) : '',
+            questions: quizData.questions || [],
+            courseId: quizData.courseId,
+            contents: quizData.contents || [],
+            createdBy: quizData.createdBy,
+            createdAt: quizData.createdAt,
+            updatedAt: quizData.updatedAt,
+          };
+          
+          setQuiz(transformedQuiz);
+        } else {
+          setError(result.error || 'Failed to fetch quiz');
+        }
+      } catch (err) {
+        setError('Failed to fetch quiz');
+        console.error('Error fetching quiz:', err);
+      } finally {
+        setLoading(false);
       }
-    ],
-    courseId: 'js-101',
-    courseName: 'JavaScript Programming',
-    attempts: 45
-  });
+    };
+
+    fetchQuiz();
+  }, [quizId]);
 
   const resetQuestionForm = () => {
     setQuestionText('');
@@ -217,7 +234,7 @@ export default function QuizDetail() {
   };
 
   const handleSaveQuestion = () => {
-    if (!questionText.trim() || !questionMarks) return;
+    if (!quiz || !questionText.trim() || !questionMarks) return;
 
     const baseQuestion = {
       id: editingQuestionId || `q${Date.now()}`,
@@ -266,6 +283,8 @@ export default function QuizDetail() {
     }
 
     setQuiz(prev => {
+      if (!prev) return prev;
+      
       let updatedQuestions;
       if (editingQuestionId) {
         // Update existing question
@@ -301,6 +320,8 @@ export default function QuizDetail() {
   const handleDeleteQuestion = (questionId: string) => {
     if (confirm('Are you sure you want to delete this question?')) {
       setQuiz(prev => {
+        if (!prev) return prev;
+        
         const updatedQuestions = prev.questions
           .filter(q => q.id !== questionId)
           .map((q, index) => ({ ...q, order: index }));
@@ -328,72 +349,132 @@ export default function QuizDetail() {
     setEditingQuestionId(null);
   };
 
-  const handleSave = () => {
-    // Update quiz with edited values
-    setQuiz(prev => ({
-      ...prev,
-      title: editTitle,
-      description: editDescription,
-      duration: parseInt(editDuration) || prev.duration,
-      scheduled: editScheduled,
-      startDateTime: editScheduled ? editStartDateTime : '',
-      endDateTime: editScheduled ? editEndDateTime : ''
-    }));
-    setIsEditing(false);
-    setIsAddingQuestion(false);
-    setEditingQuestionId(null);
-    resetQuestionForm();
-    console.log('Saving quiz:', {
-      ...quiz,
-      title: editTitle,
-      description: editDescription,
-      duration: parseInt(editDuration),
-      scheduled: editScheduled,
-      startDateTime: editScheduled ? editStartDateTime : '',
-      endDateTime: editScheduled ? editEndDateTime : ''
-    });
+  const handleSave = async () => {
+    if (!quiz || !editTitle.trim() || !editDuration) return;
+
+    try {
+      setSaving(true);
+      setError(null);
+
+      const updateData = {
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+        duration: parseInt(editDuration),
+        scheduled: editScheduled,
+        startDateTime: editScheduled ? editStartDateTime : undefined,
+        endDateTime: editScheduled ? editEndDateTime : undefined,
+        questions: quiz.questions,
+        contents: editContents
+      };
+
+      const result = await quizAPI.update(quiz.id, updateData);
+
+      if (result.success && result.data) {
+        // Update local state with returned data
+        const updatedQuiz = result.data;
+        setQuiz(prev => prev ? {
+          ...prev,
+          title: updatedQuiz.title,
+          description: updatedQuiz.description,
+          duration: updatedQuiz.duration,
+          scheduled: updatedQuiz.scheduled,
+          startDateTime: updatedQuiz.startDateTime ? new Date(updatedQuiz.startDateTime).toISOString().slice(0, 16) : '',
+          endDateTime: updatedQuiz.endDateTime ? new Date(updatedQuiz.endDateTime).toISOString().slice(0, 16) : '',
+          totalQuestions: updatedQuiz.totalQuestions,
+          totalMarks: updatedQuiz.totalMarks,
+          contents: updatedQuiz.contents || [],
+          updatedAt: updatedQuiz.updatedAt
+        } : null);
+        
+        setIsEditing(false);
+      } else {
+        setError(result.error || 'Failed to save quiz');
+      }
+    } catch (err) {
+      setError('Failed to save quiz');
+      console.error('Error saving quiz:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleEdit = () => {
-    // Initialize edit form with current values
+    if (!quiz) return;
+    
     setEditTitle(quiz.title);
     setEditDescription(quiz.description);
     setEditDuration(quiz.duration.toString());
     setEditScheduled(quiz.scheduled || false);
     setEditStartDateTime(quiz.startDateTime || '');
     setEditEndDateTime(quiz.endDateTime || '');
+    
+    // Transform quiz contents to LessonContent format for editing
+    const transformedContents: LessonContent[] = (quiz.contents || []).map(content => ({
+      id: content.id,
+      title: content.title,
+      url: content.url,
+      type: content.type as 'video' | 'image' | 'pdf' | 'link',
+      order: content.order
+    }));
+    setEditContents(transformedContents);
+    
     setIsEditing(true);
   };
 
   const handleCancel = () => {
-    // Reset edit form values
-    setEditTitle('');
-    setEditDescription('');
-    setEditDuration('');
-    setEditScheduled(false);
-    setEditStartDateTime('');
-    setEditEndDateTime('');
     setIsEditing(false);
     setIsAddingQuestion(false);
     setEditingQuestionId(null);
     resetQuestionForm();
+    setError(null);
   };
 
   const handleGoBack = () => {
-    if (quiz.courseId) {
-      router.push(`/course_detail/${quiz.courseId}`);
-    } else {
-      router.back();
-    }
+    router.back();
+  };
+
+  const handleContentClick = (content: QuizContent) => {
+    setSelectedContent(content);
+    setShowMediaModal(true);
+  };
+
+  // Content management handlers for editing
+  const handleAddContent = (content: Omit<LessonContent, 'id' | 'order'>) => {
+    const newContent: LessonContent = {
+      id: Date.now().toString(),
+      ...content,
+      order: editContents.length,
+    };
+    setEditContents(prev => [...prev, newContent]);
+  };
+
+  const handleEditContent = (index: number, content: Omit<LessonContent, 'id' | 'order'>) => {
+    setEditContents(prev => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
+        ...content,
+      };
+      return updated;
+    });
+  };
+
+  const handleDeleteContent = (index: number) => {
+    setEditContents(prev => {
+      const updated = [...prev];
+      updated.splice(index, 1);
+      // Update order of remaining contents
+      return updated.map((content, idx) => ({ ...content, order: idx }));
+    });
   };
 
   const getQuestionTypeLabel = (type: string) => {
     switch (type) {
       case 'multiple_choice': return 'Multiple Choice';
       case 'multiselect': return 'Multiselect';
-      case 'tita': return 'Type Answer';
+      case 'tita': return 'Type in Answer';
       case 'descriptive': return 'Descriptive';
-      default: return type;
+      default: return 'Unknown';
     }
   };
 
@@ -419,6 +500,119 @@ export default function QuizDetail() {
     }
   }, [newQuestionType, isAddingQuestion, editingQuestionId]);
 
+  const renderContentIcon = (type: string) => {
+    switch (type) {
+      case 'video':
+        return <FiVideo className="w-5 h-5 text-red-500" />;
+      case 'image':
+        return <FiImage className="w-5 h-5 text-green-500" />;
+      case 'pdf':
+        return <FiFile className="w-5 h-5 text-blue-500" />;
+      case 'link':
+        return <FiLink className="w-5 h-5 text-purple-500" />;
+      default:
+        return <FiFile className="w-5 h-5 text-gray-500" />;
+    }
+  };
+
+  const renderQuizResources = () => {
+    if (!quiz?.contents || quiz.contents.length === 0) return null;
+
+    return (
+      <div className="bg-white rounded-lg shadow overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">Additional Resources</h2>
+        </div>
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {quiz.contents.map((content, index) => (
+              <div
+                key={content.id}
+                className="flex items-center space-x-3 p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors group"
+              >
+                <div className="flex-shrink-0">
+                  {renderContentIcon(content.type)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h6 className="text-sm font-medium text-gray-900 truncate">
+                    {content.title}
+                  </h6>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">
+                    {content.type}
+                  </p>
+                </div>
+                <div className="flex-shrink-0 flex items-center space-x-2">
+                  {['video', 'image', 'pdf'].includes(content.type) && (
+                    <button
+                      onClick={() => handleContentClick(content)}
+                      className="text-purple-600 hover:text-purple-700 flex items-center space-x-1 bg-purple-50 px-2 py-1 rounded text-xs"
+                      title={`Preview ${content.title}`}
+                    >
+                      <FiEye className="w-3 h-3" />
+                      <span>Preview</span>
+                    </button>
+                  )}
+                  <a
+                    href={content.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 text-sm font-medium group-hover:text-blue-700 transition-colors"
+                    title={`Open ${content.title}`}
+                  >
+                    <FiExternalLink className="w-4 h-4" />
+                    <span>Open</span>
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-center items-center h-64">
+            <div className="flex items-center space-x-3">
+              <FiLoader className="animate-spin" size={24} />
+              <span className="text-gray-600 text-lg">Loading quiz...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && !quiz) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <div className="text-red-700 mb-4">
+              <h2 className="text-lg font-semibold mb-2">Error Loading Quiz</h2>
+              <p>{error}</p>
+            </div>
+            <button
+              onClick={() => router.back()}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!quiz) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -433,13 +627,30 @@ export default function QuizDetail() {
           </button>
         </div>
 
+        {/* Error message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="text-red-700">{error}</div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="flex justify-between items-start">
             <div className="flex-1">
               <div className="flex items-center text-sm text-gray-500 mb-2">
                 <FiBookOpen className="mr-2" size={16} />
-                <span>{quiz.courseName || 'Course'}</span>
+                <span>Quiz</span>
+                {quiz.createdAt && (
+                  <span className="ml-4">
+                    Created: {new Date(quiz.createdAt).toLocaleDateString()}
+                  </span>
+                )}
+                {quiz.updatedAt && (
+                  <span className="ml-4">
+                    Updated: {new Date(quiz.updatedAt).toLocaleDateString()}
+                  </span>
+                )}
               </div>
               
               {isEditing ? (
@@ -526,6 +737,20 @@ export default function QuizDetail() {
                       </div>
                     </div>
                   )}
+                  
+                  {/* Additional Resources Section */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <div className="mb-4">
+                      <h4 className="text-lg font-medium text-gray-900 mb-2">Additional Resources</h4>
+                      <p className="text-sm text-gray-600">Add videos, images, PDFs, or links as supplementary materials for this quiz.</p>
+                    </div>
+                    <ContentForm
+                      lessonContents={editContents}
+                      onAddContent={handleAddContent}
+                      onEditContent={handleEditContent}
+                      onDeleteContent={handleDeleteContent}
+                    />
+                  </div>
                 </div>
               ) : (
                 <div>
@@ -580,27 +805,40 @@ export default function QuizDetail() {
                 <div className="flex space-x-2">
                   <button
                     onClick={handleCancel}
-                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                    disabled={saving}
+                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSave}
-                    disabled={!editTitle.trim() || !editDuration}
+                    disabled={!editTitle.trim() || !editDuration || saving}
                     className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
-                      editTitle.trim() && editDuration
+                      editTitle.trim() && editDuration && !saving
                         ? 'bg-green-600 text-white hover:bg-green-700'
                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
                   >
-                    <FiSave size={18} />
-                    <span>Save Changes</span>
+                    {saving ? (
+                      <>
+                        <FiLoader className="animate-spin" size={18} />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FiSave size={18} />
+                        <span>Save Changes</span>
+                      </>
+                    )}
                   </button>
                 </div>
               )}
             </div>
           </div>
         </div>
+
+        {/* Quiz Resources Section */}
+        {renderQuizResources()}
 
         {/* Questions Section */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -909,6 +1147,16 @@ export default function QuizDetail() {
           )}
         </div>
       </div>
+      
+      {/* Media Preview Modal */}
+      {showMediaModal && selectedContent && (
+        <MediaPreviewModal
+          isOpen={showMediaModal}
+          content={selectedContent}
+          onClose={() => setShowMediaModal(false)}
+          renderContentIcon={renderContentIcon}
+        />
+      )}
     </div>
   );
 } 
