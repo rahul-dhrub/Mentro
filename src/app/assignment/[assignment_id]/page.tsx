@@ -12,6 +12,8 @@ import { uploadFileToBunnyStorage } from '@/app/utils/fileUpload';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 
 // Component imports
 import VideoPlayer from './components/VideoPlayer';
@@ -125,98 +127,8 @@ export default function AssignmentDetail() {
   };
 
   useEffect(() => {
-    // Initialize KaTeX for any math elements
-    if (typeof window !== 'undefined' && assignment) {
-      setTimeout(() => {
-        renderLatexInContent();
-      }, 100);
-    }
+    // No longer needed - LaTeX rendering is now handled by ReactMarkdown with rehypeKatex
   }, [assignment?.content, isPreview, isFullPreview]);
-
-  const renderLatexInContent = () => {
-    const contentElements = document.querySelectorAll('.assignment-content, .assignment-preview');
-    
-    contentElements.forEach((element) => {
-      const textNodes: Text[] = [];
-      const walker = document.createTreeWalker(
-        element,
-        NodeFilter.SHOW_TEXT,
-        null
-      );
-
-      let node;
-      while ((node = walker.nextNode())) {
-        textNodes.push(node as Text);
-      }
-
-      textNodes.forEach((textNode) => {
-        const text = textNode.textContent || '';
-        
-        // Handle block math ($$...$$)
-        if (text.includes('$$')) {
-          const parts = text.split(/(.*?\$\$.*?\$\$.*?)/g);
-          if (parts.length > 1) {
-            const parent = textNode.parentNode;
-            if (parent) {
-              parts.forEach((part) => {
-                if (part.includes('$$')) {
-                  const mathMatch = part.match(/\$\$(.*?)\$\$/);
-                  if (mathMatch) {
-                    const mathDiv = document.createElement('div');
-                    mathDiv.className = 'math-block';
-                    mathDiv.style.textAlign = 'center';
-                    mathDiv.style.margin = '1em 0';
-                    try {
-                      katex.render(mathMatch[1], mathDiv, {
-                        throwOnError: false,
-                        displayMode: true
-                      });
-                      parent.insertBefore(mathDiv, textNode);
-                    } catch (e) {
-                      mathDiv.textContent = part;
-                      parent.insertBefore(mathDiv, textNode);
-                    }
-                  }
-                } else if (part.trim()) {
-                  parent.insertBefore(document.createTextNode(part), textNode);
-                }
-              });
-              parent.removeChild(textNode);
-            }
-          }
-        }
-        // Handle inline math ($...$)
-        else if (text.includes('$') && !text.includes('$$')) {
-          const parts = text.split(/(\$[^$]+\$)/g);
-          if (parts.length > 1) {
-            const parent = textNode.parentNode;
-            if (parent) {
-              parts.forEach((part) => {
-                if (part.startsWith('$') && part.endsWith('$') && part.length > 2) {
-                  const mathContent = part.slice(1, -1);
-                  const mathSpan = document.createElement('span');
-                  mathSpan.className = 'math-inline';
-                  try {
-                    katex.render(mathContent, mathSpan, {
-                      throwOnError: false,
-                      displayMode: false
-                    });
-                    parent.insertBefore(mathSpan, textNode);
-                  } catch (e) {
-                    mathSpan.textContent = part;
-                    parent.insertBefore(mathSpan, textNode);
-                  }
-                } else if (part.trim()) {
-                  parent.insertBefore(document.createTextNode(part), textNode);
-                }
-              });
-              parent.removeChild(textNode);
-            }
-          }
-        }
-      });
-    });
-  };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -677,7 +589,7 @@ export default function AssignmentDetail() {
       // Reset height to auto to get the correct scrollHeight
       textarea.style.height = 'auto';
       // Set the height to match the scrollHeight, with min and max constraints
-      const newHeight = Math.max(120, Math.min(textarea.scrollHeight, 400));
+      const newHeight = Math.max(120, Math.min(textarea.scrollHeight, 600));
       textarea.style.height = `${newHeight}px`;
     }
   };
@@ -858,7 +770,7 @@ export default function AssignmentDetail() {
     const textarea = editNotesTextareaRef.current;
     if (textarea) {
       textarea.style.height = 'auto';
-      const newHeight = Math.max(120, Math.min(textarea.scrollHeight, 400));
+      const newHeight = Math.max(120, Math.min(textarea.scrollHeight, 600));
       textarea.style.height = `${newHeight}px`;
     }
   };
@@ -1062,26 +974,129 @@ export default function AssignmentDetail() {
               </div>
               {!isFullPreview && !isPreview && (
                 <div className="p-4 overflow-auto assignment-preview" style={{ height: '600px' }}>
-                  <MDEditor
-                    value={assignment.content}
-                    preview="preview"
-                    hideToolbar={true}
-                    enableScroll={true}
-                    className="!border-0"
-                  />
+                  <div className="prose prose-lg max-w-none">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm, remarkMath]}
+                      rehypePlugins={[rehypeRaw, rehypeKatex]}
+                      components={{
+                        h1: ({children}) => <h1 className="text-2xl font-bold text-gray-900 mb-4">{children}</h1>,
+                        h2: ({children}) => <h2 className="text-xl font-semibold text-gray-800 mb-3">{children}</h2>,
+                        h3: ({children}) => <h3 className="text-lg font-medium text-gray-800 mb-2">{children}</h3>,
+                        p: ({children}) => <p className="text-gray-700 mb-4 leading-relaxed">{children}</p>,
+                        strong: ({children}) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                        em: ({children}) => <em className="italic text-gray-700">{children}</em>,
+                        ul: ({children}) => <ul className="list-disc list-inside text-gray-700 mb-4 space-y-1">{children}</ul>,
+                        ol: ({children}) => <ol className="list-decimal list-inside text-gray-700 mb-4 space-y-1">{children}</ol>,
+                        li: ({children}) => <li className="text-gray-700">{children}</li>,
+                        a: ({href, children}) => (
+                          <a 
+                            href={href} 
+                            className="text-blue-600 hover:text-blue-800 underline" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                          >
+                            {children}
+                          </a>
+                        ),
+                        code: ({children}) => (
+                          <code className="bg-gray-100 text-gray-800 px-2 py-1 rounded font-mono text-sm">
+                            {children}
+                          </code>
+                        ),
+                        pre: ({children}) => (
+                          <pre className="bg-gray-100 text-gray-800 p-4 rounded-lg font-mono text-sm overflow-x-auto mb-4">
+                            {children}
+                          </pre>
+                        ),
+                        blockquote: ({children}) => (
+                          <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-600 mb-4">
+                            {children}
+                          </blockquote>
+                        ),
+                        table: ({children}) => (
+                          <table className="border-collapse border border-gray-300 mb-4 w-full">
+                            {children}
+                          </table>
+                        ),
+                        th: ({children}) => (
+                          <th className="border border-gray-300 px-3 py-2 bg-gray-100 font-semibold text-left">
+                            {children}
+                          </th>
+                        ),
+                        td: ({children}) => (
+                          <td className="border border-gray-300 px-3 py-2">
+                            {children}
+                          </td>
+                        ),
+                        hr: () => <hr className="border-gray-300 my-6" />
+                      }}
+                    >
+                      {assignment.content || 'No content available for preview.'}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               )}
             </div>
           ) : (
             <div className="p-6 assignment-content prose prose-lg max-w-none">
-              <MDEditor
-                value={assignment.content}
-                preview="preview"
-                hideToolbar={true}
-                visibleDragbar={false}
-                data-color-mode="light"
-                height={400}
-              />
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeRaw, rehypeKatex]}
+                components={{
+                  h1: ({children}) => <h1 className="text-2xl font-bold text-gray-900 mb-4">{children}</h1>,
+                  h2: ({children}) => <h2 className="text-xl font-semibold text-gray-800 mb-3">{children}</h2>,
+                  h3: ({children}) => <h3 className="text-lg font-medium text-gray-800 mb-2">{children}</h3>,
+                  p: ({children}) => <p className="text-gray-700 mb-4 leading-relaxed">{children}</p>,
+                  strong: ({children}) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                  em: ({children}) => <em className="italic text-gray-700">{children}</em>,
+                  ul: ({children}) => <ul className="list-disc list-inside text-gray-700 mb-4 space-y-1">{children}</ul>,
+                  ol: ({children}) => <ol className="list-decimal list-inside text-gray-700 mb-4 space-y-1">{children}</ol>,
+                  li: ({children}) => <li className="text-gray-700">{children}</li>,
+                  a: ({href, children}) => (
+                    <a 
+                      href={href} 
+                      className="text-blue-600 hover:text-blue-800 underline" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                    >
+                      {children}
+                    </a>
+                  ),
+                  code: ({children}) => (
+                    <code className="bg-gray-100 text-gray-800 px-2 py-1 rounded font-mono text-sm">
+                      {children}
+                    </code>
+                  ),
+                  pre: ({children}) => (
+                    <pre className="bg-gray-100 text-gray-800 p-4 rounded-lg font-mono text-sm overflow-x-auto mb-4">
+                      {children}
+                    </pre>
+                  ),
+                  blockquote: ({children}) => (
+                    <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-600 mb-4">
+                      {children}
+                    </blockquote>
+                  ),
+                  table: ({children}) => (
+                    <table className="border-collapse border border-gray-300 mb-4 w-full">
+                      {children}
+                    </table>
+                  ),
+                  th: ({children}) => (
+                    <th className="border border-gray-300 px-3 py-2 bg-gray-100 font-semibold text-left">
+                      {children}
+                    </th>
+                  ),
+                  td: ({children}) => (
+                    <td className="border border-gray-300 px-3 py-2">
+                      {children}
+                    </td>
+                  ),
+                  hr: () => <hr className="border-gray-300 my-6" />
+                }}
+              >
+                {assignment.content || 'No content available for this assignment.'}
+              </ReactMarkdown>
             </div>
           )}
         </div>
@@ -1149,7 +1164,7 @@ export default function AssignmentDetail() {
                         ref={notesTextareaRef}
                         value={submissionText}
                         onChange={handleNotesTextChange}
-                        style={{ minHeight: '120px', maxHeight: '400px' }}
+                        style={{ minHeight: '120px', maxHeight: '600px' }}
                         placeholder="Add any notes about your submission, explanations, or additional context...
 
 **Markdown supported:** You can use *italics*, **bold**, `code`, and LaTeX math like $x = y + z$ or block math:
@@ -1165,8 +1180,8 @@ $$"
                       {submissionText.trim() ? (
                         <div className="submission-notes-preview prose prose-sm max-w-none">
                           <ReactMarkdown 
-                            remarkPlugins={[remarkGfm]}
-                            rehypePlugins={[rehypeRaw]}
+                            remarkPlugins={[remarkGfm, remarkMath]}
+                            rehypePlugins={[rehypeRaw, rehypeKatex]}
                             components={{
                               h1: ({children}) => <h1 className="text-lg font-bold text-gray-800 mb-2">{children}</h1>,
                               h2: ({children}) => <h2 className="text-base font-semibold text-gray-800 mb-2">{children}</h2>,
@@ -1682,7 +1697,7 @@ $$"
                         ref={editNotesTextareaRef}
                         value={editSubmissionText}
                         onChange={handleEditNotesTextChange}
-                        style={{ minHeight: '120px', maxHeight: '400px' }}
+                        style={{ minHeight: '120px', maxHeight: '600px' }}
                         placeholder="Add any notes about your submission, explanations, or additional context...
 
 **Markdown supported:** You can use *italics*, **bold**, `code`, and LaTeX math like $x = y + z$ or block math:
@@ -1698,8 +1713,8 @@ $$"
                       {editSubmissionText.trim() ? (
                         <div className="edit-submission-notes-preview prose prose-sm max-w-none">
                           <ReactMarkdown 
-                            remarkPlugins={[remarkGfm]}
-                            rehypePlugins={[rehypeRaw]}
+                            remarkPlugins={[remarkGfm, remarkMath]}
+                            rehypePlugins={[rehypeRaw, rehypeKatex]}
                             components={{
                               h1: ({children}) => <h1 className="text-lg font-bold text-gray-800 mb-2">{children}</h1>,
                               h2: ({children}) => <h2 className="text-base font-semibold text-gray-800 mb-2">{children}</h2>,

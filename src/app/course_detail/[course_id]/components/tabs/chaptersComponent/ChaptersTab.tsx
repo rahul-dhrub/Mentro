@@ -5,8 +5,15 @@ import ChapterItem from '../../ChapterItem';
 import LessonModal from './LessonModal';
 import ChapterEditModal from './ChapterEditModal';
 import LessonEditModal from './LessonEditModal';
+import { useLessonProgress } from '@/hooks/useLessonProgress';
+import { LessonStatus } from '@/components/ui/LessonCompletionDropdown';
+
+interface ExtendedChaptersTabProps extends ChaptersTabProps {
+  courseId: string;
+}
 
 export default function ChaptersTab({
+  courseId,
   chapters,
   expandedChapters,
   onAddChapter,
@@ -16,7 +23,7 @@ export default function ChaptersTab({
   onAddLesson,
   onEditLesson,
   onDeleteLesson
-}: ChaptersTabProps) {
+}: ExtendedChaptersTabProps) {
   const [showLessonModal, setShowLessonModal] = useState(false);
   const [currentChapterId, setCurrentChapterId] = useState<string | null>(null);
   const [showChapterModal, setShowChapterModal] = useState(false);
@@ -41,6 +48,20 @@ export default function ChaptersTab({
   const [lessonToDelete, setLessonToDelete] = useState<{chapterId: string, lessonId: string, title: string} | null>(null);
   const [lessonDeleteConfirmation, setLessonDeleteConfirmation] = useState('');
   
+  // Lesson progress functionality
+  const { getLessonStatus, updateLessonProgress, loading: progressLoading, error: progressError } = useLessonProgress(courseId);
+
+  const handleLessonStatusChange = async (lessonId: string, chapterId: string, status: LessonStatus) => {
+    console.log('handleLessonStatusChange called:', { lessonId, chapterId, status, courseId });
+    try {
+      await updateLessonProgress(lessonId, chapterId, status);
+      console.log('Status updated successfully');
+    } catch (error) {
+      console.error('Error updating lesson progress:', error);
+      // You might want to show a toast notification here
+    }
+  };
+
   const handleAddLessonClick = (chapterId: string) => {
     setCurrentChapterId(chapterId);
     setShowLessonModal(true);
@@ -143,6 +164,15 @@ export default function ChaptersTab({
           <span>Add Chapter</span>
         </button>
       </div>
+
+      {/* Progress Error Display */}
+      {progressError && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="text-yellow-700 text-sm">
+            <strong>Progress Error:</strong> {progressError}
+          </div>
+        </div>
+      )}
       
       {/* Chapter Modal */}
       {showChapterModal && (
@@ -330,7 +360,7 @@ export default function ChaptersTab({
         </div>
       )}
       
-      <div className="space-y-6">
+      <div className="space-y-6 overflow-visible">
         {chapters.map((chapter) => (
           <ChapterItem
             key={chapter.id}
@@ -342,6 +372,9 @@ export default function ChaptersTab({
             onAddLesson={() => handleAddLessonClick(chapter.id)}
             onEditLesson={(lessonId) => handleEditLessonClick(chapter.id, lessonId)}
             onDeleteLesson={(lessonId) => handleLessonDeleteClick(chapter.id, lessonId)}
+            getLessonStatus={getLessonStatus}
+            onLessonStatusChange={handleLessonStatusChange}
+            progressLoading={progressLoading}
           />
         ))}
       </div>

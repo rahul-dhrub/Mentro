@@ -3,13 +3,15 @@ import Lesson from '@/models/Lesson';
 import Chapter from '@/models/Chapter';
 import Assignment from '@/models/Assignment';
 import Quiz from '@/models/Quiz';
+import LessonProgress from '@/models/LessonProgress';
 
 // Export all models to ensure they're registered
 export {
   Lesson,
   Chapter,
   Assignment,
-  Quiz
+  Quiz,
+  LessonProgress
 };
 
 // Function to ensure all models are registered
@@ -19,6 +21,7 @@ export function ensureModelsRegistered() {
     Lesson,
     Chapter,
     Assignment,
-    Quiz
+    Quiz,
+    LessonProgress
   };
 } 

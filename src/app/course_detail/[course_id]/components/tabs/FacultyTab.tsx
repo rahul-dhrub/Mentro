@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
-import Image from 'next/image';
+import React, { useState, useRef } from 'react';
 import { Faculty } from '../../types';
 import { FiUser, FiX, FiUserCheck, FiLoader } from 'react-icons/fi';
 import { facultyAPI } from '@/lib/api/faculty';
+import Avatar from '@/components/ui/Avatar';
+import { useUsersData } from '@/hooks/useUserData';
 
 interface FacultyTabProps {
   courseId: string;
@@ -39,6 +40,22 @@ export default function FacultyTab({
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Fetch user data for all faculty members
+  const facultyEmails = faculty.map(member => member.email);
+  const { getUserData } = useUsersData(facultyEmails);
+
+  // Component for rendering faculty avatar
+  const FacultyAvatar = ({ member }: { member: Faculty }) => {
+    const userData = getUserData(member.email);
+    return (
+      <Avatar 
+        name={member.name}
+        imageUrl={userData?.profilePicture || member.avatar}
+        size="medium"
+      />
+    );
+  };
 
   const handleAddFaculty = async () => {
     if (facultyEmail.trim() && facultyName.trim()) {
@@ -378,14 +395,7 @@ export default function FacultyTab({
             <div key={member.id} className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="relative h-12 w-12 rounded-full overflow-hidden">
-                    <Image
-                      src={member.avatar || 'https://via.placeholder.com/150'}
-                      alt={member.name}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
+                  <FacultyAvatar member={member} />
                   <div>
                     <div className="flex items-center space-x-2">
                       <h3 className="text-lg font-medium text-gray-900">{member.name}</h3>

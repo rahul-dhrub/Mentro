@@ -1,5 +1,11 @@
 import React from 'react';
 import { FiBookOpen, FiClock, FiCalendar, FiUser, FiEdit2, FiUpload, FiSave } from 'react-icons/fi';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 interface Assignment {
   _id: string;
@@ -118,7 +124,40 @@ const AssignmentHeader: React.FC<AssignmentHeaderProps> = ({
           ) : (
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">{assignment.title}</h1>
-              <p className="text-gray-600 text-lg">{assignment.description}</p>
+              <div className="text-gray-600 text-lg prose prose-lg max-w-none">
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm, remarkMath]}
+                  rehypePlugins={[rehypeRaw, rehypeKatex]}
+                  components={{
+                    p: ({children}) => <p className="text-gray-600 text-lg mb-2">{children}</p>,
+                    strong: ({children}) => <strong className="font-semibold text-gray-700">{children}</strong>,
+                    em: ({children}) => <em className="italic text-gray-600">{children}</em>,
+                    code: ({children}) => (
+                      <code className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-base font-mono">
+                        {children}
+                      </code>
+                    ),
+                    a: ({href, children}) => (
+                      <a href={href} className="text-blue-600 hover:text-blue-800 underline" target="_blank" rel="noopener noreferrer">
+                        {children}
+                      </a>
+                    ),
+                    ul: ({children}) => <ul className="list-disc list-inside text-gray-600 text-lg">{children}</ul>,
+                    ol: ({children}) => <ol className="list-decimal list-inside text-gray-600 text-lg">{children}</ol>,
+                    li: ({children}) => <li className="text-gray-600 text-lg">{children}</li>,
+                    h1: ({children}) => <h1 className="text-xl font-bold text-gray-700 mb-2">{children}</h1>,
+                    h2: ({children}) => <h2 className="text-lg font-semibold text-gray-700 mb-2">{children}</h2>,
+                    h3: ({children}) => <h3 className="text-base font-semibold text-gray-700 mb-1">{children}</h3>,
+                    blockquote: ({children}) => (
+                      <blockquote className="border-l-4 border-gray-300 pl-4 italic text-gray-500">
+                        {children}
+                      </blockquote>
+                    ),
+                  }}
+                >
+                  {assignment.description}
+                </ReactMarkdown>
+              </div>
             </div>
           )}
         </div>

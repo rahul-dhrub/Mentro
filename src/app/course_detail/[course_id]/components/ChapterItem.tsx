@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { Chapter, Lesson } from '../types';
+import LessonCompletionDropdown, { LessonStatus } from '@/components/ui/LessonCompletionDropdown';
 
 interface ChapterItemProps {
   chapter: Chapter;
@@ -15,6 +16,9 @@ interface ChapterItemProps {
   onAddLesson: () => void;
   onEditLesson: (lessonId: string) => void;
   onDeleteLesson: (lessonId: string) => void;
+  getLessonStatus: (lessonId: string) => LessonStatus;
+  onLessonStatusChange: (lessonId: string, chapterId: string, status: LessonStatus) => void;
+  progressLoading?: boolean;
 }
 
 export default function ChapterItem({ 
@@ -25,10 +29,13 @@ export default function ChapterItem({
   onDelete, 
   onAddLesson,
   onEditLesson,
-  onDeleteLesson
+  onDeleteLesson,
+  getLessonStatus,
+  onLessonStatusChange,
+  progressLoading = false
 }: ChapterItemProps) {
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="bg-white rounded-lg shadow overflow-visible">
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4 flex-1">
@@ -93,7 +100,7 @@ export default function ChapterItem({
       
       {/* Lessons Section */}
       {isExpanded && (
-        <div className="px-6 py-4">
+        <div className="px-6 py-4 pb-8 overflow-visible">
           <div className="flex justify-between items-center mb-4">
             <h4 className="text-md font-medium text-gray-900">Lessons</h4>
             <button
@@ -104,11 +111,17 @@ export default function ChapterItem({
               <span>Add Lesson</span>
             </button>
           </div>
-          <div className="space-y-4">
-            {chapter.lessons.map((lesson) => (
-              <div key={lesson.id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
+          <div className="space-y-6 overflow-visible">
+            {chapter.lessons.map((lesson, index) => (
+              <div 
+                key={lesson.id} 
+                className={`
+                  bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors overflow-visible relative
+                  ${index === chapter.lessons.length - 1 ? 'mb-20' : ''}
+                `}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
                     <Link 
                       href={`/lesson/${lesson._id || lesson.id}`}
                       className="block hover:text-blue-600 transition-colors"
@@ -151,36 +164,51 @@ export default function ChapterItem({
                       </div>
                     </Link>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <span className="text-xs text-gray-500 flex items-center">
+                  
+                  {/* Right side with completion dropdown and action buttons */}
+                  <div className="flex items-center space-x-3 ml-4">
+                    {/* Lesson Completion Dropdown */}
+                    <LessonCompletionDropdown
+                      lessonId={lesson._id || lesson.id}
+                      currentStatus={getLessonStatus(lesson._id || lesson.id)}
+                      onStatusChange={(lessonId, status) => onLessonStatusChange(lessonId, chapter.id, status)}
+                      disabled={progressLoading}
+                      size="small"
+                    />
+                    
+                    {/* Duration */}
+                    <span className="text-xs text-gray-500 flex items-center whitespace-nowrap">
                       <FiClock className="mr-1" />
                       {lesson.duration}
                     </span>
-                    <span className={`text-xs ${lesson.isPublished ? 'text-green-600' : 'text-yellow-600'}`}>
+                    
+                    {/* Published Status */}
+                    <span className={`text-xs whitespace-nowrap ${lesson.isPublished ? 'text-green-600' : 'text-yellow-600'}`}>
                       {lesson.isPublished ? 'Published' : 'Draft'}
                     </span>
-                    <Link 
-                      href={`/lesson/${lesson._id || lesson.id}`}
-                      className="text-gray-600 hover:text-gray-900 cursor-pointer"
-                      title="View Lesson"
-                    >
-                      <FiEye size={16} />
-                    </Link>
-                    <button 
-                      onClick={() => onEditLesson(lesson.id)} 
-                      className="text-blue-600 hover:text-blue-900 cursor-pointer"
-                    >
-                      <FiEdit2 size={16} />
-                    </button>
-                    <button 
-                      onClick={() => onDeleteLesson(lesson.id)}
-                      className="text-red-600 hover:text-red-900 cursor-pointer"
-                    >
-                      <FiTrash2 size={16} />
-                    </button>
+                    
+                    {/* Action Buttons */}
+                    <div className="flex items-center space-x-2">
+                      <Link 
+                        href={`/lesson/${lesson._id || lesson.id}`}
+                        className="text-gray-600 hover:text-gray-900 cursor-pointer"
+                        title="View Lesson"
+                      >
+                        <FiEye size={16} />
+                      </Link>
+                      <button 
+                        onClick={() => onDeleteLesson(lesson.id)}
+                        className="text-red-600 hover:text-red-900 cursor-pointer"
+                        title="Delete Lesson"
+                      >
+                        <FiTrash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500">
+                
+                {/* Lesson metadata */}
+                <div className="mt-3 flex items-center space-x-4 text-xs text-gray-500">
                   <span>{lesson.assignments?.length || 0} Assignments</span>
                   <span>{lesson.quizzes?.length || 0} Quizzes</span>
                   {lesson.lessonContents && lesson.lessonContents.length > 0 && (

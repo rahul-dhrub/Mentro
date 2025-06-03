@@ -248,6 +248,7 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
       case 'chapters':
         return (
           <ChaptersTab
+            courseId={courseId}
             chapters={chapters}
             expandedChapters={expandedChapters}
             onAddChapter={handleAddChapter}
@@ -316,7 +317,7 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
       />
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 overflow-visible">
         {renderActiveTab()}
       </div>
     </div>

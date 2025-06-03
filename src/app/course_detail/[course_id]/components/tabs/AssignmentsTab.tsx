@@ -6,6 +6,12 @@ import AssignmentModal from './assignmentsComponent/AssignmentModal';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
 import { assignmentAPI } from '@/lib/api';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 interface DatabaseAssignment {
   _id: string;
@@ -195,7 +201,40 @@ export default function AssignmentsTab({ courseId }: AssignmentsTabProps) {
           className="cursor-pointer hover:bg-gray-50 p-2 rounded"
         >
           <div className="text-sm font-medium text-gray-900">{assignment.title}</div>
-          <div className="text-sm text-gray-500">{assignment.description}</div>
+          <div className="text-sm text-gray-500 prose prose-sm max-w-none">
+            <ReactMarkdown 
+              remarkPlugins={[remarkGfm, remarkMath]}
+              rehypePlugins={[rehypeRaw, rehypeKatex]}
+              components={{
+                p: ({children}) => <p className="text-sm text-gray-500 mb-1">{children}</p>,
+                strong: ({children}) => <strong className="font-medium text-gray-600">{children}</strong>,
+                em: ({children}) => <em className="italic text-gray-500">{children}</em>,
+                code: ({children}) => (
+                  <code className="bg-gray-100 text-gray-700 px-1 py-0.5 rounded text-xs font-mono">
+                    {children}
+                  </code>
+                ),
+                a: ({href, children}) => (
+                  <a href={href} className="text-blue-600 hover:text-blue-800 underline" target="_blank" rel="noopener noreferrer">
+                    {children}
+                  </a>
+                ),
+                ul: ({children}) => <ul className="list-disc list-inside text-sm text-gray-500">{children}</ul>,
+                ol: ({children}) => <ol className="list-decimal list-inside text-sm text-gray-500">{children}</ol>,
+                li: ({children}) => <li className="text-sm text-gray-500">{children}</li>,
+                h1: ({children}) => <h1 className="text-sm font-semibold text-gray-600 mb-1">{children}</h1>,
+                h2: ({children}) => <h2 className="text-sm font-semibold text-gray-600 mb-1">{children}</h2>,
+                h3: ({children}) => <h3 className="text-xs font-semibold text-gray-600 mb-1">{children}</h3>,
+                blockquote: ({children}) => (
+                  <blockquote className="border-l-2 border-gray-300 pl-2 italic text-gray-400 text-xs">
+                    {children}
+                  </blockquote>
+                ),
+              }}
+            >
+              {assignment.description}
+            </ReactMarkdown>
+          </div>
         </div>
       )
     },
