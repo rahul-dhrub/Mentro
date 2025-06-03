@@ -9,6 +9,7 @@ import {
   SignedOut,
   UserButton,
 } from '@clerk/nextjs'
+import OnlineStatusProvider from '@/components/OnlineStatusProvider';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,16 +38,18 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
           suppressHydrationWarning={true}
         >
-          {/* <header className="flex justify-end items-center p-4 gap-4 h-16">
-            <SignedOut>
-              <SignInButton />
-              <SignUpButton />
-            </SignedOut>
-            <SignedIn>
-              <UserButton />
-            </SignedIn>
-          </header> */}
-          {children}
+          <OnlineStatusProvider>
+            {/* <header className="flex justify-end items-center p-4 gap-4 h-16">
+              <SignedOut>
+                <SignInButton />
+                <SignUpButton />
+              </SignedOut>
+              <SignedIn>
+                <UserButton />
+              </SignedIn>
+            </header> */}
+            {children}
+          </OnlineStatusProvider>
         </body>
       </html>
     </ClerkProvider>

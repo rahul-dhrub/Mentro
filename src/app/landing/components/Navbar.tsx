@@ -18,6 +18,17 @@ export default function Navbar() {
   const downloadsRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+  // Function to scroll to pricing section
+  const scrollToPricing = () => {
+    const pricingElement = document.getElementById('pricing');
+    if (pricingElement) {
+      pricingElement.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  };
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (resourcesRef.current && !resourcesRef.current.contains(event.target as Node)) {
@@ -147,11 +158,14 @@ export default function Navbar() {
               )}
             </div>
 
-            <Link href="/pricing" className="text-gray-700 hover:text-blue-600">
+            <button 
+              onClick={scrollToPricing}
+              className="text-gray-700 hover:text-blue-600 cursor-pointer"
+            >
               Pricing
-            </Link>
-            <Link href="/contact" className="text-gray-700 hover:text-blue-600">
-              Contact
+            </button>
+            <Link href="/admin" className="text-gray-700 hover:text-blue-600">
+              Admin
             </Link>
           </div>
 

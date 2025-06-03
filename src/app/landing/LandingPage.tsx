@@ -21,7 +21,9 @@ export default function LandingPage() {
       <FeaturesSection />
       <ForTutorsSection />
       <ForLearnersSection />
-      <PricingSection />
+      <div id="pricing">
+        <PricingSection />
+      </div>
       <TestimonialsSection />
       <CTASection />
       <Footer />

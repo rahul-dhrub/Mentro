@@ -8,6 +8,9 @@ export interface IUser extends mongoose.Document {
   bio?: string;
   title?: string;
   department?: string;
+  role: 'admin' | 'instructor' | 'student';
+  isOnline: boolean;
+  lastActive: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +52,19 @@ const userSchema = new mongoose.Schema<IUser>(
     department: {
       type: String,
       default: 'Computer Science',
+    },
+    role: {
+      type: String,
+      enum: ['admin', 'instructor', 'student'],
+      default: 'admin',
+    },
+    isOnline: {
+      type: Boolean,
+      default: false,
+    },
+    lastActive: {
+      type: Date,
+      default: Date.now,
     },
   },
   {
