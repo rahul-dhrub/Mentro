@@ -120,17 +120,26 @@ export default function FeedPage() {
         import('./mockData').then(({ mockPosts }) => {
           const startIndex = (page - 1) * 10;
           const endIndex = page * 10;
-          const paginatedPosts = mockPosts.slice(startIndex, endIndex);
+          
+          // Filter mock posts by current user if personal posts are selected
+          const filteredPosts = isPersonalPosts 
+            ? mockPosts.filter(post => post.author.id === currentUser.id)
+            : mockPosts;
+          
+          const paginatedPosts = filteredPosts.slice(startIndex, endIndex);
           setPosts(prev => page === 1 ? paginatedPosts : [...prev, ...paginatedPosts]);
-          setHasMore(endIndex < mockPosts.length);
+          setHasMore(endIndex < filteredPosts.length);
           setIsLoading(false);
         });
         return; // Don't throw, just return to prevent the error block
       }
 
-      const response = await fetch(
-        `/api/posts?type=${isPersonalPosts ? 'personal' : 'all'}&page=${page}&limit=10`
-      );
+      // Build API URL with user ID for personal posts
+      const apiUrl = isPersonalPosts 
+        ? `/api/posts?type=personal&userId=${currentUser.id}&page=${page}&limit=10`
+        : `/api/posts?type=all&page=${page}&limit=10`;
+
+      const response = await fetch(apiUrl);
 
       if (!response.ok) {
         // Record the time of the error
@@ -141,9 +150,15 @@ export default function FeedPage() {
         import('./mockData').then(({ mockPosts }) => {
           const startIndex = (page - 1) * 10;
           const endIndex = page * 10;
-          const paginatedPosts = mockPosts.slice(startIndex, endIndex);
+          
+          // Filter mock posts by current user if personal posts are selected
+          const filteredPosts = isPersonalPosts 
+            ? mockPosts.filter(post => post.author.id === currentUser.id)
+            : mockPosts;
+          
+          const paginatedPosts = filteredPosts.slice(startIndex, endIndex);
           setPosts(prev => page === 1 ? paginatedPosts : [...prev, ...paginatedPosts]);
-          setHasMore(endIndex < mockPosts.length);
+          setHasMore(endIndex < filteredPosts.length);
           setIsLoading(false);
         });
         return; // Don't throw, just return to prevent the error block
@@ -182,7 +197,7 @@ export default function FeedPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, isPersonalPosts, hasMore, isLoading]);
+  }, [page, isPersonalPosts, hasMore, isLoading, currentUser.id]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -355,6 +370,8 @@ export default function FeedPage() {
         <CreatePost 
           currentUser={currentUser} 
           onPostCreate={handlePostCreate}
+          onTogglePersonalPosts={handleTogglePersonalPosts}
+          isPersonalPosts={isPersonalPosts}
         />
         
         <div className="space-y-6">
@@ -483,11 +500,11 @@ export default function FeedPage() {
           </div>
         )}
         
-        <main className="flex-1 lg:mr-72 p-6">
+        <main className="flex-1 p-6">
           {renderMainContent()}
         </main>
         
-        <div className="hidden lg:block w-72 flex-shrink-0">
+        <div className="hidden lg:block w-96 flex-shrink-0">
           <div className="sticky top-20 h-[calc(100vh-80px)] overflow-y-auto">
             <RightSidebar 
               upcomingClasses={[

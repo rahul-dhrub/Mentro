@@ -4,24 +4,41 @@ import { useState, useEffect } from 'react';
 import { FiUser, FiClock, FiRefreshCw } from 'react-icons/fi';
 
 interface OnlineUser {
-  _id: string;
+  userId: string;
   name: string;
   email: string;
   department: string;
   role: string;
-  lastActive: string;
+  status: 'online' | 'away' | 'offline';
+  lastSeen: string;
+  lastSeenMs: number;
+  lastActiveFormatted: string;
+}
+
+interface OnlineUsersResponse {
+  users: OnlineUser[];
+  total: number;
+  onlineCount: number;
+  awayCount: number;
+  timestamp: string;
 }
 
 export default function OnlineUsersList() {
-  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
+  const [data, setData] = useState<OnlineUsersResponse>({
+    users: [],
+    total: 0,
+    onlineCount: 0,
+    awayCount: 0,
+    timestamp: ''
+  });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchOnlineUsers();
     
-    // Set up auto-refresh every 30 seconds
-    const interval = setInterval(fetchOnlineUsers, 30000);
+    // Set up auto-refresh every 10 seconds for real-time updates
+    const interval = setInterval(fetchOnlineUsers, 10000);
     
     return () => clearInterval(interval);
   }, []);
@@ -29,9 +46,14 @@ export default function OnlineUsersList() {
   const fetchOnlineUsers = async () => {
     try {
       setRefreshing(true);
-      const response = await fetch('/api/admin/users?onlineOnly=true&limit=50');
-      const data = await response.json();
-      setOnlineUsers(data.users || []);
+      const response = await fetch('/api/admin/online-users');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const responseData = await response.json();
+      setData(responseData);
     } catch (error) {
       console.error('Error fetching online users:', error);
     } finally {
@@ -44,21 +66,6 @@ export default function OnlineUsersList() {
     fetchOnlineUsers();
   };
 
-  const formatLastActive = (lastActive: string) => {
-    const now = new Date();
-    const lastActiveDate = new Date(lastActive);
-    const diffInMinutes = Math.floor((now.getTime() - lastActiveDate.getTime()) / (1000 * 60));
-    
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    return `${diffInDays}d ago`;
-  };
-
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'admin':
@@ -69,6 +76,52 @@ export default function OnlineUsersList() {
         return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusIndicator = (status: string) => {
+    switch (status) {
+      case 'online':
+        return (
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+          </span>
+        );
+      case 'away':
+        return (
+          <span className="relative flex h-3 w-3">
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+          </span>
+        );
+      default:
+        return (
+          <span className="relative flex h-3 w-3">
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-gray-400"></span>
+          </span>
+        );
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'online':
+        return 'Online';
+      case 'away':
+        return 'Away';
+      default:
+        return 'Offline';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'online':
+        return 'text-green-600';
+      case 'away':
+        return 'text-yellow-600';
+      default:
+        return 'text-gray-600';
     }
   };
 
@@ -86,9 +139,11 @@ export default function OnlineUsersList() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Online Users</h2>
-          <p className="text-gray-600">
-            {onlineUsers.length} user{onlineUsers.length !== 1 ? 's' : ''} currently online
-          </p>
+          <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
+            <span>{data.total} total users</span>
+            <span className="text-green-600">• {data.onlineCount} online</span>
+            <span className="text-yellow-600">• {data.awayCount} away</span>
+          </div>
         </div>
         <button
           onClick={handleRefresh}
@@ -101,7 +156,7 @@ export default function OnlineUsersList() {
       </div>
 
       {/* Online Users Grid */}
-      {onlineUsers.length === 0 ? (
+      {data.users.length === 0 ? (
         <div className="text-center py-12">
           <FiUser className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No users online</h3>
@@ -111,8 +166,8 @@ export default function OnlineUsersList() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {onlineUsers.map((user) => (
-            <div key={user._id} className="bg-white p-6 rounded-lg shadow border border-gray-200">
+          {data.users.map((user) => (
+            <div key={user.userId} className="bg-white p-6 rounded-lg shadow border border-gray-200">
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="flex-shrink-0">
@@ -129,10 +184,10 @@ export default function OnlineUsersList() {
                     </p>
                   </div>
                 </div>
-                <div className="flex-shrink-0">
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                <div className="flex-shrink-0 flex items-center space-x-2">
+                  {getStatusIndicator(user.status)}
+                  <span className={`text-xs font-medium ${getStatusColor(user.status)}`}>
+                    {getStatusText(user.status)}
                   </span>
                 </div>
               </div>
@@ -156,7 +211,7 @@ export default function OnlineUsersList() {
                     Last Active
                   </span>
                   <span className="text-xs text-gray-900">
-                    {formatLastActive(user.lastActive)}
+                    {user.lastActiveFormatted}
                   </span>
                 </div>
               </div>
@@ -168,7 +223,7 @@ export default function OnlineUsersList() {
       {/* Auto-refresh indicator */}
       <div className="text-center">
         <p className="text-xs text-gray-500">
-          Auto-refreshes every 30 seconds • Last updated: {new Date().toLocaleTimeString()}
+          Auto-refreshes every 10 seconds • Last updated: {data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : 'Never'}
         </p>
       </div>
     </div>

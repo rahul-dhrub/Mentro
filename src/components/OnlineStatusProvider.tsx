@@ -1,13 +1,13 @@
 'use client';
 
-import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useHeartbeat } from '@/hooks/useHeartbeat';
 
 interface OnlineStatusProviderProps {
   children: React.ReactNode;
 }
 
 export default function OnlineStatusProvider({ children }: OnlineStatusProviderProps) {
-  useOnlineStatus();
+  useHeartbeat(true);
   
   return <>{children}</>;
 } 

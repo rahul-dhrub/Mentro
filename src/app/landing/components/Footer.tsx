@@ -37,7 +37,7 @@ export default function Footer() {
             </div>
             <div className="relative h-96">
               <Image
-                src="https://www.apptunix.com/blog/wp-content/uploads/sites/3/2019/10/mobile-apps-in-business-copy-5.jpg"
+                src="https://www.addevice.io/storage/ckeditor/uploads/images/65f840d316353_mobile.app.development.1920.1080.png"
                 alt="Mobile App"
                 fill
                 className="object-contain"

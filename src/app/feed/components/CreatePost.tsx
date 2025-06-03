@@ -8,6 +8,7 @@ interface CreatePostProps {
   currentUser: Author;
   onPostCreate: (post: any) => void;
   onTogglePersonalPosts?: (isPersonal: boolean) => void;
+  isPersonalPosts?: boolean;
 }
 
 interface UploadProgress {
@@ -16,7 +17,7 @@ interface UploadProgress {
   type: 'image' | 'video' | 'file';
 }
 
-export default function CreatePost({ currentUser, onPostCreate, onTogglePersonalPosts }: CreatePostProps) {
+export default function CreatePost({ currentUser, onPostCreate, onTogglePersonalPosts, isPersonalPosts = false }: CreatePostProps) {
   const [content, setContent] = useState('');
   const [hashtags, setHashtags] = useState<string[]>([]);
   const [hashtagInput, setHashtagInput] = useState('');
@@ -29,7 +30,6 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string>('');
   const [showHashtagInput, setShowHashtagInput] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
-  const [isPersonalPosts, setIsPersonalPosts] = useState(false);
 
   // Refs for file inputs
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -493,7 +493,6 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
                   id="myPosts"
                   checked={isPersonalPosts}
                   onChange={(e) => {
-                    setIsPersonalPosts(e.target.checked);
                     onTogglePersonalPosts?.(e.target.checked);
                   }}
                   className="sr-only peer"
