@@ -13,240 +13,21 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 
+// Component imports
+import VideoPlayer from './components/VideoPlayer';
+import PDFViewer from './components/PDFViewer';
+import MediaPreviewModal from './components/MediaPreviewModal';
+import AssignmentHeader from './components/AssignmentHeader';
+import SubmissionsList from './components/SubmissionsList';
+
+// Type imports
+import { Assignment, Submission, Attachment } from '@/types/assignment';
+
 // Dynamically import MDEditor to avoid SSR issues
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), {
   ssr: false,
   loading: () => <p>Loading editor...</p>,
 });
-
-interface Attachment {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  url: string;
-}
-
-interface Submission {
-  id: string;
-  userId: string;
-  userName: string;
-  userEmail: string;
-  userAvatar?: string;
-  submittedAt: string;
-  status: 'submitted' | 'graded' | 'late';
-  grade?: number;
-  feedback?: string;
-  notes?: string;
-  attachments: Attachment[];
-}
-
-interface Assignment {
-  _id: string;
-  title: string;
-  description: string;
-  content: string;
-  dueDate: string;
-  totalMarks: number;
-  submissions: number;
-  attachments: Attachment[];
-  courseId?: {
-    _id: string;
-    title: string;
-  };
-  courseName?: string;
-  isPublished: boolean;
-  createdBy?: {
-    _id: string;
-    name: string;
-    email: string;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface VideoPlayerProps {
-  src: string;
-  title?: string;
-  width?: string;
-  height?: string;
-}
-
-interface PDFViewerProps {
-  src: string;
-  title?: string;
-  width?: string;
-  height?: string;
-}
-
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
-  src, 
-  title = "Video Player",
-  width = "100%",
-  height = "100%"
-}) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-
-  const handleLoad = () => {
-    setIsLoading(false);
-  };
-
-  const handleError = () => {
-    setIsLoading(false);
-    setHasError(true);
-  };
-
-  return (
-    <div className="video-player-container w-full h-full">
-      <div className="relative w-full h-full">
-        {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg">
-            <div className="flex flex-col items-center space-y-2">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <p className="text-gray-600 text-sm">Loading video...</p>
-            </div>
-          </div>
-        )}
-        
-        {hasError && (
-          <div className="absolute inset-0 flex items-center justify-center bg-red-50 rounded-lg border border-red-200">
-            <div className="text-center">
-              <p className="text-red-600 mb-2">Failed to load video</p>
-              <div className="space-y-2">
-                <button 
-                  onClick={() => {
-                    setHasError(false);
-                    setIsLoading(true);
-                  }}
-                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors mr-2"
-                >
-                  Retry
-                </button>
-                <a
-                  href={src}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                >
-                  <FiExternalLink className="w-4 h-4" />
-                  <span>Open in New Tab</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <iframe
-          src={src}
-          title={title}
-          width={width}
-          height={height}
-          frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          onLoad={handleLoad}
-          onError={handleError}
-          className={`w-full h-full rounded-lg shadow-lg transition-opacity duration-300 ${
-            isLoading || hasError ? 'opacity-0' : 'opacity-100'
-          }`}
-        />
-      </div>
-    </div>
-  );
-};
-
-const PDFViewer: React.FC<PDFViewerProps> = ({ 
-  src, 
-  title = "PDF Viewer",
-  width = "100%",
-  height = "100%"
-}) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-
-  const handleLoad = () => {
-    setIsLoading(false);
-  };
-
-  const handleError = () => {
-    setIsLoading(false);
-    setHasError(true);
-  };
-
-  const refreshPDF = () => {
-    setHasError(false);
-    setIsLoading(true);
-  };
-
-  return (
-    <div className="pdf-viewer-container w-full h-full">
-      <div className="relative w-full h-full">
-        {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg">
-            <div className="flex flex-col items-center space-y-2">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <p className="text-gray-600 text-sm">Loading PDF document...</p>
-            </div>
-          </div>
-        )}
-        
-        {hasError && (
-          <div className="absolute inset-0 flex items-center justify-center bg-red-50 rounded-lg border border-red-200">
-            <div className="text-center">
-              <FiFile className="w-16 h-16 text-red-400 mx-auto mb-4" />
-              <p className="text-red-600 mb-4">Failed to load PDF document</p>
-              <div className="space-y-2">
-                <button 
-                  onClick={refreshPDF}
-                  className="inline-flex items-center space-x-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors mr-2"
-                >
-                  <FiRefreshCw className="w-4 h-4" />
-                  <span>Retry</span>
-                </button>
-                <a
-                  href={src}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors mr-2"
-                >
-                  <FiExternalLink className="w-4 h-4" />
-                  <span>Open in New Tab</span>
-                </a>
-                <a
-                  href={src}
-                  download
-                  className="inline-flex items-center space-x-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                >
-                  <FiDownload className="w-4 h-4" />
-                  <span>Download PDF</span>
-                </a>
-              </div>
-              <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200 max-w-md mx-auto">
-                <p className="text-xs text-yellow-600">
-                  <strong>Note:</strong> Some browsers may block PDF display. Try downloading or opening in a new tab.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <iframe
-          src={src}
-          title={title}
-          width={width}
-          height={height}
-          frameBorder="0"
-          onLoad={handleLoad}
-          onError={handleError}
-          className={`w-full h-full rounded-lg shadow-lg transition-opacity duration-300 ${
-            isLoading || hasError ? 'opacity-0' : 'opacity-100'
-          }`}
-        />
-      </div>
-    </div>
-  );
-};
 
 export default function AssignmentDetail() {
   const params = useParams();
@@ -1149,137 +930,22 @@ export default function AssignmentDetail() {
         )}
 
         {/* Header */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <div className="flex items-center text-sm text-gray-500 mb-2">
-                <FiBookOpen className="mr-2" size={16} />
-                <span>{assignment.courseId?.title || assignment.courseName || 'Course'}</span>
-              </div>
-              
-              {isEditing ? (
-                <div className="space-y-4 pr-6">
-                  <div>
-                    <label htmlFor="edit-title" className="block text-sm font-medium text-gray-700 mb-1">
-                      Assignment Title *
-                    </label>
-                    <input
-                      id="edit-title"
-                      type="text"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      className="w-full px-3 py-2 text-2xl font-bold border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                      placeholder="Enter assignment title"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700 mb-1">
-                      Description
-                    </label>
-                    <textarea
-                      id="edit-description"
-                      value={editDescription}
-                      onChange={(e) => setEditDescription(e.target.value)}
-                      rows={2}
-                      className="w-full px-3 py-2 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
-                      placeholder="Enter assignment description"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="edit-due-date" className="block text-sm font-medium text-gray-700 mb-1">
-                        Due Date *
-                      </label>
-                      <input
-                        id="edit-due-date"
-                        type="date"
-                        value={editDueDate}
-                        onChange={(e) => setEditDueDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="edit-total-marks" className="block text-sm font-medium text-gray-700 mb-1">
-                        Total Marks *
-                      </label>
-                      <input
-                        id="edit-total-marks"
-                        type="number"
-                        min="1"
-                        value={editTotalMarks}
-                        onChange={(e) => setEditTotalMarks(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
-                        placeholder="e.g. 100"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">{assignment.title}</h1>
-                  <p className="text-gray-600 text-lg">{assignment.description}</p>
-                </div>
-              )}
-            </div>
-            <div className="flex items-center space-x-6 ml-6">
-              {!isEditing && (
-                <div className="text-right">
-                  <div className="flex items-center text-gray-500 mb-2">
-                    <FiClock className="mr-2" />
-                    <span className="font-medium">{assignment.totalMarks} marks</span>
-                  </div>
-                  <div className="flex items-center text-gray-500 mb-2">
-                    <FiCalendar className="mr-2" />
-                    <span>Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex items-center text-gray-500">
-                    <FiUser className="mr-2" />
-                    <span>{assignment.submissions} submissions</span>
-                  </div>
-                </div>
-              )}
-              {!isEditing ? (
-                <div className="flex space-x-2">
-                  <button
-                    onClick={handleEdit}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                  >
-                    <FiEdit2 size={18} />
-                    <span>Edit Assignment</span>
-                  </button>
-                  <button
-                    onClick={() => setShowSubmissionModal(true)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
-                  >
-                    <FiUpload size={18} />
-                    <span>Submit Assignment</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="flex space-x-2">
-                  <button
-                    onClick={handleCancel}
-                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    disabled={!editTitle.trim() || !editDueDate || !editTotalMarks}
-                    className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
-                      editTitle.trim() && editDueDate && editTotalMarks
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
-                  >
-                    <FiSave size={18} />
-                    <span>Save Changes</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <AssignmentHeader
+          assignment={assignment}
+          isEditing={isEditing}
+          editTitle={editTitle}
+          editDescription={editDescription}
+          editDueDate={editDueDate}
+          editTotalMarks={editTotalMarks}
+          onEditTitleChange={setEditTitle}
+          onEditDescriptionChange={setEditDescription}
+          onEditDueDateChange={setEditDueDate}
+          onEditTotalMarksChange={setEditTotalMarks}
+          onEdit={handleEdit}
+          onCancel={handleCancel}
+          onSave={handleSave}
+          onShowSubmissionModal={() => setShowSubmissionModal(true)}
+        />
 
         {/* Attachments Section */}
         {(assignment.attachments.length > 0 || isEditing) && (
@@ -1421,88 +1087,12 @@ export default function AssignmentDetail() {
         </div>
 
         {/* Submissions Section */}
-        <div className="bg-white rounded-lg shadow p-6 mt-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Submissions ({submissions.length})
-            </h2>
-            <div className="text-sm text-gray-500">
-              Total submissions: {submissions.length}
-            </div>
-          </div>
-
-          {submissions.length > 0 ? (
-            <div className="space-y-4">
-              {submissions.map((submission, index) => (
-                <div
-                  key={submission.id || `submission-${index}`}
-                  className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                  onClick={() => handleSubmissionClick(submission)}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-medium">
-                        {submission.userName.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">
-                          {submission.userName}
-                        </h4>
-                        <p className="text-xs text-gray-500">{submission.userEmail}</p>
-                        <p className="text-xs text-gray-500">
-                          Submitted: {new Date(submission.submittedAt).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          submission.status === 'submitted'
-                            ? 'bg-blue-100 text-blue-800'
-                            : submission.status === 'graded'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {submission.status.toUpperCase()}
-                      </span>
-                      {submission.grade !== undefined && (
-                        <span className="text-sm font-medium text-gray-900">
-                          {submission.grade}/{assignment.totalMarks}
-                        </span>
-                      )}
-                      {/* Edit button - only show for current user's submission */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditSubmission(submission);
-                        }}
-                        className="text-blue-600 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition-colors"
-                        title="Edit submission"
-                      >
-                        <FiEdit2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Quick Preview Info */}
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>{submission.attachments.length} files attached</span>
-                      <span>Click to view details and grade</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <FiUser size={48} className="mx-auto mb-4 text-gray-300" />
-              <p>No submissions yet</p>
-              <p className="text-sm">Submissions will appear here once students submit their work.</p>
-            </div>
-          )}
-        </div>
+        <SubmissionsList
+          submissions={submissions}
+          assignment={assignment}
+          onSubmissionClick={handleSubmissionClick}
+          onEditSubmission={handleEditSubmission}
+        />
 
         {/* Submission Modal */}
         {showSubmissionModal && (
@@ -1810,45 +1400,13 @@ $$"
 
         {/* Media Preview Modal */}
         {showMediaModal && selectedAttachment && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-lg w-full max-w-6xl h-full max-h-[90vh] flex flex-col">
-              <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
-                <div className="flex items-center space-x-3">
-                  {renderAttachmentIcon(selectedAttachment.type)}
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {selectedAttachment.name}
-                    </h3>
-                    <p className="text-sm text-gray-500 capitalize">
-                      {selectedAttachment.type}
-                      {selectedAttachment.size > 0 && ` • ${formatFileSize(selectedAttachment.size)}`}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <a
-                    href={selectedAttachment.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-700 flex items-center space-x-1 bg-blue-50 px-3 py-1 rounded"
-                  >
-                    <FiExternalLink size={16} />
-                    <span className="text-sm">Open in New Tab</span>
-                  </a>
-                  <button
-                    onClick={() => setShowMediaModal(false)}
-                    className="text-gray-500 hover:text-gray-700 p-1"
-                  >
-                    <FiX size={24} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex-1 p-4 overflow-hidden" style={{ minHeight: '400px' }}>
-                {renderMediaPreview()}
-              </div>
-            </div>
-          </div>
+          <MediaPreviewModal
+            isOpen={showMediaModal}
+            attachment={selectedAttachment}
+            onClose={() => setShowMediaModal(false)}
+            renderAttachmentIcon={renderAttachmentIcon}
+            formatFileSize={formatFileSize}
+          />
         )}
 
         {/* Submission Grading Modal */}
