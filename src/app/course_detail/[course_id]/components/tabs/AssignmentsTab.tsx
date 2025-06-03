@@ -86,15 +86,24 @@ export default function AssignmentsTab({ courseId }: AssignmentsTabProps) {
 
   const handleAddAssignment = async (assignmentData: any) => {
     try {
+      // Convert contents array to proper attachment objects
+      const attachments = assignmentData.contents ? assignmentData.contents.map((content: any) => ({
+        id: content.id || Date.now().toString(),
+        name: content.title,
+        type: content.type,
+        size: 0, // We don't have size info from the content form, set to 0
+        url: content.url
+      })) : [];
+      
       // Prepare data for database
       const dbAssignmentData = {
         title: assignmentData.title,
         description: assignmentData.description,
-        content: assignmentData.description, // Use description as content for now
+        content: assignmentData.content || '', // Use the content from the form
         dueDate: assignmentData.dueDate,
         totalMarks: assignmentData.totalMarks,
         courseId: courseId,
-        attachments: []
+        attachments: attachments // Store multimedia content as attachments
       };
 
       const result = await assignmentAPI.create(dbAssignmentData);

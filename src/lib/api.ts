@@ -98,4 +98,39 @@ export const quizAPI = {
     apiCall<{ message: string }>(`/api/quizzes/${id}`, {
       method: 'DELETE',
     }),
+};
+
+// Submission API calls
+export const submissionAPI = {
+  // Get all submissions
+  getAll: (assignmentId?: string, userId?: string) => {
+    const params = new URLSearchParams();
+    if (assignmentId) params.append('assignmentId', assignmentId);
+    if (userId) params.append('userId', userId);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiCall<any[]>(`/api/submissions${query}`);
+  },
+
+  // Get submission by ID
+  getById: (id: string) => apiCall<any>(`/api/submissions/${id}`),
+
+  // Create new submission
+  create: (data: any) =>
+    apiCall<any>(`/api/submissions`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // Update submission (for grading)
+  update: (id: string, data: any) =>
+    apiCall<any>(`/api/submissions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  // Delete submission
+  delete: (id: string) =>
+    apiCall<{ message: string }>(`/api/submissions/${id}`, {
+      method: 'DELETE',
+    }),
 }; 
