@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { FiBook, FiFileText, FiClock, FiVideo, FiEdit2, FiTrash2, FiPlus, FiChevronDown, FiX, FiUser } from 'react-icons/fi';
+import { useRouter } from 'next/navigation';
 import CourseHeader from './components/CourseHeader';
 import TabNavigation from './components/TabNavigation';
 import OverviewTab from './components/tabs/OverviewTab';
@@ -17,6 +18,7 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
   // Tab state
   const [activeTab, setActiveTab] = useState('overview');
   const [courseId, setCourseId] = useState<string | null>(null);
+  const router = useRouter();
   
   // Initialize course ID from params
   useEffect(() => {
@@ -170,7 +172,9 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
   };
 
   const handleEditAssignment = (assignmentId: string) => {
-    console.log('Edit assignment:', assignmentId);
+    if (courseId) {
+      router.push(`/course_detail/${courseId}/assignment/${assignmentId}`);
+    }
   };
 
   const handleDeleteAssignment = (assignmentId: string) => {

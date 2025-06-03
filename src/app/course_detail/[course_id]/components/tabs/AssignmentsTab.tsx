@@ -3,6 +3,8 @@ import { FiPlus, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
 import { Assignment } from '../../types';
 import DataTable, { Column } from '../DataTable';
 import AssignmentModal from './assignmentsComponent/AssignmentModal';
+import { useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 
 interface AssignmentsTabProps {
   assignments: Assignment[];
@@ -18,6 +20,8 @@ export default function AssignmentsTab({
   onDeleteAssignment
 }: AssignmentsTabProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
+  const params = useParams();
   
   // Delete confirmation modal states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -54,12 +58,19 @@ export default function AssignmentsTab({
     }
   };
 
+  const handleAssignmentClick = (assignmentId: string) => {
+    router.push(`/assignment/${assignmentId}`);
+  };
+
   const columns: Column<Assignment>[] = [
     {
       key: 'title',
       header: 'Title',
       render: (assignment) => (
-        <div>
+        <div 
+          onClick={() => handleAssignmentClick(assignment.id)}
+          className="cursor-pointer hover:bg-gray-50 p-2 rounded"
+        >
           <div className="text-sm font-medium text-gray-900">{assignment.title}</div>
           <div className="text-sm text-gray-500">{assignment.description}</div>
         </div>
@@ -69,14 +80,22 @@ export default function AssignmentsTab({
       key: 'dueDate',
       header: 'Due Date',
       render: (assignment) => (
-        <span className="text-sm text-gray-500">{assignment.dueDate}</span>
+        <span 
+          onClick={() => handleAssignmentClick(assignment.id)}
+          className="text-sm text-gray-500 cursor-pointer hover:bg-gray-50 p-2 rounded block"
+        >
+          {assignment.dueDate}
+        </span>
       )
     },
     {
       key: 'submissions',
       header: 'Submissions',
       render: (assignment) => (
-        <span className="text-sm text-gray-500">
+        <span 
+          onClick={() => handleAssignmentClick(assignment.id)}
+          className="text-sm text-gray-500 cursor-pointer hover:bg-gray-50 p-2 rounded block"
+        >
           {assignment.submissions} / {assignment.totalMarks}
         </span>
       )
@@ -88,13 +107,10 @@ export default function AssignmentsTab({
       render: (assignment) => (
         <div className="flex justify-end space-x-4">
           <button 
-            onClick={() => onEditAssignment(assignment.id)} 
-            className="text-blue-600 hover:text-blue-900 cursor-pointer"
-          >
-            <FiEdit2 size={18} />
-          </button>
-          <button 
-            onClick={() => handleDeleteClick(assignment.id)} 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteClick(assignment.id);
+            }} 
             className="text-red-600 hover:text-red-900 cursor-pointer"
           >
             <FiTrash2 size={18} />

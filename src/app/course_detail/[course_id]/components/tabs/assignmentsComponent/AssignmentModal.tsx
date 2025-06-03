@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FiX } from 'react-icons/fi';
 import { FaBold, FaItalic, FaUnderline, FaListUl, FaListOl, FaLink, FaHeading } from 'react-icons/fa';
+import { TbMath, TbMathFunction } from 'react-icons/tb';
 import MDEditor from '@uiw/react-md-editor';
+import 'katex/dist/katex.min.css';
+import katex from 'katex';
 import '../chaptersComponent/markdown-styles.css';
 import ContentForm from '../chaptersComponent/ContentForm';
 import { ContentType, LessonContent } from '../chaptersComponent/types';
@@ -35,6 +38,99 @@ export default function AssignmentModal({
     }
   }, [isOpen]);
   
+  // Effect to render LaTeX in preview
+  useEffect(() => {
+    if (description && typeof window !== 'undefined') {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        renderLatexInPreview();
+      }, 100);
+    }
+  }, [description]);
+  
+  const renderLatexInPreview = () => {
+    const previewElement = document.querySelector('.assignment-preview');
+    if (!previewElement) return;
+
+    // Find all potential math expressions
+    const textNodes: Text[] = [];
+    const walker = document.createTreeWalker(
+      previewElement,
+      NodeFilter.SHOW_TEXT,
+      null
+    );
+
+    let node;
+    while ((node = walker.nextNode())) {
+      textNodes.push(node as Text);
+    }
+
+    textNodes.forEach((textNode) => {
+      const text = textNode.textContent || '';
+      
+      // Handle block math ($$...$$)
+      if (text.includes('$$')) {
+        const parts = text.split(/(.*?\$\$.*?\$\$.*?)/g);
+        if (parts.length > 1) {
+          const parent = textNode.parentNode;
+          if (parent) {
+            parts.forEach((part, index) => {
+              if (part.includes('$$')) {
+                const mathMatch = part.match(/\$\$(.*?)\$\$/);
+                if (mathMatch) {
+                  const mathSpan = document.createElement('span');
+                  mathSpan.className = 'math-block';
+                  try {
+                    katex.render(mathMatch[1], mathSpan, {
+                      throwOnError: false,
+                      displayMode: true
+                    });
+                    parent.insertBefore(mathSpan, textNode);
+                  } catch (e) {
+                    mathSpan.textContent = part;
+                    parent.insertBefore(mathSpan, textNode);
+                  }
+                }
+              } else if (part.trim()) {
+                parent.insertBefore(document.createTextNode(part), textNode);
+              }
+            });
+            parent.removeChild(textNode);
+          }
+        }
+      }
+      // Handle inline math ($...$)
+      else if (text.includes('$') && !text.includes('$$')) {
+        const parts = text.split(/(\$[^$]+\$)/g);
+        if (parts.length > 1) {
+          const parent = textNode.parentNode;
+          if (parent) {
+            parts.forEach((part) => {
+              if (part.startsWith('$') && part.endsWith('$') && part.length > 2) {
+                const mathContent = part.slice(1, -1);
+                const mathSpan = document.createElement('span');
+                mathSpan.className = 'math-inline';
+                try {
+                  katex.render(mathContent, mathSpan, {
+                    throwOnError: false,
+                    displayMode: false
+                  });
+                  parent.insertBefore(mathSpan, textNode);
+                } catch (e) {
+                  mathSpan.textContent = part;
+                  parent.insertBefore(mathSpan, textNode);
+                }
+              } else if (part.trim()) {
+                parent.insertBefore(document.createTextNode(part), textNode);
+              }
+            });
+            parent.removeChild(textNode);
+          }
+        }
+      }
+    });
+  };
+  
   const resetForm = () => {
     setTitle('');
     setDescription('');
@@ -45,7 +141,12 @@ export default function AssignmentModal({
   
   // Text formatting functions
   const insertTextFormat = (format: string) => {
-    let selectedText = window.getSelection()?.toString() || '';
+    const textarea = document.getElementById('assignment-description') as HTMLTextAreaElement;
+    if (!textarea) return;
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
     let newText = '';
     
     switch (format) {
@@ -74,29 +175,25 @@ export default function AssignmentModal({
       case 'link':
         newText = selectedText ? `[${selectedText}](url)` : '[Link text](https://example.com)';
         break;
+      case 'inlineMath':
+        newText = selectedText ? `$${selectedText}$` : '$x = y$';
+        break;
+      case 'blockMath':
+        newText = selectedText ? `$$\n${selectedText}\n$$` : '$$\n\\frac{x^2 + y^2}{z}\n$$';
+        break;
       default:
         newText = selectedText;
     }
     
-    setDescription(prev => {
-      if (selectedText) {
-        // Replace selected text with formatted text
-        const selection = window.getSelection();
-        const range = selection?.getRangeAt(0);
-        if (!range || !selection) return prev + newText;
-        
-        // Get the start and end indices of the selection in the textarea value
-        const textarea = document.getElementById('assignment-description') as HTMLTextAreaElement;
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        
-        // Replace the selected text with the formatted text
-        return prev.substring(0, start) + newText + prev.substring(end);
-      } else {
-        // No selection, just append
-        return prev + newText;
-      }
-    });
+    // Insert the new text at cursor position
+    const newValue = description.substring(0, start) + newText + description.substring(end);
+    setDescription(newValue);
+    
+    // Set cursor position after the inserted text
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + newText.length, start + newText.length);
+    }, 0);
   };
   
   const handleAddContent = (content: Omit<LessonContent, 'id' | 'order'>) => {
@@ -157,7 +254,7 @@ export default function AssignmentModal({
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-semibold text-gray-900">Add New Assignment</h3>
           <button 
@@ -167,6 +264,27 @@ export default function AssignmentModal({
             <FiX size={24} />
           </button>
         </div>
+        
+        {/* Custom styles for LaTeX rendering */}
+        <style jsx>{`
+          .assignment-preview .math-block {
+            display: block;
+            margin: 1em 0;
+            text-align: center;
+          }
+          
+          .assignment-preview .math-inline {
+            display: inline;
+          }
+          
+          .assignment-preview .katex {
+            font-size: 1.1em;
+          }
+          
+          .assignment-preview .katex-display {
+            margin: 1em 0;
+          }
+        `}</style>
         
         {/* Form Fields */}
         <div className="space-y-4">
@@ -247,8 +365,25 @@ export default function AssignmentModal({
               >
                 <FaLink size={16} />
               </button>
+              <div className="h-8 w-px bg-gray-500 mx-1"></div>
+              <button 
+                type="button" 
+                onClick={() => insertTextFormat('inlineMath')}
+                className="p-2 bg-gray-700 text-white hover:bg-blue-600 rounded-md flex items-center justify-center transition-colors shadow-sm border border-gray-600"
+                title="Inline Math ($x$)"
+              >
+                <TbMath size={16} />
+              </button>
+              <button 
+                type="button" 
+                onClick={() => insertTextFormat('blockMath')}
+                className="p-2 bg-gray-700 text-white hover:bg-blue-600 rounded-md flex items-center justify-center transition-colors shadow-sm border border-gray-600"
+                title="Block Math ($$...$$)"
+              >
+                <TbMathFunction size={16} />
+              </button>
               <div className="ml-auto text-xs text-gray-700 font-semibold">
-                Markdown formatting supported
+                Markdown & LaTeX supported
               </div>
             </div>
             <div className="flex flex-col">
@@ -256,20 +391,21 @@ export default function AssignmentModal({
                 id="assignment-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Enter assignment description (Markdown supported)"
-                rows={5}
-                className="w-full px-4 py-2 border border-gray-300 rounded-b-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 font-mono"
+                placeholder="Enter assignment description (Markdown & LaTeX supported)&#10;&#10;Examples:&#10;Inline math: $x^2 + y^2 = z^2$&#10;Block math: $$\int_0^1 x^2 dx$$&#10;&#10;More examples:&#10;$$f(x) = \frac{ax^2 + bx + c}{dx + e}$$&#10;$\alpha + \beta = \gamma$"
+                rows={8}
+                className="w-full px-4 py-2 border border-gray-300 rounded-b-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 font-mono text-sm"
               />
               {description && (
-                <div className="mt-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Preview
                   </label>
-                  <div className="border border-gray-400 rounded-lg p-4 bg-white shadow-inner prose prose-headings:text-gray-800 prose-p:text-gray-700 prose-strong:text-black prose-em:text-gray-800 prose-ul:text-gray-700 prose-ol:text-gray-700 prose-a:text-blue-600 max-w-none">
+                  <div className="assignment-preview border border-gray-400 rounded-lg p-4 bg-white shadow-inner prose prose-headings:text-gray-800 prose-p:text-gray-700 prose-strong:text-black prose-em:text-gray-800 prose-ul:text-gray-700 prose-ol:text-gray-700 prose-a:text-blue-600 max-w-none min-h-[200px] overflow-y-auto max-h-[300px]">
                     <MDEditor.Markdown 
                       source={description} 
                       style={{ backgroundColor: 'white' }}
                       className="white-markdown-preview"
+                      rehypePlugins={[]}
                     />
                   </div>
                 </div>

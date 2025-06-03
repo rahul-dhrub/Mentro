@@ -3,6 +3,7 @@ import { FiPlus, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
 import { Quiz } from '../../types';
 import DataTable, { Column } from '../DataTable';
 import QuizModal from './quizzesComponent/QuizModal';
+import { useRouter } from 'next/navigation';
 
 interface QuizzesTabProps {
   quizzes: Quiz[];
@@ -18,6 +19,7 @@ export default function QuizzesTab({
   onDeleteQuiz
 }: QuizzesTabProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
   
   // Delete confirmation modal states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -57,12 +59,19 @@ export default function QuizzesTab({
     }
   };
 
+  const handleQuizClick = (quizId: string) => {
+    router.push(`/quiz/${quizId}`);
+  };
+
   const columns: Column<Quiz>[] = [
     {
       key: 'title',
       header: 'Title',
       render: (quiz) => (
-        <div>
+        <div 
+          onClick={() => handleQuizClick(quiz.id)}
+          className="cursor-pointer hover:bg-gray-50 p-2 rounded"
+        >
           <div className="text-sm font-medium text-gray-900">{quiz.title}</div>
           <div className="text-sm text-gray-500">{quiz.description}</div>
         </div>
@@ -72,14 +81,24 @@ export default function QuizzesTab({
       key: 'questions',
       header: 'Questions',
       render: (quiz) => (
-        <span className="text-sm text-gray-500">{quiz.totalQuestions}</span>
+        <span 
+          onClick={() => handleQuizClick(quiz.id)}
+          className="text-sm text-gray-500 cursor-pointer hover:bg-gray-50 p-2 rounded block"
+        >
+          {quiz.totalQuestions}
+        </span>
       )
     },
     {
       key: 'duration',
       header: 'Duration',
       render: (quiz) => (
-        <span className="text-sm text-gray-500">{quiz.duration} mins</span>
+        <span 
+          onClick={() => handleQuizClick(quiz.id)}
+          className="text-sm text-gray-500 cursor-pointer hover:bg-gray-50 p-2 rounded block"
+        >
+          {quiz.duration} mins
+        </span>
       )
     },
     {
@@ -87,7 +106,8 @@ export default function QuizzesTab({
       header: 'Status',
       render: (quiz) => (
         <span
-          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+          onClick={() => handleQuizClick(quiz.id)}
+          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full cursor-pointer hover:bg-gray-50 ${
             quiz.isPublished
               ? 'bg-green-100 text-green-800'
               : 'bg-yellow-100 text-yellow-800'
@@ -104,13 +124,10 @@ export default function QuizzesTab({
       render: (quiz) => (
         <div className="flex justify-end space-x-4">
           <button 
-            onClick={() => onEditQuiz(quiz.id)} 
-            className="text-blue-600 hover:text-blue-900 cursor-pointer"
-          >
-            <FiEdit2 size={18} />
-          </button>
-          <button 
-            onClick={() => handleDeleteClick(quiz.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteClick(quiz.id);
+            }}
             className="text-red-600 hover:text-red-900 cursor-pointer"
           >
             <FiTrash2 size={18} />
