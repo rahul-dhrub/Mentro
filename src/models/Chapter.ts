@@ -50,4 +50,8 @@ const ChapterSchema = new Schema<IChapter>(
   }
 );
 
+// Indexes for better performance
+ChapterSchema.index({ courseId: 1 });
+ChapterSchema.index({ order: 1 });
+
 export default mongoose.models.Chapter || mongoose.model<IChapter>('Chapter', ChapterSchema); 

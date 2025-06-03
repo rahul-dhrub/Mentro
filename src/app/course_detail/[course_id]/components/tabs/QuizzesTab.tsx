@@ -1,23 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
 import { Quiz } from '../../types';
 import DataTable, { Column } from '../DataTable';
 import QuizModal from './quizzesComponent/QuizModal';
 import { useRouter } from 'next/navigation';
+import { quizAPI } from '@/lib/api';
 
-interface QuizzesTabProps {
-  quizzes: Quiz[];
-  onAddQuiz: (quiz: Quiz) => void;
-  onEditQuiz: (quizId: string) => void;
-  onDeleteQuiz: (quizId: string) => void;
+interface DatabaseQuiz {
+  _id: string;
+  title: string;
+  description: string;
+  questions: any[];
+  totalQuestions: number;
+  duration: number;
+  totalMarks: number;
+  isPublished: boolean;
+  courseId?: {
+    _id: string;
+    title: string;
+  };
+  createdAt: string;
+  updatedAt: string;
 }
 
-export default function QuizzesTab({
-  quizzes,
-  onAddQuiz,
-  onEditQuiz,
-  onDeleteQuiz
-}: QuizzesTabProps) {
+interface QuizzesTabProps {
+  courseId: string;
+}
+
+export default function QuizzesTab({ courseId }: QuizzesTabProps) {
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
   
@@ -25,6 +38,44 @@ export default function QuizzesTab({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [quizToDelete, setQuizToDelete] = useState<{id: string, title: string} | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+
+  // Fetch quizzes from database
+  useEffect(() => {
+    const fetchQuizzes = async () => {
+      if (!courseId) return;
+      
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const result = await quizAPI.getAll(courseId);
+        
+        if (result.success && result.data) {
+          // Transform database quizzes to match our interface
+          const transformedQuizzes: Quiz[] = (result.data as DatabaseQuiz[]).map(quiz => ({
+            id: quiz._id,
+            title: quiz.title,
+            description: quiz.description,
+            totalQuestions: quiz.totalQuestions,
+            duration: quiz.duration,
+            totalMarks: quiz.totalMarks,
+            isPublished: quiz.isPublished
+          }));
+          
+          setQuizzes(transformedQuizzes);
+        } else {
+          setError(result.error || 'Failed to fetch quizzes');
+        }
+      } catch (err) {
+        setError('Failed to fetch quizzes');
+        console.error('Error fetching quizzes:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchQuizzes();
+  }, [courseId]);
 
   const handleOpenModal = () => {
     setIsModalOpen(true);
@@ -34,11 +85,49 @@ export default function QuizzesTab({
     setIsModalOpen(false);
   };
 
-  const handleAddQuiz = (quizData: any) => {
-    onAddQuiz({
-      id: Date.now().toString(),
-      ...quizData
-    });
+  const handleAddQuiz = async (quizData: any) => {
+    try {
+      // Prepare data for database
+      const dbQuizData = {
+        title: quizData.title,
+        description: quizData.description,
+        questions: quizData.questions || [],
+        duration: quizData.duration,
+        totalMarks: quizData.totalMarks || 0,
+        isPublished: quizData.isPublished || false,
+        courseId: courseId,
+        startDate: quizData.startDate,
+        endDate: quizData.endDate,
+        attemptsAllowed: quizData.attemptsAllowed || 1,
+        showResults: quizData.showResults || 'after_submission',
+        passingScore: quizData.passingScore || 0,
+        shuffleQuestions: quizData.shuffleQuestions || false,
+        shuffleOptions: quizData.shuffleOptions || false
+      };
+
+      const result = await quizAPI.create(dbQuizData);
+      
+      if (result.success && result.data) {
+        // Transform and add to local state
+        const newQuiz: Quiz = {
+          id: (result.data as DatabaseQuiz)._id,
+          title: (result.data as DatabaseQuiz).title,
+          description: (result.data as DatabaseQuiz).description,
+          totalQuestions: (result.data as DatabaseQuiz).totalQuestions,
+          duration: (result.data as DatabaseQuiz).duration,
+          totalMarks: (result.data as DatabaseQuiz).totalMarks,
+          isPublished: (result.data as DatabaseQuiz).isPublished
+        };
+        
+        setQuizzes(prev => [...prev, newQuiz]);
+        setError(null);
+      } else {
+        setError(result.error || 'Failed to create quiz');
+      }
+    } catch (err) {
+      setError('Failed to create quiz');
+      console.error('Error creating quiz:', err);
+    }
   };
   
   const handleDeleteClick = (quizId: string) => {
@@ -50,9 +139,22 @@ export default function QuizzesTab({
     }
   };
   
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (quizToDelete && deleteConfirmation === quizToDelete.title) {
-      onDeleteQuiz(quizToDelete.id);
+      try {
+        const result = await quizAPI.delete(quizToDelete.id);
+        
+        if (result.success) {
+          setQuizzes(prev => prev.filter(q => q.id !== quizToDelete.id));
+          setError(null);
+        } else {
+          setError(result.error || 'Failed to delete quiz');
+        }
+      } catch (err) {
+        setError('Failed to delete quiz');
+        console.error('Error deleting quiz:', err);
+      }
+      
       setShowDeleteModal(false);
       setQuizToDelete(null);
       setDeleteConfirmation('');
@@ -62,6 +164,40 @@ export default function QuizzesTab({
   const handleQuizClick = (quizId: string) => {
     router.push(`/quiz/${quizId}`);
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-gray-900">Quizzes</h2>
+          <button
+            onClick={handleOpenModal}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 cursor-pointer"
+          >
+            <FiPlus size={20} />
+            <span>Add Quiz</span>
+          </button>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="text-red-700">{error}</div>
+          </div>
+        )}
+        
+        {/* Quiz Modal */}
+        <QuizModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          onAddQuiz={handleAddQuiz}
+        />
+        
+        <div className="flex justify-center items-center h-32">
+          <div className="text-gray-500">Loading quizzes...</div>
+        </div>
+      </div>
+    );
+  }
 
   const columns: Column<Quiz>[] = [
     {
@@ -149,6 +285,12 @@ export default function QuizzesTab({
           <span>Add Quiz</span>
         </button>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="text-red-700">{error}</div>
+        </div>
+      )}
       
       {/* Quiz Modal */}
       <QuizModal

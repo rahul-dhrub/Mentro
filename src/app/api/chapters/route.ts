@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
-import Chapter from '@/models/Chapter';
-import Lesson from '@/models/Lesson';
+import { Chapter, Lesson, ensureModelsRegistered } from '@/lib/models';
 
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
+    
+    // Ensure all models are registered
+    ensureModelsRegistered();
     
     const { searchParams } = new URL(request.url);
     const courseId = searchParams.get('courseId');
@@ -29,6 +31,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
+    
+    // Ensure all models are registered
+    ensureModelsRegistered();
     
     const body = await request.json();
     const { title, description, courseId, order } = body;

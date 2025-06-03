@@ -1,24 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
 import { Assignment } from '../../types';
 import DataTable, { Column } from '../DataTable';
 import AssignmentModal from './assignmentsComponent/AssignmentModal';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
+import { assignmentAPI } from '@/lib/api';
 
-interface AssignmentsTabProps {
-  assignments: Assignment[];
-  onAddAssignment: (assignment: Assignment) => void;
-  onEditAssignment: (assignmentId: string) => void;
-  onDeleteAssignment: (assignmentId: string) => void;
+interface DatabaseAssignment {
+  _id: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  totalMarks: number;
+  submissions: number;
+  courseId?: {
+    _id: string;
+    title: string;
+  };
+  createdAt: string;
+  updatedAt: string;
 }
 
-export default function AssignmentsTab({
-  assignments,
-  onAddAssignment,
-  onEditAssignment,
-  onDeleteAssignment
-}: AssignmentsTabProps) {
+interface AssignmentsTabProps {
+  courseId: string;
+}
+
+export default function AssignmentsTab({ courseId }: AssignmentsTabProps) {
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
   const params = useParams();
@@ -28,6 +39,43 @@ export default function AssignmentsTab({
   const [assignmentToDelete, setAssignmentToDelete] = useState<{id: string, title: string} | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
+  // Fetch assignments from database
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      if (!courseId) return;
+      
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const result = await assignmentAPI.getAll(courseId);
+        
+        if (result.success && result.data) {
+          // Transform database assignments to match our interface
+          const transformedAssignments: Assignment[] = (result.data as DatabaseAssignment[]).map(assignment => ({
+            id: assignment._id,
+            title: assignment.title,
+            description: assignment.description,
+            dueDate: new Date(assignment.dueDate).toLocaleDateString(),
+            totalMarks: assignment.totalMarks,
+            submissions: assignment.submissions
+          }));
+          
+          setAssignments(transformedAssignments);
+        } else {
+          setError(result.error || 'Failed to fetch assignments');
+        }
+      } catch (err) {
+        setError('Failed to fetch assignments');
+        console.error('Error fetching assignments:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAssignments();
+  }, [courseId]);
+
   const handleOpenModal = () => {
     setIsModalOpen(true);
   };
@@ -36,8 +84,41 @@ export default function AssignmentsTab({
     setIsModalOpen(false);
   };
 
-  const handleAddAssignment = (assignmentData: Assignment) => {
-    onAddAssignment(assignmentData);
+  const handleAddAssignment = async (assignmentData: any) => {
+    try {
+      // Prepare data for database
+      const dbAssignmentData = {
+        title: assignmentData.title,
+        description: assignmentData.description,
+        content: assignmentData.description, // Use description as content for now
+        dueDate: assignmentData.dueDate,
+        totalMarks: assignmentData.totalMarks,
+        courseId: courseId,
+        attachments: []
+      };
+
+      const result = await assignmentAPI.create(dbAssignmentData);
+      
+      if (result.success && result.data) {
+        // Transform and add to local state
+        const newAssignment: Assignment = {
+          id: (result.data as DatabaseAssignment)._id,
+          title: (result.data as DatabaseAssignment).title,
+          description: (result.data as DatabaseAssignment).description,
+          dueDate: new Date((result.data as DatabaseAssignment).dueDate).toLocaleDateString(),
+          totalMarks: (result.data as DatabaseAssignment).totalMarks,
+          submissions: (result.data as DatabaseAssignment).submissions
+        };
+        
+        setAssignments(prev => [...prev, newAssignment]);
+        setError(null);
+      } else {
+        setError(result.error || 'Failed to create assignment');
+      }
+    } catch (err) {
+      setError('Failed to create assignment');
+      console.error('Error creating assignment:', err);
+    }
   };
   
   const handleDeleteClick = (assignmentId: string) => {
@@ -49,9 +130,22 @@ export default function AssignmentsTab({
     }
   };
   
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (assignmentToDelete && deleteConfirmation === assignmentToDelete.title) {
-      onDeleteAssignment(assignmentToDelete.id);
+      try {
+        const result = await assignmentAPI.delete(assignmentToDelete.id);
+        
+        if (result.success) {
+          setAssignments(prev => prev.filter(a => a.id !== assignmentToDelete.id));
+          setError(null);
+        } else {
+          setError(result.error || 'Failed to delete assignment');
+        }
+      } catch (err) {
+        setError('Failed to delete assignment');
+        console.error('Error deleting assignment:', err);
+      }
+      
       setShowDeleteModal(false);
       setAssignmentToDelete(null);
       setDeleteConfirmation('');
@@ -61,6 +155,26 @@ export default function AssignmentsTab({
   const handleAssignmentClick = (assignmentId: string) => {
     router.push(`/assignment/${assignmentId}`);
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-gray-900">Assignments</h2>
+          <button
+            onClick={handleOpenModal}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 cursor-pointer"
+          >
+            <FiPlus size={20} />
+            <span>Add Assignment</span>
+          </button>
+        </div>
+        <div className="flex justify-center items-center h-32">
+          <div className="text-gray-500">Loading assignments...</div>
+        </div>
+      </div>
+    );
+  }
 
   const columns: Column<Assignment>[] = [
     {
@@ -132,12 +246,19 @@ export default function AssignmentsTab({
           <span>Add Assignment</span>
         </button>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="text-red-700">{error}</div>
+        </div>
+      )}
       
       {/* Assignment Modal */}
       <AssignmentModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onAddAssignment={handleAddAssignment}
+        courseId={courseId}
       />
       
       {/* Delete Confirmation Modal */}

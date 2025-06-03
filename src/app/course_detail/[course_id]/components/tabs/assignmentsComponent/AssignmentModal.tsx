@@ -14,13 +14,15 @@ interface AssignmentModalProps {
   onClose: () => void;
   onAddAssignment: (assignmentData: any) => void;
   lessonId?: string | null;
+  courseId?: string;
 }
 
 export default function AssignmentModal({ 
   isOpen, 
   onClose, 
   onAddAssignment,
-  lessonId
+  lessonId,
+  courseId
 }: AssignmentModalProps) {
   // Form states
   const [title, setTitle] = useState('');
@@ -28,6 +30,8 @@ export default function AssignmentModal({
   const [dueDate, setDueDate] = useState('');
   const [totalMarks, setTotalMarks] = useState('');
   const [contents, setContents] = useState<LessonContent[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const titleInputRef = useRef<HTMLInputElement>(null);
   
@@ -137,6 +141,8 @@ export default function AssignmentModal({
     setDueDate('');
     setTotalMarks('');
     setContents([]);
+    setIsLoading(false);
+    setError(null);
   };
   
   // Text formatting functions
@@ -225,29 +231,37 @@ export default function AssignmentModal({
     });
   };
   
-  const handleSaveAssignment = () => {
+  const handleSaveAssignment = async () => {
     if (!title.trim()) return;
     
-    // Create assignment object
-    const assignmentData = {
-      id: Date.now().toString(),
-      title,
-      description,
-      dueDate,
-      totalMarks: parseInt(totalMarks) || 0,
-      submissions: 0,
-      lessonId,
-      contents // Include the media contents
-    };
+    setIsLoading(true);
+    setError(null);
     
-    console.log('Saving assignment:', assignmentData);
-    
-    // Call the parent handler with the new assignment data
-    onAddAssignment(assignmentData);
-    
-    // Close modal and reset form
-    onClose();
-    resetForm();
+    try {
+      // Create assignment object
+      const assignmentData = {
+        title,
+        description,
+        dueDate,
+        totalMarks: parseInt(totalMarks) || 0,
+        submissions: 0,
+        lessonId,
+        contents // Include the media contents
+      };
+      
+      console.log('Saving assignment:', assignmentData);
+      
+      // Call the parent handler with the new assignment data
+      await onAddAssignment(assignmentData);
+      
+      // Close modal and reset form
+      onClose();
+      resetForm();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save assignment');
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   if (!isOpen) return null;
@@ -288,6 +302,12 @@ export default function AssignmentModal({
         
         {/* Form Fields */}
         <div className="space-y-4">
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="text-red-700">{error}</div>
+            </div>
+          )}
+
           <div>
             <label htmlFor="assignment-title" className="block text-sm font-medium text-gray-700 mb-1">
               Assignment Title *
@@ -456,16 +476,28 @@ export default function AssignmentModal({
           <div className="flex justify-end space-x-3 mt-6">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
+              disabled={isLoading}
+              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               onClick={handleSaveAssignment}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
-              disabled={!title.trim() || !dueDate || !totalMarks}
+              disabled={!title.trim() || !dueDate || !totalMarks || isLoading}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
+                (!title.trim() || !dueDate || !totalMarks || isLoading)
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+              }`}
             >
-              Save Assignment
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <span>Save Assignment</span>
+              )}
             </button>
           </div>
         </div>

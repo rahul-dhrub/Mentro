@@ -6,6 +6,7 @@ import { FiSave, FiEye, FiEdit2, FiClock, FiCalendar, FiPaperclip, FiFile, FiX, 
 import dynamic from 'next/dynamic';
 import 'katex/dist/katex.min.css';
 import katex from 'katex';
+import { assignmentAPI } from '@/lib/api';
 
 // Dynamically import MDEditor to avoid SSR issues
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), {
@@ -22,7 +23,7 @@ interface Attachment {
 }
 
 interface Assignment {
-  id: string;
+  _id: string;
   title: string;
   description: string;
   content: string;
@@ -30,8 +31,19 @@ interface Assignment {
   totalMarks: number;
   submissions: number;
   attachments: Attachment[];
-  courseId?: string;
+  courseId?: {
+    _id: string;
+    title: string;
+  };
   courseName?: string;
+  isPublished: boolean;
+  createdBy?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function AssignmentDetail() {
@@ -40,6 +52,8 @@ export default function AssignmentDetail() {
   const [isPreview, setIsPreview] = useState(false);
   const [isFullPreview, setIsFullPreview] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Edit form states
   const [editTitle, setEditTitle] = useState('');
@@ -47,68 +61,43 @@ export default function AssignmentDetail() {
   const [editDueDate, setEditDueDate] = useState('');
   const [editTotalMarks, setEditTotalMarks] = useState('');
   
-  const [assignment, setAssignment] = useState<Assignment>({
-    id: '1',
-    title: 'Mathematical Analysis Assignment',
-    description: 'Solve complex mathematical problems using calculus and linear algebra',
-    content: `# Mathematical Analysis Assignment
+  const [assignment, setAssignment] = useState<Assignment | null>(null);
 
-## Problem 1: Derivatives
-Find the derivative of the following function:
-
-$$f(x) = \\frac{x^2 + 3x + 2}{x + 1}$$
-
-**Solution approach:**
-- Use the quotient rule: $\\left(\\frac{u}{v}\\right)' = \\frac{u'v - uv'}{v^2}$
-- Simplify the expression
-- Check for critical points
-
-## Problem 2: Integration
-Evaluate the integral:
-
-$$\\int_{0}^{\\pi} \\sin^2(x) \\, dx$$
-
-**Hint:** Use the identity $\\sin^2(x) = \\frac{1 - \\cos(2x)}{2}$
-
-## Problem 3: Differential Equations
-Solve the differential equation:
-
-$$\\frac{dy}{dx} + 2y = e^{-x}$$
-
-**Steps:**
-1. Identify the integrating factor: $\\mu(x) = e^{\\int 2 dx} = e^{2x}$
-2. Multiply both sides by the integrating factor
-3. Integrate and solve for $y$
-
-## Submission Guidelines
-- Show all your work and explain your steps
-- Include graphs where appropriate
-- Submit as PDF format
-- Due date: **April 1, 2024**`,
-    dueDate: '2024-04-01',
-    totalMarks: 100,
-    submissions: 23,
-    attachments: [
-      {
-        id: '1',
-        name: 'formula_sheet.pdf',
-        type: 'application/pdf',
-        size: 245760,
-        url: '#'
+  // Fetch assignment data
+  useEffect(() => {
+    const fetchAssignment = async () => {
+      if (!params.assignment_id) return;
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const result = await assignmentAPI.getById(params.assignment_id as string);
+        
+        if (result.success && result.data) {
+          setAssignment(result.data as Assignment);
+        } else {
+          setError(result.error || 'Failed to fetch assignment');
+        }
+      } catch (err) {
+        setError('Failed to fetch assignment');
+        console.error('Error fetching assignment:', err);
+      } finally {
+        setLoading(false);
       }
-    ],
-    courseId: 'math-101',
-    courseName: 'Advanced Mathematics'
-  });
+    };
+
+    fetchAssignment();
+  }, [params.assignment_id]);
 
   useEffect(() => {
     // Initialize KaTeX for any math elements
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && assignment) {
       setTimeout(() => {
         renderLatexInContent();
       }, 100);
     }
-  }, [assignment.content, isPreview, isFullPreview]);
+  }, [assignment?.content, isPreview, isFullPreview]);
 
   const renderLatexInContent = () => {
     const contentElements = document.querySelectorAll('.assignment-content, .assignment-preview');
@@ -197,7 +186,7 @@ $$\\frac{dy}{dx} + 2y = e^{-x}$$
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files) return;
+    if (!files || !assignment) return;
 
     const newAttachments: Attachment[] = Array.from(files).map(file => ({
       id: Math.random().toString(36).substr(2, 9),
@@ -207,17 +196,17 @@ $$\\frac{dy}{dx} + 2y = e^{-x}$$
       url: URL.createObjectURL(file)
     }));
 
-    setAssignment(prev => ({
+    setAssignment(prev => prev ? ({
       ...prev,
       attachments: [...prev.attachments, ...newAttachments]
-    }));
+    }) : null);
   };
 
   const handleRemoveAttachment = (attachmentId: string) => {
-    setAssignment(prev => ({
+    setAssignment(prev => prev ? ({
       ...prev,
       attachments: prev.attachments.filter(att => att.id !== attachmentId)
-    }));
+    }) : null);
   };
 
   const formatFileSize = (bytes: number) => {
@@ -229,35 +218,46 @@ $$\\frac{dy}{dx} + 2y = e^{-x}$$
   };
 
   const handleContentChange = (value: string | undefined) => {
-    if (value !== undefined) {
-      setAssignment(prev => ({ ...prev, content: value }));
+    if (value !== undefined && assignment) {
+      setAssignment(prev => prev ? ({ ...prev, content: value }) : null);
     }
   };
 
-  const handleSave = () => {
-    // Update assignment with edited values
-    setAssignment(prev => ({
-      ...prev,
-      title: editTitle,
-      description: editDescription,
-      dueDate: editDueDate,
-      totalMarks: parseInt(editTotalMarks) || prev.totalMarks
-    }));
-    setIsEditing(false);
-    console.log('Saving assignment:', {
-      ...assignment,
-      title: editTitle,
-      description: editDescription,
-      dueDate: editDueDate,
-      totalMarks: parseInt(editTotalMarks)
-    });
+  const handleSave = async () => {
+    if (!assignment) return;
+    
+    try {
+      const updateData = {
+        title: editTitle,
+        description: editDescription,
+        dueDate: editDueDate,
+        totalMarks: parseInt(editTotalMarks),
+        content: assignment.content,
+        attachments: assignment.attachments
+      };
+
+      const result = await assignmentAPI.update(assignment._id, updateData);
+      
+      if (result.success && result.data) {
+        setAssignment(result.data as Assignment);
+        setIsEditing(false);
+        setError(null);
+      } else {
+        setError(result.error || 'Failed to update assignment');
+      }
+    } catch (err) {
+      setError('Failed to update assignment');
+      console.error('Error updating assignment:', err);
+    }
   };
 
   const handleEdit = () => {
+    if (!assignment) return;
+    
     // Initialize edit form with current values
     setEditTitle(assignment.title);
     setEditDescription(assignment.description);
-    setEditDueDate(assignment.dueDate);
+    setEditDueDate(assignment.dueDate.split('T')[0]);
     setEditTotalMarks(assignment.totalMarks.toString());
     setIsEditing(true);
   };
@@ -272,12 +272,36 @@ $$\\frac{dy}{dx} + 2y = e^{-x}$$
   };
 
   const handleGoBack = () => {
-    if (assignment.courseId) {
-      router.push(`/course_detail/${assignment.courseId}`);
+    if (assignment?.courseId?._id) {
+      router.push(`/course_detail/${assignment.courseId._id}`);
     } else {
       router.back();
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-center items-center h-64">
+            <div className="text-gray-500">Loading assignment...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !assignment) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-center items-center h-64">
+            <div className="text-red-500">{error || 'Assignment not found'}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -293,13 +317,20 @@ $$\\frac{dy}{dx} + 2y = e^{-x}$$
           </button>
         </div>
 
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="text-red-700">{error}</div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="flex justify-between items-start">
             <div className="flex-1">
               <div className="flex items-center text-sm text-gray-500 mb-2">
                 <FiBookOpen className="mr-2" size={16} />
-                <span>{assignment.courseName || 'Course'}</span>
+                <span>{assignment.courseId?.title || assignment.courseName || 'Course'}</span>
               </div>
               
               {isEditing ? (

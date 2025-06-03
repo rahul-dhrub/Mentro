@@ -54,38 +54,32 @@ export default function useChaptersAndLessons(courseId: string) {
       
       const dbChapters = await response.json();
       
-      const transformedChapters: Chapter[] = await Promise.all(
-        dbChapters.map(async (chapter: any) => {
-          const lessonsResponse = await fetch(`/api/lessons?chapterId=${chapter._id}`);
-          const lessons = lessonsResponse.ok ? await lessonsResponse.json() : [];
-          
-          return {
-            id: chapter._id,
-            _id: chapter._id,
-            title: chapter.title,
-            description: chapter.description,
-            duration: chapter.duration,
-            isPublished: chapter.isPublished,
-            order: chapter.order,
-            lessons: lessons.map((lesson: any) => ({
-              id: lesson._id,
-              _id: lesson._id,
-              title: lesson.title,
-              description: lesson.description,
-              duration: lesson.duration,
-              isPublished: lesson.isPublished,
-              isLive: lesson.isLive,
-              lessonContents: lesson.lessonContents || [],
-              liveScheduleDate: lesson.liveScheduleDate,
-              liveScheduleTime: lesson.liveScheduleTime,
-              liveScheduleLink: lesson.liveScheduleLink,
-              timezone: lesson.timezone,
-              assignments: lesson.assignments || [],
-              quizzes: lesson.quizzes || [],
-            })),
-          };
-        })
-      );
+      // Transform the database chapters with populated lessons
+      const transformedChapters: Chapter[] = dbChapters.map((chapter: any) => ({
+        id: chapter._id,
+        _id: chapter._id,
+        title: chapter.title,
+        description: chapter.description,
+        duration: chapter.duration,
+        isPublished: chapter.isPublished,
+        order: chapter.order,
+        lessons: (chapter.lessons || []).map((lesson: any) => ({
+          id: lesson._id,
+          _id: lesson._id,
+          title: lesson.title,
+          description: lesson.description,
+          duration: lesson.duration,
+          isPublished: lesson.isPublished,
+          isLive: lesson.isLive,
+          lessonContents: lesson.lessonContents || [],
+          liveScheduleDate: lesson.liveScheduleDate,
+          liveScheduleTime: lesson.liveScheduleTime,
+          liveScheduleLink: lesson.liveScheduleLink,
+          timezone: lesson.timezone,
+          assignments: lesson.assignments || [],
+          quizzes: lesson.quizzes || [],
+        })),
+      }));
       
       setChapters(transformedChapters);
     } catch (err) {

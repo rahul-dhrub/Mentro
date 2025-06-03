@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
-import Chapter from '@/models/Chapter';
-import Lesson from '@/models/Lesson';
+import { Chapter, Lesson, ensureModelsRegistered } from '@/lib/models';
 
 export async function PUT(
   request: NextRequest,
@@ -9,6 +8,9 @@ export async function PUT(
 ) {
   try {
     await connectDB();
+    
+    // Ensure all models are registered
+    ensureModelsRegistered();
     
     const { chapterId } = await params;
     const body = await request.json();
@@ -37,6 +39,9 @@ export async function DELETE(
 ) {
   try {
     await connectDB();
+    
+    // Ensure all models are registered
+    ensureModelsRegistered();
     
     const { chapterId } = await params;
     

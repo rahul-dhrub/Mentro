@@ -122,4 +122,9 @@ const LessonSchema = new Schema<ILesson>(
   }
 );
 
+// Indexes for better performance
+LessonSchema.index({ chapterId: 1 });
+LessonSchema.index({ order: 1 });
+LessonSchema.index({ isPublished: 1 });
+
 export default mongoose.models.Lesson || mongoose.model<ILesson>('Lesson', LessonSchema); 

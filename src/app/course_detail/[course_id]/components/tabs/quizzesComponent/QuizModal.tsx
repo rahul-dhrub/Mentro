@@ -20,6 +20,8 @@ export default function QuizModal({
   const [duration, setDuration] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isPublished, setIsPublished] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Scheduling states
   const [isScheduled, setIsScheduled] = useState(false);
@@ -52,6 +54,8 @@ export default function QuizModal({
     setEndDate('');
     setEndTime('');
     setContents([]);
+    setIsLoading(false);
+    setError(null);
   };
   
   // Text formatting functions
@@ -194,59 +198,71 @@ export default function QuizModal({
     }
   };
   
-  const handleSaveQuiz = () => {
+  const handleSaveQuiz = async () => {
     if (!title.trim() || !duration || questions.length === 0) return;
     
-    // Validate scheduling information if enabled
-    if (isScheduled) {
-      if (!startDate || !startTime || !endDate || !endTime) {
-        alert('Please complete all scheduling fields');
-        return;
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Validate scheduling information if enabled
+      if (isScheduled) {
+        if (!startDate || !startTime || !endDate || !endTime) {
+          setError('Please complete all scheduling fields');
+          setIsLoading(false);
+          return;
+        }
+        
+        // Check if end date/time is after start date/time
+        const startDateTime = createDateTimeString(startDate, startTime);
+        const endDateTime = createDateTimeString(endDate, endTime);
+        
+        if (!startDateTime || !endDateTime) {
+          setError('Invalid date or time format');
+          setIsLoading(false);
+          return;
+        }
+        
+        if (new Date(endDateTime) <= new Date(startDateTime)) {
+          setError('End date/time must be after start date/time');
+          setIsLoading(false);
+          return;
+        }
       }
       
-      // Check if end date/time is after start date/time
-      const startDateTime = createDateTimeString(startDate, startTime);
-      const endDateTime = createDateTimeString(endDate, endTime);
+      // Calculate total marks
+      const totalMarks = questions.reduce((sum, question) => sum + question.marks, 0);
       
-      if (!startDateTime || !endDateTime) {
-        alert('Invalid date or time format');
-        return;
-      }
+      // Create quiz object
+      const quizData = {
+        title,
+        description,
+        duration: parseInt(duration),
+        totalQuestions: questions.length,
+        totalMarks,
+        isPublished,
+        questions,
+        contents,
+        ...(isScheduled && {
+          scheduled: true,
+          startDateTime: createDateTimeString(startDate, startTime),
+          endDateTime: createDateTimeString(endDate, endTime)
+        })
+      };
       
-      if (new Date(endDateTime) <= new Date(startDateTime)) {
-        alert('End date/time must be after start date/time');
-        return;
-      }
+      console.log('Saving quiz:', quizData);
+      
+      // Call the parent handler with the new quiz data
+      await onAddQuiz(quizData as Omit<Quiz, 'id'> & { questions: Question[] });
+      
+      // Close modal and reset form
+      onClose();
+      resetForm();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save quiz');
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Calculate total marks
-    const totalMarks = questions.reduce((sum, question) => sum + question.marks, 0);
-    
-    // Create quiz object
-    const quizData = {
-      title,
-      description,
-      duration: parseInt(duration),
-      totalQuestions: questions.length,
-      totalMarks,
-      isPublished,
-      questions,
-      contents,
-      ...(isScheduled && {
-        scheduled: true,
-        startDateTime: createDateTimeString(startDate, startTime),
-        endDateTime: createDateTimeString(endDate, endTime)
-      })
-    };
-    
-    console.log('Saving quiz:', quizData);
-    
-    // Call the parent handler with the new quiz data
-    onAddQuiz(quizData as Omit<Quiz, 'id'> & { questions: Question[] });
-    
-    // Close modal and reset form
-    onClose();
-    resetForm();
   };
   
   // Helper to get current date in YYYY-MM-DD format for default value
@@ -283,6 +299,12 @@ export default function QuizModal({
         
         {/* Form Fields */}
         <div className="space-y-5">
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="text-red-700">{error}</div>
+            </div>
+          )}
+
           <div>
             <label htmlFor="quiz-title" className="block text-sm font-medium text-gray-700 mb-1">
               Quiz Title *
@@ -582,16 +604,28 @@ export default function QuizModal({
           <div className="flex justify-end space-x-3 mt-6">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
+              disabled={isLoading}
+              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               onClick={handleSaveQuiz}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
-              disabled={!title.trim() || !duration || questions.length === 0}
+              disabled={!title.trim() || !duration || questions.length === 0 || isLoading}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
+                (!title.trim() || !duration || questions.length === 0 || isLoading)
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+              }`}
             >
-              Save Quiz
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <span>Save Quiz</span>
+              )}
             </button>
           </div>
         </div>

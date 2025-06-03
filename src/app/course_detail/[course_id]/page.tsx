@@ -45,30 +45,18 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
   // Chapter UI state
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
   
-  // Assignment state
-  const [assignments, setAssignments] = useState<Assignment[]>([
-    {
-      id: '1',
-      title: 'HTML Basics Assignment',
-      description: 'Create a simple webpage using HTML',
-      dueDate: '2024-03-20',
-      totalMarks: 100,
-      submissions: 15,
-    },
-  ]);
-  
   // Quiz state
-  const [quizzes, setQuizzes] = useState<Quiz[]>([
-    {
-      id: '1',
-      title: 'HTML Fundamentals Quiz',
-      description: 'Test your knowledge of HTML basics',
-      totalQuestions: 20,
-      duration: 30,
-      totalMarks: 100,
-      isPublished: true,
-    },
-  ]);
+  // const [quizzes, setQuizzes] = useState<Quiz[]>([
+  //   {
+  //     id: '1',
+  //     title: 'HTML Fundamentals Quiz',
+  //     description: 'Test your knowledge of HTML basics',
+  //     totalQuestions: 20,
+  //     duration: 30,
+  //     totalMarks: 100,
+  //     isPublished: true,
+  //   },
+  // ]);
   
   // Faculty state
   const [faculty, setFaculty] = useState<Faculty[]>([
@@ -167,31 +155,17 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
     }
   };
 
-  const handleAddAssignment = () => {
-    console.log('Add assignment clicked');
-  };
+  // const handleAddQuiz = () => {
+  //   console.log('Add quiz clicked');
+  // };
 
-  const handleEditAssignment = (assignmentId: string) => {
-    if (courseId) {
-      router.push(`/course_detail/${courseId}/assignment/${assignmentId}`);
-    }
-  };
+  // const handleEditQuiz = (quizId: string) => {
+  //   console.log('Edit quiz:', quizId);
+  // };
 
-  const handleDeleteAssignment = (assignmentId: string) => {
-    console.log('Delete assignment:', assignmentId);
-  };
-
-  const handleAddQuiz = () => {
-    console.log('Add quiz clicked');
-  };
-
-  const handleEditQuiz = (quizId: string) => {
-    console.log('Edit quiz:', quizId);
-  };
-
-  const handleDeleteQuiz = (quizId: string) => {
-    console.log('Delete quiz:', quizId);
-  };
+  // const handleDeleteQuiz = (quizId: string) => {
+  //   console.log('Delete quiz:', quizId);
+  // };
 
   const handleAddFaculty = () => {
     console.log('Add faculty clicked');
@@ -245,8 +219,8 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
         return (
           <OverviewTab
             onAddChapter={handleAddChapter}
-            onCreateAssignment={handleAddAssignment}
-            onCreateQuiz={handleAddQuiz}
+            onCreateAssignment={() => setActiveTab('assignments')}
+            onCreateQuiz={() => setActiveTab('quizzes')}
             onTabChange={setActiveTab}
           />
         );
@@ -267,19 +241,13 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
       case 'assignments':
         return (
           <AssignmentsTab
-            assignments={assignments}
-            onAddAssignment={handleAddAssignment}
-            onEditAssignment={handleEditAssignment}
-            onDeleteAssignment={handleDeleteAssignment}
+            courseId={courseId}
           />
         );
       case 'quizzes':
         return (
           <QuizzesTab
-            quizzes={quizzes}
-            onAddQuiz={handleAddQuiz}
-            onEditQuiz={handleEditQuiz}
-            onDeleteQuiz={handleDeleteQuiz}
+            courseId={courseId}
           />
         );
       case 'faculty':

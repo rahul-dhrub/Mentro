@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
-import Lesson from '@/models/Lesson';
-import Chapter from '@/models/Chapter';
+import { Lesson, Chapter, ensureModelsRegistered } from '@/lib/models';
 
 export async function GET(
   request: NextRequest,
@@ -9,6 +8,9 @@ export async function GET(
 ) {
   try {
     await connectDB();
+    
+    // Ensure all models are registered
+    ensureModelsRegistered();
     
     const { lessonId } = await params;
     const lesson = await Lesson.findById(lessonId);
@@ -31,15 +33,13 @@ export async function PUT(
   try {
     await connectDB();
     
+    // Ensure all models are registered
+    ensureModelsRegistered();
+    
     const { lessonId } = await params;
     const body = await request.json();
-    const updateData = { ...body };
     
-    const lesson = await Lesson.findByIdAndUpdate(
-      lessonId,
-      updateData,
-      { new: true }
-    );
+    const lesson = await Lesson.findByIdAndUpdate(lessonId, body, { new: true });
     
     if (!lesson) {
       return NextResponse.json({ error: 'Lesson not found' }, { status: 404 });
@@ -58,6 +58,9 @@ export async function DELETE(
 ) {
   try {
     await connectDB();
+    
+    // Ensure all models are registered
+    ensureModelsRegistered();
     
     const { lessonId } = await params;
     const lesson = await Lesson.findById(lessonId);
