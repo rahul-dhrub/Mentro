@@ -9,7 +9,6 @@ import PostCard from './components/PostCard';
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
 import Navbar from './components/Navbar';
-import CourseSidebar from './components/CourseSidebar';
 import PublicationsModal from './components/PublicationsModal';
 import SearchBar from './components/SearchBar';
 import UserProfile from './components/UserProfile';

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Course } from '../../types';
 import Navbar from '../../components/Navbar';
 import CourseHeader from '../../components/CourseHeader';
@@ -15,12 +16,24 @@ interface CourseLayoutProps {
 }
 
 export default function CourseLayout({ course, user }: CourseLayoutProps) {
+  const router = useRouter();
+  
+  // Check if user is a student
+  const isStudent = user.role.toLowerCase() === 'student';
+
+  const handleGoBack = () => {
+    router.back();
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar
         cartCount={2}
         favoriteCount={5}
         user={user}
+        showBackButton={true}
+        onBackClick={handleGoBack}
+        backButtonText="Back to Courses"
       />
 
       <CourseHeader course={course} />
@@ -32,7 +45,7 @@ export default function CourseLayout({ course, user }: CourseLayoutProps) {
           <CourseContent course={course} />
 
           {/* Sidebar */}
-          <CourseSidebar course={course} isDetailPage={false} />
+          <CourseSidebar course={course} isStudent={isStudent} />
         </div>
       </div>
     </div>

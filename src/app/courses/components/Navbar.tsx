@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { FiShoppingCart, FiHeart } from 'react-icons/fi';
+import { FiShoppingCart, FiHeart, FiArrowLeft } from 'react-icons/fi';
 
 interface NavbarProps {
   cartCount?: number;
@@ -9,19 +9,43 @@ interface NavbarProps {
     role: string;
     image: string;
   };
+  showBackButton?: boolean;
+  onBackClick?: () => void;
+  backButtonText?: string;
 }
 
-export default function Navbar({ cartCount = 0, favoriteCount = 0, user }: NavbarProps) {
+export default function Navbar({ 
+  cartCount = 0, 
+  favoriteCount = 0, 
+  user, 
+  showBackButton = false,
+  onBackClick,
+  backButtonText = "Back"
+}: NavbarProps) {
   return (
     <nav className="bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center">
-            <span className="text-2xl font-bold text-blue-600">Mentro</span>
-          </Link>
+          {/* Left Side - Logo and Back Button */}
+          <div className="flex items-center space-x-4">
+            {/* Back Button */}
+            {showBackButton && onBackClick && (
+              <button
+                onClick={onBackClick}
+                className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors group"
+              >
+                <FiArrowLeft className="w-5 h-5 group-hover:translate-x-[-2px] transition-transform" />
+                <span className="font-medium hidden sm:inline">{backButtonText}</span>
+              </button>
+            )}
 
-          {/* Navigation Items */}
+            {/* Logo */}
+            <Link href="/" className="flex items-center">
+              <span className="text-2xl font-bold text-blue-600">Mentro</span>
+            </Link>
+          </div>
+
+          {/* Right Side - Navigation Items */}
           <div className="flex items-center space-x-6">
             {/* Cart */}
             <button className="relative p-2 text-gray-600 hover:text-gray-900">

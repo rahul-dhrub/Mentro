@@ -8,17 +8,21 @@ interface SidebarProps {
   selectedCategory: string | null;
   onCategorySelect: (category: string | null) => void;
   onCreateCourseClick: () => void;
+  canCreateCourses: boolean;
 }
 
 export default function Sidebar({ 
   categories, 
   selectedCategory, 
   onCategorySelect,
-  onCreateCourseClick
+  onCreateCourseClick,
+  canCreateCourses
 }: SidebarProps) {
   return (
     <div className="md:w-64">
-      <CreateCourseButton onClick={onCreateCourseClick} />
+      {canCreateCourses && (
+        <CreateCourseButton onClick={onCreateCourseClick} />
+      )}
       <CategorySidebar
         categories={categories}
         selectedCategory={selectedCategory}
