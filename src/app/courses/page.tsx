@@ -155,6 +155,9 @@ export default function StudentCoursesPage() {
           role: userRole ? (userRole.charAt(0).toUpperCase() + userRole.slice(1)) : 'Student',
           image: user?.imageUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
         }}
+        showBackButton={true}
+        onBackClick={handleGoBack}
+        backButtonText="Back"
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

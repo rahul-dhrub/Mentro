@@ -31,7 +31,7 @@ export default function CourseLayout({ course, user }: CourseLayoutProps) {
         user={user}
         showBackButton={true}
         onBackClick={handleGoBack}
-        backButtonText="Back to Courses"
+        backButtonText="Back"
       />
 
       <CourseHeader course={course} />

@@ -7,14 +7,14 @@ import Wishlist from '../../../../models/Wishlist';
 const transformWishlistItems = (items: any[]) => {
   return items.map(item => ({
     ...item.toObject(),
-    id: item._id.toString()
+    id: item.courseId // Use courseId as the id for frontend
   }));
 };
 
 // DELETE /api/wishlist/[courseId] - Remove specific item from wishlist
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { courseId: string } }
+  { params }: { params: Promise<{ courseId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -23,7 +23,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { courseId } = params;
+    const { courseId } = await params;
 
     await connectDB();
     
@@ -33,8 +33,15 @@ export async function DELETE(
       return NextResponse.json({ error: 'Wishlist not found' }, { status: 404 });
     }
 
-    // Remove item from wishlist
+    // Remove item from wishlist by courseId
+    const initialLength = wishlist.items.length;
     wishlist.items = wishlist.items.filter((item: any) => item.courseId !== courseId);
+    
+    // Check if an item was actually removed
+    if (wishlist.items.length === initialLength) {
+      return NextResponse.json({ error: 'Item not found in wishlist' }, { status: 404 });
+    }
+    
     await wishlist.save();
 
     return NextResponse.json({

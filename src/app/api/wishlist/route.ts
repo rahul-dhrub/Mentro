@@ -10,7 +10,7 @@ const MAX_WISHLIST_ITEMS = 50;
 const transformWishlistItems = (items: any[]) => {
   return items.map(item => ({
     ...item.toObject(),
-    id: item._id.toString()
+    id: item.courseId
   }));
 };
 

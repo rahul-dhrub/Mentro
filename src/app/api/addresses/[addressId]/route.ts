@@ -26,7 +26,7 @@ const transformAddress = (address: any) => {
 // GET /api/addresses/[addressId] - Get specific address
 export async function GET(
   request: NextRequest,
-  { params }: { params: { addressId: string } }
+  { params }: { params: Promise<{ addressId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -35,7 +35,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { addressId } = params;
+    const { addressId } = await params;
 
     await connectDB();
     
@@ -57,7 +57,7 @@ export async function GET(
 // PUT /api/addresses/[addressId] - Update address
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { addressId: string } }
+  { params }: { params: Promise<{ addressId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -66,7 +66,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { addressId } = params;
+    const { addressId } = await params;
     const updateData = await request.json();
 
     await connectDB();
@@ -107,7 +107,7 @@ export async function PUT(
 // DELETE /api/addresses/[addressId] - Delete specific address
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { addressId: string } }
+  { params }: { params: Promise<{ addressId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -116,7 +116,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { addressId } = params;
+    const { addressId } = await params;
 
     await connectDB();
     

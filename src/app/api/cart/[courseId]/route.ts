@@ -14,7 +14,7 @@ const transformCartItems = (items: any[]) => {
 // DELETE /api/cart/[courseId] - Remove specific item from cart
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { courseId: string } }
+  { params }: { params: Promise<{ courseId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -23,7 +23,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { courseId } = params;
+    const { courseId } = await params;
 
     await connectDB();
     

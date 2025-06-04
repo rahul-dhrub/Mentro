@@ -6,7 +6,7 @@ import Address from '../../../../../models/Address';
 // PUT /api/addresses/[addressId]/default - Set address as default
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { addressId: string } }
+  { params }: { params: Promise<{ addressId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -15,7 +15,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { addressId } = params;
+    const { addressId } = await params;
 
     await connectDB();
     

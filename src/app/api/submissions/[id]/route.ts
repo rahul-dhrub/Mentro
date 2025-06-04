@@ -5,12 +5,13 @@ import Submission from '@/models/Submission';
 // GET /api/submissions/[id] - Get single submission
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
     
-    const submission = await Submission.findById(params.id);
+    const { id } = await params;
+    const submission = await Submission.findById(id);
     
     if (!submission) {
       return NextResponse.json(
@@ -35,13 +36,14 @@ export async function GET(
 // PUT /api/submissions/[id] - Update submission (for grading)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
     
     const body = await request.json();
     const { grade, feedback, gradedBy } = body;
+    const { id } = await params;
     
     const updateData: any = {};
     
@@ -60,7 +62,7 @@ export async function PUT(
     }
     
     const submission = await Submission.findByIdAndUpdate(
-      params.id,
+      id,
       updateData,
       { new: true, runValidators: true }
     );
@@ -88,12 +90,13 @@ export async function PUT(
 // DELETE /api/submissions/[id] - Delete submission
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
     
-    const submission = await Submission.findByIdAndDelete(params.id);
+    const { id } = await params;
+    const submission = await Submission.findByIdAndDelete(id);
     
     if (!submission) {
       return NextResponse.json(
