@@ -83,7 +83,7 @@ export default function CourseSidebar({ course, isStudent = false }: CourseSideb
         </div>
         
         <button 
-          className={`w-full py-3 rounded-lg font-medium mb-4 flex items-center justify-center gap-2 transition-colors ${
+          className={`w-full py-3 rounded-lg font-medium mb-4 flex items-center justify-center gap-2 transition-colors cursor-pointer ${
             isStudent && courseInCart
               ? 'bg-green-600 text-white hover:bg-green-700'
               : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -108,7 +108,7 @@ export default function CourseSidebar({ course, isStudent = false }: CourseSideb
         </button>
         
         <button 
-          className="w-full border border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 mb-4 transition-colors"
+          className="w-full border border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 mb-4 transition-colors cursor-pointer"
           onClick={handleSecondaryButtonClick}
         >
           {isStudent ? 'Buy Now' : 'Edit Course'}
@@ -117,7 +117,7 @@ export default function CourseSidebar({ course, isStudent = false }: CourseSideb
         {/* Add to Wishlist Button - Only show for students */}
         {isStudent && (
           <button 
-            className={`w-full border rounded-lg font-medium py-3 flex items-center justify-center gap-2 transition-colors ${
+            className={`w-full border rounded-lg font-medium py-3 flex items-center justify-center gap-2 transition-colors cursor-pointer ${
               courseInWishlist
                 ? 'border-red-300 text-red-700 bg-red-50 hover:bg-red-100'
                 : 'border-gray-300 text-gray-700 hover:bg-gray-50'

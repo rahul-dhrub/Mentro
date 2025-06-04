@@ -20,8 +20,10 @@ export interface Cart {
 
 export interface CartContextType {
   cart: Cart;
-  addToCart: (course: any) => void;
-  removeFromCart: (courseId: string) => void;
-  clearCart: () => void;
+  addToCart: (course: any) => Promise<void>;
+  removeFromCart: (courseId: string) => Promise<void>;
+  clearCart: () => Promise<void>;
   isInCart: (courseId: string) => boolean;
+  isLoading: boolean;
+  maxItems: number;
 } 

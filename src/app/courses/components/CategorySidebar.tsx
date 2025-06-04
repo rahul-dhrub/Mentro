@@ -16,7 +16,7 @@ export default function CategorySidebar({ categories, selectedCategory, onCatego
             <button
               key={category.id}
               onClick={() => onCategorySelect(category.id)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors duration-200 ${
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors duration-200 cursor-pointer ${
                 selectedCategory === category.id
                   ? 'bg-blue-50 text-blue-800 font-medium'
                   : 'text-gray-800 hover:bg-gray-50'

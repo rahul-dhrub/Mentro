@@ -114,11 +114,21 @@ export default function WishlistPage() {
                 <span className="font-medium">Back</span>
               </button>
               <h1 className="text-2xl font-bold text-gray-900">My Wishlist</h1>
-              <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
-                {wishlist.totalItems} item{wishlist.totalItems !== 1 ? 's' : ''}
-              </span>
+              <div className="flex items-center space-x-2">
+                <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
+                  {wishlist.totalItems} item{wishlist.totalItems !== 1 ? 's' : ''}
+                </span>
+                <span className="text-xs text-gray-500">
+                  (max 50)
+                </span>
+              </div>
             </div>
             <div className="flex items-center gap-4">
+              {wishlist.totalItems >= 45 && (
+                <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded-full">
+                  {50 - wishlist.totalItems} slots left
+                </span>
+              )}
               <button
                 onClick={handleClearWishlist}
                 className="text-sm text-red-600 hover:text-red-700 font-medium cursor-pointer"

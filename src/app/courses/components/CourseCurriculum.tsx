@@ -46,7 +46,7 @@ export default function CourseCurriculum({ course }: CourseCurriculumProps) {
               {/* Chapter Header */}
               <button
                 onClick={() => toggleChapter(chapterIndex.toString())}
-                className="w-full px-4 py-3 flex items-center justify-between text-left bg-gray-50 hover:bg-gray-100 rounded-t-lg"
+                className="w-full px-4 py-3 flex items-center justify-between text-left bg-gray-50 hover:bg-gray-100 rounded-t-lg cursor-pointer"
               >
                 <div className="flex items-center">
                   <span className="text-lg font-medium text-gray-900">{chapter.title}</span>

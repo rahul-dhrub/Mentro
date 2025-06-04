@@ -81,9 +81,14 @@ export default function CartPage() {
                 <span className="font-medium">Back</span>
               </button>
               <h1 className="text-2xl font-bold text-gray-900">Shopping Cart</h1>
-              <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
-                {cart.totalItems} {cart.totalItems === 1 ? 'item' : 'items'}
-              </span>
+              <div className="flex items-center space-x-2">
+                <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
+                  {cart.totalItems} {cart.totalItems === 1 ? 'item' : 'items'}
+                </span>
+                <span className="text-xs text-gray-500">
+                  (max 25)
+                </span>
+              </div>
             </div>
             <Link href="/" className="flex items-center cursor-pointer">
               <span className="text-2xl font-bold text-blue-600">Mentro</span>
@@ -99,7 +104,14 @@ export default function CartPage() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-gray-900">Cart Items</h2>
+                  <div className="flex items-center space-x-3">
+                    <h2 className="text-lg font-semibold text-gray-900">Cart Items</h2>
+                    {cart.totalItems >= 20 && (
+                      <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded-full">
+                        {25 - cart.totalItems} slots left
+                      </span>
+                    )}
+                  </div>
                   <button
                     onClick={handleClearCart}
                     className="text-sm text-red-600 hover:text-red-800 font-medium cursor-pointer"
@@ -113,20 +125,24 @@ export default function CartPage() {
                 {cart.items.map((item) => (
                   <div key={item.id} className="p-6">
                     <div className="flex items-start space-x-4">
-                      {/* Course Thumbnail */}
+                      {/* Course Thumbnail - Clickable */}
                       <div className="flex-shrink-0">
-                        <img
-                          src={item.thumbnail}
-                          alt={item.title}
-                          className="w-24 h-16 object-cover rounded-lg"
-                        />
+                        <Link href={`/courses/${item.courseId}`} className="block cursor-pointer">
+                          <img
+                            src={item.thumbnail}
+                            alt={item.title}
+                            className="w-24 h-16 object-cover rounded-lg hover:opacity-80 transition-opacity"
+                          />
+                        </Link>
                       </div>
 
-                      {/* Course Details */}
+                      {/* Course Details - Clickable */}
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-medium text-gray-900 line-clamp-2">
-                          {item.title}
-                        </h3>
+                        <Link href={`/courses/${item.courseId}`} className="block cursor-pointer group">
+                          <h3 className="text-lg font-medium text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                            {item.title}
+                          </h3>
+                        </Link>
                         <div className="flex items-center mt-1">
                           <img
                             src={item.instructor.image}

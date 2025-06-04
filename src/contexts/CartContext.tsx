@@ -1,9 +1,13 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { CartItem, Cart, CartContextType } from '../app/cart/cart';
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+
+// Constants
+const MAX_CART_ITEMS = 25;
 
 export const useCart = () => {
   const context = useContext(CartContext);
@@ -18,81 +22,148 @@ interface CartProviderProps {
 }
 
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
+  const { isSignedIn, userId } = useAuth();
   const [cart, setCart] = useState<Cart>({
     items: [],
     totalItems: 0,
     totalAmount: 0,
   });
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Load cart from localStorage on component mount
+  // Fetch cart from database when user is authenticated
   useEffect(() => {
-    const savedCart = localStorage.getItem('mentro_cart');
-    if (savedCart) {
-      try {
-        const parsedCart = JSON.parse(savedCart);
-        setCart(parsedCart);
-      } catch (error) {
-        console.error('Error parsing saved cart:', error);
-      }
+    if (isSignedIn && userId) {
+      fetchCart();
+    } else {
+      // Clear cart if user is not signed in
+      setCart({
+        items: [],
+        totalItems: 0,
+        totalAmount: 0,
+      });
     }
-  }, []);
+  }, [isSignedIn, userId]);
 
-  // Save cart to localStorage whenever cart changes
-  useEffect(() => {
-    localStorage.setItem('mentro_cart', JSON.stringify(cart));
-  }, [cart]);
+  const fetchCart = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/cart');
+      if (response.ok) {
+        const cartData = await response.json();
+        setCart({
+          items: cartData.items || [],
+          totalItems: cartData.totalItems || 0,
+          totalAmount: cartData.totalAmount || 0,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  // Calculate totals whenever items change
-  useEffect(() => {
-    const totalItems = cart.items.length;
-    const totalAmount = cart.items.reduce((sum, item) => sum + item.price, 0);
-    
-    setCart(prevCart => ({
-      ...prevCart,
-      totalItems,
-      totalAmount,
-    }));
-  }, [cart.items]);
+  const addToCart = async (course: any) => {
+    if (!isSignedIn) {
+      alert('Please sign in to add items to cart');
+      return;
+    }
 
-  const addToCart = (course: any) => {
     // Check if course is already in cart
     if (cart.items.some(item => item.courseId === course.id)) {
-      return; // Course already in cart
+      alert('This course is already in your cart');
+      return;
     }
 
-    const cartItem: CartItem = {
-      id: `cart_${course.id}_${Date.now()}`,
-      courseId: course.id,
-      title: course.title,
-      instructor: {
-        name: course.instructor.name,
-        image: course.instructor.image,
-      },
-      price: course.price,
-      originalPrice: course.originalPrice,
-      thumbnail: course.thumbnail,
-      addedAt: new Date(),
-    };
+    // Check maximum cart items limit
+    if (cart.items.length >= MAX_CART_ITEMS) {
+      alert(`You can only have a maximum of ${MAX_CART_ITEMS} items in your cart. Please remove some items to add new ones.`);
+      return;
+    }
 
-    setCart(prevCart => ({
-      ...prevCart,
-      items: [...prevCart.items, cartItem],
-    }));
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/cart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(course),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setCart({
+          items: result.items || [],
+          totalItems: result.totalItems || 0,
+          totalAmount: result.totalAmount || 0,
+        });
+      } else {
+        const error = await response.json();
+        if (error.error === 'Cart limit exceeded') {
+          alert(`You can only have a maximum of ${MAX_CART_ITEMS} items in your cart.`);
+        } else {
+          console.error('Error adding to cart:', error.error);
+          alert(error.error || 'Failed to add item to cart');
+        }
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      alert('Failed to add item to cart. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const removeFromCart = (courseId: string) => {
-    setCart(prevCart => ({
-      ...prevCart,
-      items: prevCart.items.filter(item => item.courseId !== courseId),
-    }));
+  const removeFromCart = async (courseId: string) => {
+    if (!isSignedIn) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await fetch(`/api/cart/${courseId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setCart({
+          items: result.items || [],
+          totalItems: result.totalItems || 0,
+          totalAmount: result.totalAmount || 0,
+        });
+      }
+    } catch (error) {
+      console.error('Error removing from cart:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const clearCart = () => {
-    setCart({
-      items: [],
-      totalItems: 0,
-      totalAmount: 0,
-    });
+  const clearCart = async () => {
+    if (!isSignedIn) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/cart', {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setCart({
+          items: [],
+          totalItems: 0,
+          totalAmount: 0,
+        });
+      }
+    } catch (error) {
+      console.error('Error clearing cart:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const isInCart = (courseId: string): boolean => {
@@ -105,6 +176,8 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     removeFromCart,
     clearCart,
     isInCart,
+    isLoading,
+    maxItems: MAX_CART_ITEMS,
   };
 
   return (

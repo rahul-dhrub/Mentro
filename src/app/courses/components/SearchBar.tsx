@@ -22,7 +22,7 @@ export default function SearchBar({ searchQuery, onSearchChange, onFilterClick }
       </div>
       <button
         onClick={onFilterClick}
-        className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-800 font-medium"
+        className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-800 font-medium cursor-pointer"
       >
         <FiFilter className="mr-2" />
         Filters

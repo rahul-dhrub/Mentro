@@ -164,7 +164,7 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 focus:outline-none p-1 rounded-full hover:bg-gray-200 transition-colors"
+            className="text-gray-500 hover:text-gray-700 focus:outline-none p-1 rounded-full hover:bg-gray-200 transition-colors cursor-pointer"
             aria-label="Close"
           >
             <FiX size={24} />
@@ -217,7 +217,7 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
                         <button
                           type="button"
                           onClick={clearImage}
-                          className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full hover:bg-red-700"
+                          className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full hover:bg-red-700 cursor-pointer"
                         >
                           <FiX size={20} />
                         </button>
@@ -264,7 +264,7 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
                     {!isUploading && previewImage && !courseData.thumbnail && (
                       <button
                         type="button"
-                        className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
+                        className="mt-2 text-blue-600 hover:text-blue-800 text-sm cursor-pointer"
                         onClick={() => fileInputRef.current?.click()}
                       >
                         Change image
@@ -286,7 +286,7 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
                     name="category"
                     value={courseData.category}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 cursor-pointer"
                     required
                   >
                     <option value="">Select a category</option>
@@ -304,7 +304,7 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
                     name="level"
                     value={courseData.level}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 cursor-pointer"
                     required
                   >
                     <option value="Beginner">Beginner</option>
@@ -380,7 +380,7 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
                   <button
                     type="button"
                     onClick={() => removeArrayItem('features', index)}
-                    className="p-2 text-red-600 hover:text-red-800 font-medium"
+                    className="p-2 text-red-600 hover:text-red-800 font-medium cursor-pointer"
                     disabled={courseData.features?.length === 1}
                   >
                     Remove
@@ -391,7 +391,7 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
               <button
                 type="button"
                 onClick={() => addArrayItem('features')}
-                className="mt-2 text-blue-600 hover:text-blue-800 font-medium flex items-center"
+                className="mt-2 text-blue-600 hover:text-blue-800 font-medium flex items-center cursor-pointer"
               >
                 <span className="mr-1 text-lg">+</span> Add Feature
               </button>
@@ -414,7 +414,7 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
                   <button
                     type="button"
                     onClick={() => removeArrayItem('requirements', index)}
-                    className="p-2 text-red-600 hover:text-red-800 font-medium"
+                    className="p-2 text-red-600 hover:text-red-800 font-medium cursor-pointer"
                     disabled={courseData.requirements?.length === 1}
                   >
                     Remove
@@ -425,7 +425,7 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
               <button
                 type="button"
                 onClick={() => addArrayItem('requirements')}
-                className="mt-2 text-blue-600 hover:text-blue-800 font-medium flex items-center"
+                className="mt-2 text-blue-600 hover:text-blue-800 font-medium flex items-center cursor-pointer"
               >
                 <span className="mr-1 text-lg">+</span> Add Requirement
               </button>
@@ -448,7 +448,7 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
                   <button
                     type="button"
                     onClick={() => removeArrayItem('whatYouWillLearn', index)}
-                    className="p-2 text-red-600 hover:text-red-800 font-medium"
+                    className="p-2 text-red-600 hover:text-red-800 font-medium cursor-pointer"
                     disabled={courseData.whatYouWillLearn?.length === 1}
                   >
                     Remove
@@ -459,7 +459,7 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
               <button
                 type="button"
                 onClick={() => addArrayItem('whatYouWillLearn')}
-                className="mt-2 text-blue-600 hover:text-blue-800 font-medium flex items-center"
+                className="mt-2 text-blue-600 hover:text-blue-800 font-medium flex items-center cursor-pointer"
               >
                 <span className="mr-1 text-lg">+</span> Add Learning Outcome
               </button>
@@ -470,13 +470,15 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2 border border-gray-300 rounded-md text-gray-800 hover:bg-gray-100 font-medium text-base"
+              className="px-5 py-2 border border-gray-300 rounded-md text-gray-800 hover:bg-gray-100 font-medium text-base cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium text-base"
+              className={`px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium text-base ${
+                isUploading ? 'cursor-not-allowed' : 'cursor-pointer'
+              }`}
               disabled={isUploading}
             >
               Create Course

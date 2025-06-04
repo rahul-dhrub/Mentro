@@ -53,7 +53,7 @@ export default function CourseCard({ course }: CourseCardProps) {
 
   return (
     <div className="group bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200 relative">
-      <Link href={`/courses/${course.id}`} className="block">
+      <Link href={`/courses/${course.id}`} className="block cursor-pointer">
         {/* Course Thumbnail */}
         <div className="aspect-video relative">
           <img
@@ -117,7 +117,7 @@ export default function CourseCard({ course }: CourseCardProps) {
       <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         <button
           onClick={handleWishlistToggle}
-          className={`p-2 rounded-full shadow-lg transition-colors ${
+          className={`p-2 rounded-full shadow-lg transition-colors cursor-pointer ${
             courseInWishlist
               ? 'bg-red-500 text-white hover:bg-red-600'
               : 'bg-white text-gray-700 hover:bg-gray-50'
@@ -132,7 +132,7 @@ export default function CourseCard({ course }: CourseCardProps) {
       <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         <button
           onClick={handleAddToCart}
-          className={`p-2 rounded-full shadow-lg transition-colors ${
+          className={`p-2 rounded-full shadow-lg transition-colors cursor-pointer ${
             courseInCart
               ? 'bg-green-600 text-white'
               : 'bg-white text-gray-700 hover:bg-gray-50'

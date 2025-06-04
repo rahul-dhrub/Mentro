@@ -26,7 +26,7 @@ export default function CourseHeader({ course }: CourseHeaderProps) {
                   em: ({children}) => <em className="italic text-gray-800">{children}</em>,
                   u: ({children}) => <u className="underline text-gray-800">{children}</u>,
                   a: ({href, children}) => (
-                    <a href={href} className="text-blue-600 hover:text-blue-800 underline" target="_blank" rel="noopener noreferrer">
+                    <a href={href} className="text-blue-600 hover:text-blue-800 underline cursor-pointer" target="_blank" rel="noopener noreferrer">
                       {children}
                     </a>
                   ),

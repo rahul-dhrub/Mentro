@@ -45,7 +45,7 @@ export default function Navbar({
             {showBackButton && onBackClick && (
               <button
                 onClick={onBackClick}
-                className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors group"
+                className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors group cursor-pointer"
               >
                 <FiArrowLeft className="w-5 h-5 group-hover:translate-x-[-2px] transition-transform" />
                 <span className="font-medium hidden sm:inline">{backButtonText}</span>
@@ -53,7 +53,7 @@ export default function Navbar({
             )}
 
             {/* Logo */}
-            <Link href="/" className="flex items-center">
+            <Link href="/" className="flex items-center cursor-pointer">
               <span className="text-2xl font-bold text-blue-600">Mentro</span>
             </Link>
           </div>
@@ -63,7 +63,7 @@ export default function Navbar({
             {/* Cart */}
             <button 
               onClick={handleCartClick}
-              className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors"
+              className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
               title="View Cart"
             >
               <FiShoppingCart className="w-6 h-6" />
@@ -77,7 +77,7 @@ export default function Navbar({
             {/* Wishlist */}
             <button 
               onClick={handleWishlistClick}
-              className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors"
+              className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
               title="View Wishlist"
             >
               <FiHeart className="w-6 h-6" />

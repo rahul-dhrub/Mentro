@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import { useCart } from '../../contexts/CartContext';
 import { BillingAddress, SavedAddress, Coupon, OrderSummary } from './checkout';
 
@@ -16,6 +17,7 @@ import {
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const { isSignedIn, userId } = useAuth();
   const { cart, clearCart } = useCart();
   
   const [billingAddress, setBillingAddress] = useState<BillingAddress>({
@@ -34,6 +36,7 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [saveCurrentAddress, setSaveCurrentAddress] = useState(false);
   const [newAddressLabel, setNewAddressLabel] = useState('');
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
 
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
@@ -41,50 +44,57 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<Partial<BillingAddress>>({});
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Load saved addresses from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('mentro_saved_addresses');
-    if (saved) {
-      try {
-        const addresses = JSON.parse(saved);
-        setSavedAddresses(addresses);
+  // Fetch saved addresses from database
+  const fetchSavedAddresses = async () => {
+    if (!isSignedIn || !userId) return;
+
+    try {
+      setIsLoadingAddresses(true);
+      const response = await fetch('/api/addresses');
+      if (response.ok) {
+        const data = await response.json();
+        setSavedAddresses(data.addresses || []);
         
-        // For returning users with saved addresses, still show the form but don't auto-hide it
-        if (addresses.length > 0) {
-          const defaultAddress = addresses.find((addr: SavedAddress) => addr.isDefault);
-          if (defaultAddress) {
-            setSelectedAddressId(defaultAddress.id);
-            setBillingAddress({
-              firstName: defaultAddress.firstName,
-              lastName: defaultAddress.lastName,
-              email: defaultAddress.email,
-              phone: defaultAddress.phone,
-              address: defaultAddress.address,
-              city: defaultAddress.city,
-              state: defaultAddress.state,
-              zipCode: defaultAddress.zipCode,
-              country: defaultAddress.country,
-            });
-          }
-        } else {
-          // No saved addresses, show form and save option
+        // Auto-select default address if available
+        const defaultAddress = data.addresses.find((addr: SavedAddress) => addr.isDefault);
+        if (defaultAddress) {
+          setSelectedAddressId(defaultAddress.id);
+          setBillingAddress({
+            firstName: defaultAddress.firstName,
+            lastName: defaultAddress.lastName,
+            email: defaultAddress.email,
+            phone: defaultAddress.phone,
+            address: defaultAddress.address,
+            city: defaultAddress.city,
+            state: defaultAddress.state,
+            zipCode: defaultAddress.zipCode,
+            country: defaultAddress.country,
+          });
+        } else if (data.addresses.length === 0) {
+          // No saved addresses, show save option
           setSaveCurrentAddress(true);
         }
-      } catch (error) {
-        console.error('Error loading saved addresses:', error);
+      } else {
+        console.error('Failed to fetch addresses');
         setSaveCurrentAddress(true);
       }
+    } catch (error) {
+      console.error('Error fetching addresses:', error);
+      setSaveCurrentAddress(true);
+    } finally {
+      setIsLoadingAddresses(false);
+    }
+  };
+
+  // Load saved addresses when user is signed in
+  useEffect(() => {
+    if (isSignedIn && userId) {
+      fetchSavedAddresses();
     } else {
-      // No saved addresses, show form and save option for first-time users
+      // Guest user, show form and save option
       setSaveCurrentAddress(true);
     }
-  }, []);
-
-  // Save addresses to localStorage
-  const saveAddressesToStorage = (addresses: SavedAddress[]) => {
-    localStorage.setItem('mentro_saved_addresses', JSON.stringify(addresses));
-    setSavedAddresses(addresses);
-  };
+  }, [isSignedIn, userId]);
 
   // Mock coupons for demonstration
   const mockCoupons: Record<string, Coupon> = {
@@ -191,51 +201,88 @@ export default function CheckoutPage() {
     setErrors({});
   };
 
-  const handleDeleteAddress = (addressId: string) => {
-    if (window.confirm('Are you sure you want to delete this address?')) {
-      const updatedAddresses = savedAddresses.filter(addr => addr.id !== addressId);
-      
-      // If deleted address was default and there are other addresses, make the first one default
-      if (updatedAddresses.length > 0) {
-        const wasDefault = savedAddresses.find(addr => addr.id === addressId)?.isDefault;
-        if (wasDefault && !updatedAddresses.find(addr => addr.isDefault)) {
-          updatedAddresses[0].isDefault = true;
+  const handleDeleteAddress = async (addressId: string) => {
+    if (!isSignedIn || !window.confirm('Are you sure you want to delete this address?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/addresses/${addressId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Refresh addresses from server
+        await fetchSavedAddresses();
+        
+        if (selectedAddressId === addressId) {
+          setSelectedAddressId(null);
+          handleAddNewAddress();
         }
+      } else {
+        alert('Failed to delete address. Please try again.');
       }
-      
-      saveAddressesToStorage(updatedAddresses);
-      
-      if (selectedAddressId === addressId) {
-        setSelectedAddressId(null);
-        handleAddNewAddress();
-      }
+    } catch (error) {
+      console.error('Error deleting address:', error);
+      alert('Failed to delete address. Please try again.');
     }
   };
 
-  const handleSetDefault = (addressId: string) => {
-    const updatedAddresses = savedAddresses.map(addr => ({
-      ...addr,
-      isDefault: addr.id === addressId
-    }));
-    saveAddressesToStorage(updatedAddresses);
+  const handleSetDefault = async (addressId: string) => {
+    if (!isSignedIn) return;
+
+    try {
+      const response = await fetch(`/api/addresses/${addressId}/default`, {
+        method: 'PUT',
+      });
+
+      if (response.ok) {
+        // Refresh addresses from server
+        await fetchSavedAddresses();
+      } else {
+        alert('Failed to set default address. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error setting default address:', error);
+      alert('Failed to set default address. Please try again.');
+    }
   };
 
-  const saveNewAddress = () => {
-    if (!validateForm()) return false;
+  const saveNewAddress = async (): Promise<boolean> => {
+    if (!validateForm() || !isSignedIn) return false;
 
-    const newAddress: SavedAddress = {
-      id: `addr_${Date.now()}`,
-      label: newAddressLabel || 'Home',
-      isDefault: savedAddresses.length === 0, // First address becomes default
-      createdAt: new Date(),
-      ...billingAddress
-    };
+    try {
+      const addressData = {
+        ...billingAddress,
+        label: newAddressLabel || 'Home',
+        isDefault: savedAddresses.length === 0 // First address becomes default
+      };
 
-    const updatedAddresses = [...savedAddresses, newAddress];
-    saveAddressesToStorage(updatedAddresses);
-    setSelectedAddressId(newAddress.id);
-    setNewAddressLabel('');
-    return true;
+      const response = await fetch('/api/addresses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(addressData),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Refresh addresses from server
+        await fetchSavedAddresses();
+        setSelectedAddressId(result.address.id);
+        setNewAddressLabel('');
+        return true;
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to save address. Please try again.');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error saving address:', error);
+      alert('Failed to save address. Please try again.');
+      return false;
+    }
   };
 
   const applyCoupon = async () => {
@@ -291,8 +338,9 @@ export default function CheckoutPage() {
     if (!validateForm()) return;
 
     // Save address if requested and form is being used
-    if (saveCurrentAddress && !selectedAddressId) {
-      if (!saveNewAddress()) return;
+    if (saveCurrentAddress && !selectedAddressId && isSignedIn) {
+      const saved = await saveNewAddress();
+      if (!saved) return;
     }
 
     setIsProcessing(true);
@@ -321,14 +369,16 @@ export default function CheckoutPage() {
           <div className="flex-1">
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Saved Addresses */}
-              <SavedAddresses
-                savedAddresses={savedAddresses}
-                selectedAddressId={selectedAddressId}
-                onSelectAddress={handleSelectSavedAddress}
-                onAddNewAddress={handleAddNewAddress}
-                onDeleteAddress={handleDeleteAddress}
-                onSetDefault={handleSetDefault}
-              />
+              {isSignedIn && (
+                <SavedAddresses
+                  savedAddresses={savedAddresses}
+                  selectedAddressId={selectedAddressId}
+                  onSelectAddress={handleSelectSavedAddress}
+                  onAddNewAddress={handleAddNewAddress}
+                  onDeleteAddress={handleDeleteAddress}
+                  onSetDefault={handleSetDefault}
+                />
+              )}
 
               {/* Billing Address Form */}
               <BillingAddressForm

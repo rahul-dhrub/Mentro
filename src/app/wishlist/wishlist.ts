@@ -24,8 +24,10 @@ export interface Wishlist {
 
 export interface WishlistContextType {
   wishlist: Wishlist;
-  addToWishlist: (item: Omit<WishlistItem, 'addedAt'>) => void;
-  removeFromWishlist: (itemId: string) => void;
-  clearWishlist: () => void;
+  addToWishlist: (item: Omit<WishlistItem, 'addedAt'>) => Promise<void>;
+  removeFromWishlist: (itemId: string) => Promise<void>;
+  clearWishlist: () => Promise<void>;
   isInWishlist: (itemId: string) => boolean;
+  isLoading: boolean;
+  maxItems: number;
 } 
