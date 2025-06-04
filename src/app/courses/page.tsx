@@ -149,17 +149,12 @@ export default function StudentCoursesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar
-        cartCount={2}
-        favoriteCount={5}
+      <Navbar 
         user={{
           name: user?.fullName || user?.firstName || 'User',
           role: userRole ? (userRole.charAt(0).toUpperCase() + userRole.slice(1)) : 'Student',
           image: user?.imageUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
         }}
-        showBackButton={true}
-        onBackClick={handleGoBack}
-        backButtonText="Back to Feed"
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -1,9 +1,12 @@
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { FiShoppingCart, FiHeart, FiArrowLeft } from 'react-icons/fi';
+import { useCart } from '../../../contexts/CartContext';
+import { useWishlist } from '../../../contexts/WishlistContext';
 
 interface NavbarProps {
-  cartCount?: number;
-  favoriteCount?: number;
   user?: {
     name: string;
     role: string;
@@ -15,13 +18,23 @@ interface NavbarProps {
 }
 
 export default function Navbar({ 
-  cartCount = 0, 
-  favoriteCount = 0, 
   user, 
   showBackButton = false,
   onBackClick,
   backButtonText = "Back"
 }: NavbarProps) {
+  const router = useRouter();
+  const { cart } = useCart();
+  const { wishlist } = useWishlist();
+
+  const handleCartClick = () => {
+    router.push('/cart');
+  };
+
+  const handleWishlistClick = () => {
+    router.push('/wishlist');
+  };
+
   return (
     <nav className="bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -46,23 +59,31 @@ export default function Navbar({
           </div>
 
           {/* Right Side - Navigation Items */}
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-2">
             {/* Cart */}
-            <button className="relative p-2 text-gray-600 hover:text-gray-900">
+            <button 
+              onClick={handleCartClick}
+              className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors"
+              title="View Cart"
+            >
               <FiShoppingCart className="w-6 h-6" />
-              {cartCount > 0 && (
+              {cart.totalItems > 0 && (
                 <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {cartCount}
+                  {cart.totalItems}
                 </span>
               )}
             </button>
 
-            {/* Favorite Courses */}
-            <button className="relative p-2 text-gray-600 hover:text-gray-900">
+            {/* Wishlist */}
+            <button 
+              onClick={handleWishlistClick}
+              className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors"
+              title="View Wishlist"
+            >
               <FiHeart className="w-6 h-6" />
-              {favoriteCount > 0 && (
+              {wishlist.totalItems > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {favoriteCount}
+                  {wishlist.totalItems}
                 </span>
               )}
             </button>

@@ -1,6 +1,10 @@
-import { FiCheck } from 'react-icons/fi';
+'use client';
+
+import { FiCheck, FiShoppingCart, FiHeart } from 'react-icons/fi';
 import { Course } from '../types';
 import { useRouter } from 'next/navigation';
+import { useCart } from '../../../contexts/CartContext';
+import { useWishlist } from '../../../contexts/WishlistContext';
 
 interface CourseSidebarProps {
   course: Course;
@@ -9,11 +13,21 @@ interface CourseSidebarProps {
 
 export default function CourseSidebar({ course, isStudent = false }: CourseSidebarProps) {
   const router = useRouter();
+  const { addToCart, isInCart } = useCart();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+
+  const courseInCart = isInCart(course.id);
+  const courseInWishlist = isInWishlist(course.id);
 
   const handlePrimaryButtonClick = () => {
     if (isStudent) {
-      // TODO: Add to cart functionality
-      console.log('Add to cart:', course.id);
+      if (courseInCart) {
+        // Navigate to cart if already in cart
+        router.push('/cart');
+      } else {
+        // Add to cart
+        addToCart(course);
+      }
     } else {
       // Navigate to course detail page
       router.push(`/course_detail/${course.id}`);
@@ -30,35 +44,97 @@ export default function CourseSidebar({ course, isStudent = false }: CourseSideb
     }
   };
 
+  const handleWishlistClick = () => {
+    if (courseInWishlist) {
+      removeFromWishlist(course.id);
+    } else {
+      addToWishlist({
+        id: course.id,
+        title: course.title,
+        description: course.description,
+        price: course.price,
+        originalPrice: course.originalPrice,
+        thumbnail: course.thumbnail,
+        instructor: {
+          name: course.instructor.name,
+          avatar: course.instructor.image,
+        },
+        rating: course.rating,
+        studentsCount: course.students,
+        duration: course.duration,
+        level: course.level,
+        category: course.category,
+      });
+    }
+  };
+
   return (
     <div className="w-full md:w-80 flex-shrink-0">
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
-          {course.originalPrice && (
+          {course.originalPrice && course.originalPrice !== course.price ? (
+            <>
+              <span className="text-2xl font-bold text-gray-900">${course.price}</span>
+              <span className="text-lg text-gray-700 line-through">${course.originalPrice}</span>
+            </>
+          ) : (
             <span className="text-2xl font-bold text-gray-900">${course.price}</span>
           )}
-          {course.originalPrice && (
-            <span className="text-lg text-gray-700 line-through">${course.originalPrice}</span>
-          )}
         </div>
+        
         <button 
-          className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 mb-4"
+          className={`w-full py-3 rounded-lg font-medium mb-4 flex items-center justify-center gap-2 transition-colors ${
+            isStudent && courseInCart
+              ? 'bg-green-600 text-white hover:bg-green-700'
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
           onClick={handlePrimaryButtonClick}
         >
-          {isStudent ? 'Add to Cart' : 'Go to Course'}
+          {isStudent ? (
+            courseInCart ? (
+              <>
+                <FiCheck className="w-5 h-5" />
+                Added to Cart
+              </>
+            ) : (
+              <>
+                <FiShoppingCart className="w-5 h-5" />
+                Add to Cart
+              </>
+            )
+          ) : (
+            'Go to Course'
+          )}
         </button>
+        
         <button 
-          className="w-full border border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 mb-4"
+          className="w-full border border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 mb-4 transition-colors"
           onClick={handleSecondaryButtonClick}
         >
           {isStudent ? 'Buy Now' : 'Edit Course'}
         </button>
-        <div className="space-y-3">
+
+        {/* Add to Wishlist Button - Only show for students */}
+        {isStudent && (
+          <button 
+            className={`w-full border rounded-lg font-medium py-3 flex items-center justify-center gap-2 transition-colors ${
+              courseInWishlist
+                ? 'border-red-300 text-red-700 bg-red-50 hover:bg-red-100'
+                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+            onClick={handleWishlistClick}
+          >
+            <FiHeart className={`w-5 h-5 ${courseInWishlist ? 'fill-current' : ''}`} />
+            {courseInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
+          </button>
+        )}
+        
+        <div className={`space-y-3 ${isStudent ? 'mt-6' : 'mt-0'}`}>
           <h3 className="font-medium text-gray-900">This course includes:</h3>
           <ul className="space-y-2">
             {course.features.map((feature: string, index: number) => (
               <li key={index} className="flex items-center text-sm text-gray-700">
-                <FiCheck className="text-green-500 mr-2" />
+                <FiCheck className="text-green-500 mr-2 flex-shrink-0" />
                 {feature}
               </li>
             ))}

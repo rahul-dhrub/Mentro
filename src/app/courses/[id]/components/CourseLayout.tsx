@@ -28,8 +28,6 @@ export default function CourseLayout({ course, user }: CourseLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar
-        cartCount={2}
-        favoriteCount={5}
         user={user}
         showBackButton={true}
         onBackClick={handleGoBack}
