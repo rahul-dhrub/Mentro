@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FiShoppingCart, FiHeart, FiArrowLeft } from 'react-icons/fi';
+import { FiShoppingCart, FiHeart, FiArrowLeft, FiHome } from 'react-icons/fi';
 import { useCart } from '../../../contexts/CartContext';
 import { useWishlist } from '../../../contexts/WishlistContext';
 
@@ -55,6 +55,17 @@ export default function Navbar({
             {/* Logo */}
             <Link href="/" className="flex items-center cursor-pointer">
               <span className="text-2xl font-bold text-blue-600">Mentro</span>
+            </Link>
+          </div>
+
+          {/* Center - Home Link */}
+          <div className="flex items-center">
+            <Link 
+              href="/feed" 
+              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-blue-600 transition-colors group cursor-pointer"
+            >
+              <FiHome className="w-5 h-5" />
+              <span className="font-medium">Home</span>
             </Link>
           </div>
 
