@@ -13,6 +13,8 @@ import FacultyTab from './components/tabs/FacultyTab';
 import StudentsTab from './components/tabs/StudentsTab';
 import { Assignment, Quiz, Faculty, Student } from './types';
 import useChaptersAndLessons from './hooks/useChaptersAndLessons';
+import useCourseData from './hooks/useCourseData';
+import useCourseStats from './hooks/useCourseStats';
 import { facultyAPI } from '@/lib/api/faculty';
 
 export default function FacultyCourseDetail({ params }: { params: Promise<{ course_id: string }> }) {
@@ -29,6 +31,21 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
     };
     initializeParams();
   }, [params]);
+  
+  // Fetch course data
+  const {
+    course,
+    loading: courseLoading,
+    error: courseError,
+    refetch: refetchCourse
+  } = useCourseData(courseId || '');
+  
+  // Fetch course statistics
+  const {
+    stats,
+    loading: statsLoading,
+    error: statsError
+  } = useCourseStats(courseId || '');
   
   // Use the database hook for chapters and lessons - only when courseId is available
   const {
@@ -199,14 +216,15 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
     console.log('View student details:', studentId);
   };
 
-  // Show loading state while course ID is being resolved or chapters are loading
-  if (!courseId || chaptersLoading || (activeTab === 'faculty' && facultyLoading)) {
+  // Show loading state while course ID is being resolved or data is loading
+  if (!courseId || courseLoading || chaptersLoading || (activeTab === 'faculty' && facultyLoading)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">
             {!courseId ? 'Loading course...' : 
+             courseLoading ? 'Loading course data...' :
              chaptersLoading ? 'Loading chapters...' : 
              'Loading faculty...'}
           </p>
@@ -216,17 +234,39 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
   }
 
   // Show error state
-  if (chaptersError || (activeTab === 'faculty' && facultyError)) {
-    const errorMessage = chaptersError || facultyError;
+  if (courseError || chaptersError || (activeTab === 'faculty' && facultyError)) {
+    const errorMessage = courseError || chaptersError || facultyError;
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600 mb-4">Error loading {chaptersError ? 'chapters' : 'faculty'}: {errorMessage}</p>
+          <p className="text-red-600 mb-4">
+            Error loading {courseError ? 'course data' : chaptersError ? 'chapters' : 'faculty'}: {errorMessage}
+          </p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              if (courseError) refetchCourse();
+              else window.location.reload();
+            }}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
             Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if course not found
+  if (!course) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Course not found</p>
+          <button
+            onClick={() => router.back()}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Go Back
           </button>
         </div>
       </div>
@@ -239,6 +279,9 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
       case 'overview':
         return (
           <OverviewTab
+            stats={stats}
+            statsLoading={statsLoading}
+            statsError={statsError}
             onAddChapter={handleAddChapter}
             onCreateAssignment={() => setActiveTab('assignments')}
             onCreateQuiz={() => setActiveTab('quizzes')}
@@ -303,9 +346,9 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
     <div className="min-h-screen bg-gray-50">
       {/* Course Header */}
       <CourseHeader
-        title="Web Development Bootcamp"
-        description="Learn web development from scratch"
-        thumbnail="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=60"
+        title={course.title}
+        description={course.description}
+        thumbnail={course.thumbnail}
         onEditCourse={handleEditCourse}
       />
 

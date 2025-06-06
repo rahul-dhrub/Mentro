@@ -20,9 +20,17 @@ export async function GET(
       );
     }
     
+    // Transform submission to match frontend expectations
+    const submissionObj = submission.toObject();
+    const transformedSubmission = {
+      ...submissionObj,
+      id: submissionObj._id.toString(),
+      _id: undefined
+    };
+    
     return NextResponse.json({
       success: true,
-      data: submission
+      data: transformedSubmission
     });
   } catch (error) {
     console.error('Error fetching submission:', error);
@@ -74,9 +82,17 @@ export async function PUT(
       );
     }
     
+    // Transform submission to match frontend expectations
+    const submissionObj = submission.toObject();
+    const transformedSubmission = {
+      ...submissionObj,
+      id: submissionObj._id.toString(),
+      _id: undefined
+    };
+    
     return NextResponse.json({
       success: true,
-      data: submission
+      data: transformedSubmission
     });
   } catch (error) {
     console.error('Error updating submission:', error);

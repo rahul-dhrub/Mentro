@@ -3,7 +3,19 @@ import { FiBook, FiClock, FiPlus, FiVideo, FiUpload, FiX, FiCheck, FiClipboard, 
 import StatCard from '../StatCard';
 import { initializeVideoUpload, uploadVideoToBunny, waitForVideoProcessing } from '../../../../utils/videoUpload';
 
+export interface CourseStats {
+  totalStudents: number;
+  completionRate: number;
+  averageRating: number;
+  newAssignmentSubmissions: number;
+  quizCompletions: number;
+  newEnrollments: number;
+}
+
 interface OverviewTabProps {
+  stats?: CourseStats;
+  statsLoading?: boolean;
+  statsError?: string | null;
   onAddChapter: (chapterData: { title: string; description: string }) => Promise<void>;
   onCreateAssignment: () => void;
   onCreateQuiz: () => void;
@@ -11,6 +23,9 @@ interface OverviewTabProps {
 }
 
 export default function OverviewTab({ 
+  stats,
+  statsLoading = false,
+  statsError = null,
   onAddChapter, 
   onCreateAssignment, 
   onCreateQuiz,
@@ -106,30 +121,42 @@ export default function OverviewTab({
       <StatCard title="Course Statistics" icon={<FiBook className="text-blue-500" size={24} />}>
         <div>
           <p className="text-sm text-gray-600">Total Students</p>
-          <p className="text-2xl font-bold text-gray-900">150</p>
+          <p className="text-2xl font-bold text-gray-900">
+            {stats !== undefined ? stats.totalStudents : 'Loading...'}
+          </p>
         </div>
         <div>
           <p className="text-sm text-gray-600">Completion Rate</p>
-          <p className="text-2xl font-bold text-gray-900">75%</p>
+          <p className="text-2xl font-bold text-gray-900">
+            {stats !== undefined ? `${stats.completionRate}%` : 'Loading...'}
+          </p>
         </div>
         <div>
           <p className="text-sm text-gray-600">Average Rating</p>
-          <p className="text-2xl font-bold text-gray-900">4.5</p>
+          <p className="text-2xl font-bold text-gray-900">
+            {stats !== undefined ? stats.averageRating.toFixed(1) : 'Loading...'}
+          </p>
         </div>
       </StatCard>
 
       <StatCard title="Recent Activity" icon={<FiClock className="text-blue-500" size={24} />}>
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-600">New Assignment Submissions</p>
-          <p className="text-sm font-medium text-gray-900">12</p>
+          <p className="text-sm font-medium text-gray-900">
+            {stats !== undefined ? stats.newAssignmentSubmissions : 'Loading...'}
+          </p>
         </div>
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-600">Quiz Completions</p>
-          <p className="text-sm font-medium text-gray-900">25</p>
+          <p className="text-sm font-medium text-gray-900">
+            {stats !== undefined ? stats.quizCompletions : 'Loading...'}
+          </p>
         </div>
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-600">New Enrollments</p>
-          <p className="text-sm font-medium text-gray-900">8</p>
+          <p className="text-sm font-medium text-gray-900">
+            {stats !== undefined ? stats.newEnrollments : 'Loading...'}
+          </p>
         </div>
       </StatCard>
 

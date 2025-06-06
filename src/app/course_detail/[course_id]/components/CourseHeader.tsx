@@ -3,6 +3,8 @@ import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+import { FiArrowLeft } from 'react-icons/fi';
+import { useRouter } from 'next/navigation';
 
 interface CourseHeaderProps {
   title: string;
@@ -17,9 +19,27 @@ export default function CourseHeader({
   thumbnail, 
   onEditCourse 
 }: CourseHeaderProps) {
+  const router = useRouter();
+
+  const handleGoBack = () => {
+    router.back();
+  };
+
   return (
     <div className="bg-white shadow">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Back Button */}
+        <div className="mb-4">
+          <button
+            onClick={handleGoBack}
+            className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <FiArrowLeft className="mr-2" size={20} />
+            <span>Back</span>
+          </button>
+        </div>
+        
+        {/* Course Header Content */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="relative h-20 w-20 rounded-lg overflow-hidden">

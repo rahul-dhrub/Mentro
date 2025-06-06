@@ -26,9 +26,19 @@ export async function GET(request: NextRequest) {
       .find(filter)
       .sort({ submittedAt: -1 });
     
+    // Transform submissions to match frontend expectations
+    const transformedSubmissions = submissions.map(submission => {
+      const submissionObj = submission.toObject();
+      return {
+        ...submissionObj,
+        id: submissionObj._id.toString(),
+        _id: undefined
+      };
+    });
+    
     return NextResponse.json({
       success: true,
-      data: submissions
+      data: transformedSubmissions
     });
   } catch (error) {
     console.error('Error fetching submissions:', error);
@@ -106,9 +116,17 @@ export async function POST(request: NextRequest) {
       $inc: { submissions: 1 }
     });
     
+    // Transform submission to match frontend expectations
+    const submissionObj = savedSubmission.toObject();
+    const transformedSubmission = {
+      ...submissionObj,
+      id: submissionObj._id.toString(),
+      _id: undefined
+    };
+    
     return NextResponse.json({
       success: true,
-      data: savedSubmission
+      data: transformedSubmission
     }, { status: 201 });
   } catch (error) {
     console.error('Error creating submission:', error);
