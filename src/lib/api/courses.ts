@@ -124,6 +124,95 @@ export const coursesAPI = {
     }
   },
 
+  // Update existing course
+  async update(courseId: string, courseData: Partial<Course>): Promise<ApiResponse<Course>> {
+    try {
+      const response = await fetch(`${BASE_URL}/api/courses/${courseId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(courseData),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error || 'Failed to update course',
+        };
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error updating course:', error);
+      return {
+        success: false,
+        error: 'Network error while updating course',
+      };
+    }
+  },
+
+  // Publish/Unpublish course
+  async publish(courseId: string, isPublished: boolean): Promise<ApiResponse<Course>> {
+    try {
+      const response = await fetch(`${BASE_URL}/api/courses/${courseId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isPublished }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error || 'Failed to update course publication status',
+        };
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error updating course publication status:', error);
+      return {
+        success: false,
+        error: 'Network error while updating course publication status',
+      };
+    }
+  },
+
+  // Delete course
+  async delete(courseId: string): Promise<ApiResponse<null>> {
+    try {
+      const response = await fetch(`${BASE_URL}/api/courses/${courseId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error || 'Failed to delete course',
+        };
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error deleting course:', error);
+      return {
+        success: false,
+        error: 'Network error while deleting course',
+      };
+    }
+  },
+
   // Get categories with course counts
   async getCategories(): Promise<ApiResponse<Array<{ name: string; count: number; icon: string }>>> {
     try {

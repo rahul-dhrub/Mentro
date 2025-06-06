@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { useCourseData } from './hooks/useCourseData';
+import { Course } from '../types';
 import CourseLayout from './components/CourseLayout';
 import LoadingState from './components/LoadingState';
 import ErrorState from './components/ErrorState';
@@ -21,6 +22,14 @@ export default function CourseDetailPage({ params }: { params: { id: string } | 
   
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isLoadingRole, setIsLoadingRole] = useState(true);
+  const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
+
+  // Update current course when course data changes
+  useEffect(() => {
+    if (course) {
+      setCurrentCourse(course);
+    }
+  }, [course]);
 
   // Fetch user role
   useEffect(() => {
@@ -51,13 +60,18 @@ export default function CourseDetailPage({ params }: { params: { id: string } | 
     window.location.reload();
   };
 
+  // Handle course updates from the edit modal
+  const handleCourseUpdate = (updatedCourse: Course) => {
+    setCurrentCourse(updatedCourse);
+  };
+
   // Show loading state while checking authentication and role
   if (!isLoaded || isLoadingRole || isLoading) {
     return <LoadingState />;
   }
 
   // Show error state
-  if (error || !course) {
+  if (error || !currentCourse) {
     return <ErrorState message={error || 'Course not found'} onRetry={handleRetry} />;
   }
 
@@ -69,5 +83,11 @@ export default function CourseDetailPage({ params }: { params: { id: string } | 
   };
 
   // Render the course layout
-  return <CourseLayout course={course} user={userData} />;
+  return (
+    <CourseLayout 
+      course={currentCourse} 
+      user={userData} 
+      onCourseUpdate={handleCourseUpdate}
+    />
+  );
 } 

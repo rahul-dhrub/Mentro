@@ -1,6 +1,6 @@
 'use client';
 
-import { FiCheck, FiShoppingCart, FiHeart } from 'react-icons/fi';
+import { FiCheck, FiShoppingCart, FiHeart, FiEdit } from 'react-icons/fi';
 import { Course } from '../types';
 import { useRouter } from 'next/navigation';
 import { useCart } from '../../../contexts/CartContext';
@@ -9,15 +9,20 @@ import { useWishlist } from '../../../contexts/WishlistContext';
 interface CourseSidebarProps {
   course: Course;
   isStudent?: boolean;
+  userRole?: string;
+  onEditClick?: () => void;
 }
 
-export default function CourseSidebar({ course, isStudent = false }: CourseSidebarProps) {
+export default function CourseSidebar({ course, isStudent = false, userRole, onEditClick }: CourseSidebarProps) {
   const router = useRouter();
   const { addToCart, isInCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
   const courseInCart = isInCart(course.id);
   const courseInWishlist = isInWishlist(course.id);
+  
+  // Check if user can edit this course
+  const canEdit = userRole && (userRole.toLowerCase() === 'instructor' || userRole.toLowerCase() === 'admin');
 
   const handlePrimaryButtonClick = () => {
     if (isStudent) {
@@ -39,8 +44,12 @@ export default function CourseSidebar({ course, isStudent = false }: CourseSideb
       // TODO: Buy now functionality
       console.log('Buy now:', course.id);
     } else {
-      // TODO: Edit course functionality
-      console.log('Edit course:', course.id);
+      // Call edit functionality if user can edit, otherwise fallback
+      if (canEdit && onEditClick) {
+        onEditClick();
+      } else {
+        console.log('View course details:', course.id);
+      }
     }
   };
 
@@ -108,10 +117,21 @@ export default function CourseSidebar({ course, isStudent = false }: CourseSideb
         </button>
         
         <button 
-          className="w-full border border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 mb-4 transition-colors cursor-pointer"
+          className={`w-full border border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 mb-4 transition-colors cursor-pointer ${
+            canEdit ? 'flex items-center justify-center gap-2' : ''
+          }`}
           onClick={handleSecondaryButtonClick}
         >
-          {isStudent ? 'Buy Now' : 'Edit Course'}
+          {isStudent ? (
+            'Buy Now'
+          ) : canEdit ? (
+            <>
+              <FiEdit className="w-5 h-5" />
+              Edit Course
+            </>
+          ) : (
+            'View Details'
+          )}
         </button>
 
         {/* Add to Wishlist Button - Only show for students */}
