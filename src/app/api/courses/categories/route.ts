@@ -11,14 +11,16 @@ export async function GET(request: NextRequest) {
     // Get authentication info
     const { userId } = await auth();
     let userRole = 'student'; // Default to student
+    let currentUserObjectId = null;
     
-    // If user is authenticated, get their role
+    // If user is authenticated, get their role and object ID
     if (userId) {
       try {
         const User = (await import('@/models/User')).default;
         const currentUser = await User.findOne({ clerkId: userId });
         if (currentUser) {
           userRole = currentUser.role || 'student';
+          currentUserObjectId = currentUser._id;
         }
       } catch (error) {
         console.error('Error fetching user role:', error);
@@ -30,10 +32,17 @@ export async function GET(request: NextRequest) {
     let matchFilter: any = { isActive: true };
     
     // For students, only count published courses
-    // For instructors/admins, count all active courses (published and unpublished)
     if (userRole === 'student') {
       matchFilter.isPublished = true;
+    } 
+    // For instructors, only count courses they created or are faculty of
+    else if (userRole === 'instructor' && currentUserObjectId) {
+      matchFilter.$or = [
+        { instructorId: currentUserObjectId }, // Courses they created
+        { 'faculty.id': currentUserObjectId.toString() } // Courses where they are faculty
+      ];
     }
+    // For admins, count all active courses (no additional filter needed)
     
     // Aggregate courses by category to get counts
     const categoryCounts = await Course.aggregate([

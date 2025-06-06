@@ -54,6 +54,7 @@ export const useUsersData = (emails: string[]) => {
   const [usersData, setUsersData] = useState<Map<string, UserData>>(new Map());
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [fetchedEmails, setFetchedEmails] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (emails.length === 0) {
@@ -63,7 +64,7 @@ export const useUsersData = (emails: string[]) => {
     }
 
     // Filter out emails that are already cached
-    const uncachedEmails = emails.filter(email => !usersData.has(email));
+    const uncachedEmails = emails.filter(email => !fetchedEmails.has(email));
     
     if (uncachedEmails.length === 0) {
       return; // All emails are already cached
@@ -84,6 +85,13 @@ export const useUsersData = (emails: string[]) => {
           });
           return merged;
         });
+
+        // Mark these emails as fetched
+        setFetchedEmails(prevFetched => {
+          const newFetched = new Set(prevFetched);
+          uncachedEmails.forEach(email => newFetched.add(email));
+          return newFetched;
+        });
       } catch (err) {
         setError('Failed to fetch users data');
         console.error('Error fetching users data:', err);
@@ -93,7 +101,7 @@ export const useUsersData = (emails: string[]) => {
     };
 
     fetchData();
-  }, [emails, usersData]);
+  }, [emails.join(',')]); // Use emails.join(',') to create a stable dependency
 
   const getUserData = (email: string): UserData | null => {
     return usersData.get(email) || null;

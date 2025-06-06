@@ -5,9 +5,10 @@ import CourseCard from './CourseCard';
 interface CourseGridProps {
   courses: Course[];
   isLoading?: boolean;
+  userRole?: string | null;
 }
 
-export default function CourseGrid({ courses, isLoading = false }: CourseGridProps) {
+export default function CourseGrid({ courses, isLoading = false, userRole }: CourseGridProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -40,7 +41,7 @@ export default function CourseGrid({ courses, isLoading = false }: CourseGridPro
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {courses.map((course) => (
-        <CourseCard key={course.id} course={course} />
+        <CourseCard key={course.id} course={course} userRole={userRole} />
       ))}
     </div>
   );

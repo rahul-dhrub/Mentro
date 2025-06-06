@@ -11,6 +11,25 @@ export async function GET(request: NextRequest) {
     // Import User model
     const User = (await import('@/models/User')).default;
     
+    // Get authentication info
+    const { userId } = await auth();
+    let userRole = 'student'; // Default to student
+    let currentUserObjectId = null;
+    
+    // If user is authenticated, get their role and object ID
+    if (userId) {
+      try {
+        const currentUser = await User.findOne({ clerkId: userId });
+        if (currentUser) {
+          userRole = currentUser.role || 'student';
+          currentUserObjectId = currentUser._id;
+        }
+      } catch (error) {
+        console.error('Error fetching user role:', error);
+        // Continue with default student role
+      }
+    }
+    
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
     const level = searchParams.get('level');
@@ -40,6 +59,15 @@ export async function GET(request: NextRequest) {
         { description: { $regex: search, $options: 'i' } }
       ];
     }
+    
+    // For instructors/admins, only show courses where they are faculty members
+    if (userRole === 'instructor' && currentUserObjectId) {
+      filter.$or = [
+        { instructorId: currentUserObjectId }, // Courses they created
+        { 'faculty.id': currentUserObjectId.toString() } // Courses where they are faculty
+      ];
+    }
+    // For students, show all active courses (with optional published filter)
     
     // Calculate skip for pagination
     const skip = (page - 1) * limit;
@@ -89,7 +117,7 @@ export async function GET(request: NextRequest) {
         requirements: course.requirements,
         whatYouWillLearn: course.whatYouWillLearn,
         isPublished: course.isPublished,
-        curriculum: [] // Will be populated from chapters/lessons if needed
+        curriculum: course.curriculum || [] // Include curriculum data from database
       };
     });
     
@@ -150,7 +178,8 @@ export async function POST(request: NextRequest) {
       thumbnail,
       features,
       requirements,
-      whatYouWillLearn
+      whatYouWillLearn,
+      curriculum
     } = body;
     
     // Validation
@@ -199,10 +228,18 @@ export async function POST(request: NextRequest) {
       features: features || [],
       requirements: requirements || [],
       whatYouWillLearn: whatYouWillLearn || [],
+      curriculum: curriculum || [],
       isPublished: false,
       isActive: true,
       createdBy: userId,
-      faculty: [],
+      faculty: [{
+        id: currentUser._id.toString(),
+        name: currentUser.name,
+        email: currentUser.email,
+        role: 'owner',
+        avatar: currentUser.profilePicture || undefined,
+        joinedAt: new Date(),
+      }],
       students: [],
       chapters: [],
       // Initialize new rating and review fields
@@ -241,7 +278,7 @@ export async function POST(request: NextRequest) {
       requirements: newCourse.requirements,
       whatYouWillLearn: newCourse.whatYouWillLearn,
       isPublished: newCourse.isPublished,
-      curriculum: []
+      curriculum: newCourse.curriculum || []
     };
     
     return NextResponse.json({

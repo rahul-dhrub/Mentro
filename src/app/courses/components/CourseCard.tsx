@@ -8,9 +8,10 @@ import { useWishlist } from '../../../contexts/WishlistContext';
 
 interface CourseCardProps {
   course: Course;
+  userRole?: string | null;
 }
 
-export default function CourseCard({ course }: CourseCardProps) {
+export default function CourseCard({ course, userRole }: CourseCardProps) {
   const { addToCart, isInCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const courseInCart = isInCart(course.id);
@@ -121,41 +122,45 @@ export default function CourseCard({ course }: CourseCardProps) {
         </div>
       </Link>
 
-      {/* Wishlist Button - Top Left */}
-      <div className={`absolute top-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
-        course.isPublished === false ? 'left-20' : 'left-4'
-      }`}>
-        <button
-          onClick={handleWishlistToggle}
-          className={`p-2 rounded-full shadow-lg transition-colors cursor-pointer ${
-            courseInWishlist
-              ? 'bg-red-500 text-white hover:bg-red-600'
-              : 'bg-white text-gray-700 hover:bg-gray-50'
-          }`}
-          title={courseInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
-        >
-          <FiHeart className={`w-5 h-5 ${courseInWishlist ? 'fill-current' : ''}`} />
-        </button>
-      </div>
+      {/* Wishlist Button - Top Left - Only show for students */}
+      {userRole?.toLowerCase() === 'student' && (
+        <div className={`absolute top-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
+          course.isPublished === false ? 'left-20' : 'left-4'
+        }`}>
+          <button
+            onClick={handleWishlistToggle}
+            className={`p-2 rounded-full shadow-lg transition-colors cursor-pointer ${
+              courseInWishlist
+                ? 'bg-red-500 text-white hover:bg-red-600'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+            title={courseInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+          >
+            <FiHeart className={`w-5 h-5 ${courseInWishlist ? 'fill-current' : ''}`} />
+          </button>
+        </div>
+      )}
 
-      {/* Add to Cart Button - Top Right */}
-      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-        <button
-          onClick={handleAddToCart}
-          className={`p-2 rounded-full shadow-lg transition-colors cursor-pointer ${
-            courseInCart
-              ? 'bg-green-600 text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-50'
-          }`}
-          title={courseInCart ? 'Added to cart' : 'Add to cart'}
-        >
-          {courseInCart ? (
-            <FiCheck className="w-5 h-5" />
-          ) : (
-            <FiShoppingCart className="w-5 h-5" />
-          )}
-        </button>
-      </div>
+      {/* Add to Cart Button - Top Right - Only show for students */}
+      {userRole?.toLowerCase() === 'student' && (
+        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <button
+            onClick={handleAddToCart}
+            className={`p-2 rounded-full shadow-lg transition-colors cursor-pointer ${
+              courseInCart
+                ? 'bg-green-600 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+            title={courseInCart ? 'Added to cart' : 'Add to cart'}
+          >
+            {courseInCart ? (
+              <FiCheck className="w-5 h-5" />
+            ) : (
+              <FiShoppingCart className="w-5 h-5" />
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 } 

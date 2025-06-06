@@ -9,6 +9,7 @@ interface MainContentProps {
   onFilterClick: () => void;
   filteredCourses: Course[];
   isLoading?: boolean;
+  userRole?: string | null;
 }
 
 export default function MainContent({ 
@@ -16,7 +17,8 @@ export default function MainContent({
   onSearchChange, 
   onFilterClick, 
   filteredCourses,
-  isLoading = false
+  isLoading = false,
+  userRole
 }: MainContentProps) {
   return (
     <div className="flex-1">
@@ -28,7 +30,7 @@ export default function MainContent({
       />
 
       {/* Course Grid */}
-      <CourseGrid courses={filteredCourses} isLoading={isLoading} />
+      <CourseGrid courses={filteredCourses} isLoading={isLoading} userRole={userRole} />
     </div>
   );
 } 

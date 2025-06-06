@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Course } from '../types';
-import { FiUpload, FiX, FiAlertCircle } from 'react-icons/fi';
+import { FiUpload, FiX, FiAlertCircle, FiPlus, FiTrash2, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { coursesAPI } from '@/lib/api/courses';
 
 interface CreateCourseModalProps {
@@ -20,6 +20,16 @@ interface UserDetails {
   role: string;
 }
 
+interface CurriculumSection {
+  title: string;
+  lectures: {
+    title: string;
+    duration: string;
+    type: 'video' | 'reading' | 'quiz' | 'assignment';
+    preview?: boolean;
+  }[];
+}
+
 export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateCourseModalProps) {
   const [courseData, setCourseData] = useState<Partial<Course>>({
     title: '',
@@ -33,7 +43,13 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
     features: [''],
     requirements: [''],
     whatYouWillLearn: [''],
+    curriculum: [],
   });
+
+  // Curriculum state
+  const [curriculum, setCurriculum] = useState<CurriculumSection[]>([]);
+  const [showCurriculum, setShowCurriculum] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
 
   // Form states
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,12 +112,17 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
         features: [''],
         requirements: [''],
         whatYouWillLearn: [''],
+        curriculum: [],
       });
       setError(null);
       setUserDetails(null);
       setPreviewImage(null);
       setIsUploading(false);
       setUploadProgress(0);
+      // Reset curriculum state
+      setCurriculum([]);
+      setShowCurriculum(false);
+      setExpandedSections(new Set());
     }
   }, [isOpen]);
 
@@ -132,6 +153,91 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
       const newArray = [...(prev[field] || [])];
       newArray.splice(index, 1);
       return { ...prev, [field]: newArray };
+    });
+  };
+
+  // Curriculum management functions
+  const addCurriculumSection = () => {
+    setCurriculum(prev => [...prev, { title: '', lectures: [] }]);
+    setExpandedSections(prev => new Set([...prev, curriculum.length]));
+  };
+
+  const removeCurriculumSection = (sectionIndex: number) => {
+    setCurriculum(prev => prev.filter((_, index) => index !== sectionIndex));
+    setExpandedSections(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(sectionIndex);
+      // Adjust indices for remaining sections
+      const adjustedSet = new Set<number>();
+      newSet.forEach(index => {
+        if (index < sectionIndex) {
+          adjustedSet.add(index);
+        } else if (index > sectionIndex) {
+          adjustedSet.add(index - 1);
+        }
+      });
+      return adjustedSet;
+    });
+  };
+
+  const updateSectionTitle = (sectionIndex: number, title: string) => {
+    setCurriculum(prev => 
+      prev.map((section, index) => 
+        index === sectionIndex ? { ...section, title } : section
+      )
+    );
+  };
+
+  const addLecture = (sectionIndex: number) => {
+    setCurriculum(prev => 
+      prev.map((section, index) => 
+        index === sectionIndex 
+          ? { 
+              ...section, 
+              lectures: [...section.lectures, { title: '', duration: '', type: 'video', preview: false }] 
+            }
+          : section
+      )
+    );
+  };
+
+  const removeLecture = (sectionIndex: number, lectureIndex: number) => {
+    setCurriculum(prev => 
+      prev.map((section, index) => 
+        index === sectionIndex 
+          ? { 
+              ...section, 
+              lectures: section.lectures.filter((_, lIndex) => lIndex !== lectureIndex) 
+            }
+          : section
+      )
+    );
+  };
+
+  const updateLecture = (sectionIndex: number, lectureIndex: number, field: string, value: any) => {
+    setCurriculum(prev => 
+      prev.map((section, index) => 
+        index === sectionIndex 
+          ? { 
+              ...section, 
+              lectures: section.lectures.map((lecture, lIndex) => 
+                lIndex === lectureIndex ? { ...lecture, [field]: value } : lecture
+              )
+            }
+          : section
+      )
+    );
+  };
+
+  const toggleSectionExpanded = (sectionIndex: number) => {
+    setExpandedSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(sectionIndex)) {
+        newSet.delete(sectionIndex);
+      } else {
+        newSet.add(sectionIndex);
+      }
+      return newSet;
     });
   };
 
@@ -257,6 +363,27 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
       const filteredRequirements = courseData.requirements?.filter(r => r.trim()) || [];
       const filteredLearning = courseData.whatYouWillLearn?.filter(l => l.trim()) || [];
       
+      // Process curriculum data
+      const processedCurriculum = curriculum
+        .filter(section => section.title.trim()) // Only include sections with titles
+        .map(section => {
+          const validLectures = section.lectures.filter(lecture => lecture.title.trim()); // Only include lectures with titles
+          return {
+            title: section.title.trim(),
+            lectures: validLectures.length,
+            duration: validLectures.reduce((total, lecture) => {
+              const duration = lecture.duration.trim();
+              // Simple duration parsing - assumes format like "10 min", "1 hour", etc.
+              const match = duration.match(/(\d+)/);
+              return total + (match ? parseInt(match[1]) : 0);
+            }, 0) + ' min', // Convert to minutes string
+            sections: [{
+              title: section.title.trim(),
+              lectures: validLectures
+            }]
+          };
+        });
+      
       // Prepare course data for API
       const coursePayload = {
         title: courseData.title!.trim(),
@@ -270,7 +397,8 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
         thumbnail: courseData.thumbnail || undefined,
         features: filteredFeatures,
         requirements: filteredRequirements,
-        whatYouWillLearn: filteredLearning
+        whatYouWillLearn: filteredLearning,
+        curriculum: processedCurriculum
       };
       
       // Call API to create course
@@ -294,8 +422,12 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
           features: [''],
           requirements: [''],
           whatYouWillLearn: [''],
+          curriculum: [],
         });
         setPreviewImage(null);
+        setCurriculum([]);
+        setShowCurriculum(false);
+        setExpandedSections(new Set());
         
       } else {
         setError(response.error || 'Failed to create course');
@@ -674,6 +806,140 @@ export default function CreateCourseModal({ isOpen, onClose, onSubmit }: CreateC
               >
                 <span className="mr-1 text-lg">+</span> Add Learning Outcome
               </button>
+            </div>
+            
+            {/* Curriculum (Optional) */}
+            <div className="col-span-2">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold text-gray-900">Curriculum (Optional)</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowCurriculum(!showCurriculum)}
+                  className="flex items-center text-blue-600 hover:text-blue-800 font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isSubmitting}
+                >
+                  {showCurriculum ? <FiChevronUp className="mr-1" /> : <FiChevronDown className="mr-1" />}
+                  {showCurriculum ? 'Hide Curriculum' : 'Add Curriculum'}
+                </button>
+              </div>
+              
+              {showCurriculum && (
+                <div className="space-y-4 border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <p className="text-sm text-gray-600 mb-4">
+                    Add sections and lectures to your course. This is optional and can be modified later.
+                  </p>
+                  
+                  {curriculum.map((section, sectionIndex) => (
+                    <div key={`section-${sectionIndex}`} className="border border-gray-300 rounded-lg bg-white">
+                      <div className="p-4 border-b border-gray-200">
+                        <div className="flex items-center gap-2 mb-3">
+                          <input
+                            type="text"
+                            value={section.title}
+                            onChange={(e) => updateSectionTitle(sectionIndex, e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                            placeholder="Section title (e.g., Introduction to Programming)"
+                            disabled={isSubmitting}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => toggleSectionExpanded(sectionIndex)}
+                            className="p-2 text-gray-600 hover:text-gray-800 cursor-pointer"
+                            disabled={isSubmitting}
+                          >
+                            {expandedSections.has(sectionIndex) ? <FiChevronUp /> : <FiChevronDown />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeCurriculumSection(sectionIndex)}
+                            className="p-2 text-red-600 hover:text-red-800 cursor-pointer"
+                            disabled={isSubmitting}
+                          >
+                            <FiTrash2 />
+                          </button>
+                        </div>
+                        
+                        {expandedSections.has(sectionIndex) && (
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <h4 className="font-medium text-gray-700">Lectures</h4>
+                              <button
+                                type="button"
+                                onClick={() => addLecture(sectionIndex)}
+                                className="flex items-center text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+                                disabled={isSubmitting}
+                              >
+                                <FiPlus className="mr-1" size={14} />
+                                Add Lecture
+                              </button>
+                            </div>
+                            
+                            {section.lectures.map((lecture, lectureIndex) => (
+                              <div key={`lecture-${sectionIndex}-${lectureIndex}`} className="grid grid-cols-12 gap-2 items-center p-3 bg-gray-50 rounded-md">
+                                <input
+                                  type="text"
+                                  value={lecture.title}
+                                  onChange={(e) => updateLecture(sectionIndex, lectureIndex, 'title', e.target.value)}
+                                  className="col-span-5 px-3 py-2 text-sm border-2 border-gray-400 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 placeholder-gray-500"
+                                  placeholder="Lecture title"
+                                  disabled={isSubmitting}
+                                />
+                                <input
+                                  type="text"
+                                  value={lecture.duration}
+                                  onChange={(e) => updateLecture(sectionIndex, lectureIndex, 'duration', e.target.value)}
+                                  className="col-span-2 px-3 py-2 text-sm border-2 border-gray-400 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 placeholder-gray-500"
+                                  placeholder="10 min"
+                                  disabled={isSubmitting}
+                                />
+                                <select
+                                  value={lecture.type}
+                                  onChange={(e) => updateLecture(sectionIndex, lectureIndex, 'type', e.target.value)}
+                                  className="col-span-2 px-3 py-2 text-sm border-2 border-gray-400 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 cursor-pointer"
+                                  disabled={isSubmitting}
+                                >
+                                  <option value="video">Video</option>
+                                  <option value="reading">Reading</option>
+                                  <option value="quiz">Quiz</option>
+                                  <option value="assignment">Assignment</option>
+                                </select>
+                                <label className="col-span-2 flex items-center text-sm text-gray-700 font-medium">
+                                  <input
+                                    type="checkbox"
+                                    checked={lecture.preview || false}
+                                    onChange={(e) => updateLecture(sectionIndex, lectureIndex, 'preview', e.target.checked)}
+                                    className="mr-2 w-4 h-4 text-blue-600 border-2 border-gray-400 rounded focus:ring-blue-500"
+                                    disabled={isSubmitting}
+                                  />
+                                  Preview
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => removeLecture(sectionIndex, lectureIndex)}
+                                  className="col-span-1 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded cursor-pointer"
+                                  disabled={isSubmitting}
+                                >
+                                  <FiTrash2 size={16} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  <button
+                    type="button"
+                    onClick={addCurriculumSection}
+                    className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:text-gray-800 hover:border-gray-400 flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSubmitting}
+                  >
+                    <FiPlus className="mr-2" />
+                    Add Section
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           

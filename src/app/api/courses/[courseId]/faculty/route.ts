@@ -20,7 +20,15 @@ export async function GET(
       );
     }
 
-    const course = await Course.findOne({ code: courseId.toUpperCase() });
+    // Validate if courseId is a valid MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return NextResponse.json(
+        { error: 'Invalid course ID format' },
+        { status: 400 }
+      );
+    }
+
+    const course = await Course.findById(courseId);
 
     if (!course) {
       return NextResponse.json(
@@ -68,7 +76,15 @@ export async function POST(
       );
     }
 
-    const course = await Course.findOne({ code: courseId.toUpperCase() });
+    // Validate if courseId is a valid MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return NextResponse.json(
+        { error: 'Invalid course ID format' },
+        { status: 400 }
+      );
+    }
+
+    const course = await Course.findById(courseId);
 
     if (!course) {
       return NextResponse.json(

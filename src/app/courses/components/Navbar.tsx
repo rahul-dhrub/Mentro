@@ -71,33 +71,37 @@ export default function Navbar({
 
           {/* Right Side - Navigation Items */}
           <div className="flex items-center space-x-2">
-            {/* Cart */}
-            <button 
-              onClick={handleCartClick}
-              className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
-              title="View Cart"
-            >
-              <FiShoppingCart className="w-6 h-6" />
-              {cart.totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {cart.totalItems}
-                </span>
-              )}
-            </button>
+            {/* Cart - Only show for students */}
+            {user?.role?.toLowerCase() === 'student' && (
+              <button 
+                onClick={handleCartClick}
+                className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+                title="View Cart"
+              >
+                <FiShoppingCart className="w-6 h-6" />
+                {cart.totalItems > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {cart.totalItems}
+                  </span>
+                )}
+              </button>
+            )}
 
-            {/* Wishlist */}
-            <button 
-              onClick={handleWishlistClick}
-              className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
-              title="View Wishlist"
-            >
-              <FiHeart className="w-6 h-6" />
-              {wishlist.totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {wishlist.totalItems}
-                </span>
-              )}
-            </button>
+            {/* Wishlist - Only show for students */}
+            {user?.role?.toLowerCase() === 'student' && (
+              <button 
+                onClick={handleWishlistClick}
+                className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+                title="View Wishlist"
+              >
+                <FiHeart className="w-6 h-6" />
+                {wishlist.totalItems > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {wishlist.totalItems}
+                  </span>
+                )}
+              </button>
+            )}
 
             {/* Profile */}
             {user && (

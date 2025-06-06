@@ -245,6 +245,7 @@ export default function StudentCoursesPage() {
             onFilterClick={() => setIsFilterModalOpen(true)}
             filteredCourses={filteredCourses}
             isLoading={isLoadingCourses}
+            userRole={userRole}
           />
         </div>
       </div>

@@ -31,6 +31,20 @@ export interface ICourse extends Document {
   features: string[];
   requirements: string[];
   whatYouWillLearn: string[];
+  curriculum: {
+    title: string;
+    lectures: number;
+    duration: string;
+    sections: {
+      title: string;
+      lectures: {
+        title: string;
+        duration: string;
+        type: 'video' | 'reading' | 'quiz' | 'assignment';
+        preview?: boolean;
+      }[];
+    }[];
+  }[];
   
   // Status and visibility
   isPublished: boolean;
@@ -145,6 +159,45 @@ const CourseSchema = new Schema<ICourse>(
     }],
     whatYouWillLearn: [{
       type: String,
+    }],
+    curriculum: [{
+      title: {
+        type: String,
+        required: true,
+      },
+      lectures: {
+        type: Number,
+        default: 0,
+      },
+      duration: {
+        type: String,
+        default: '',
+      },
+      sections: [{
+        title: {
+          type: String,
+          required: true,
+        },
+        lectures: [{
+          title: {
+            type: String,
+            required: true,
+          },
+          duration: {
+            type: String,
+            default: '',
+          },
+          type: {
+            type: String,
+            enum: ['video', 'reading', 'quiz', 'assignment'],
+            default: 'video',
+          },
+          preview: {
+            type: Boolean,
+            default: false,
+          },
+        }],
+      }],
     }],
     isPublished: {
       type: Boolean,

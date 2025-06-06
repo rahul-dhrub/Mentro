@@ -74,7 +74,7 @@ export async function GET(
       requirements: course.requirements,
       whatYouWillLearn: course.whatYouWillLearn,
       isPublished: course.isPublished,
-      curriculum: [] // TODO: Populate from chapters/lessons
+      curriculum: course.curriculum || [] // Include curriculum data from database
     };
     
     return NextResponse.json({
