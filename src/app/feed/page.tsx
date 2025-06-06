@@ -379,7 +379,7 @@ export default function FeedPage() {
 
       const data = await response.json();
       setPublications(prev => [data.publication, ...prev]);
-      setIsPublicationsModalOpen(false);
+      return { success: true, publication: data.publication };
     } catch (error) {
       console.error('Error adding publication:', error);
       const mockPublication = {
@@ -387,7 +387,40 @@ export default function FeedPage() {
         ...newPublication
       };
       setPublications(prev => [mockPublication, ...prev]);
-      setIsPublicationsModalOpen(false);
+      return { success: true, publication: mockPublication };
+    }
+  };
+
+  const handleDeletePublication = async (publicationId: string) => {
+    try {
+      const response = await fetch(`/api/publications/${publicationId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        
+        // If it's an invalid ObjectId (mock data), just remove it from the frontend
+        if (errorData.error?.includes('Invalid publication ID format')) {
+          console.log('Removing mock publication from frontend only');
+          setPublications(prev => prev.filter(pub => pub.id !== publicationId));
+          return;
+        }
+        
+        throw new Error(errorData.error || 'Failed to delete publication');
+      }
+
+      setPublications(prev => prev.filter(pub => pub.id !== publicationId));
+    } catch (error) {
+      console.error('Error deleting publication:', error);
+      
+      // For network errors or other issues, still try to remove from frontend
+      if (error instanceof Error && error.message.includes('fetch')) {
+        console.log('Network error, removing from frontend only');
+        setPublications(prev => prev.filter(pub => pub.id !== publicationId));
+      } else {
+        alert(`Failed to delete publication: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     }
   };
 
@@ -608,6 +641,7 @@ export default function FeedPage() {
         onClose={() => setIsPublicationsModalOpen(false)}
         publications={publications}
         onAddPublication={handleAddPublication}
+        onDeletePublication={handleDeletePublication}
       />
     </div>
   );

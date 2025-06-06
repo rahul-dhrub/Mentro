@@ -41,8 +41,22 @@ export default function UserProfile({
         // Get user's posts
         const userPosts = mockPosts.filter(post => post.author.id === userId);
         
-        // Get user's publications
-        const userPublications = mockPublications.slice(0, 2); // Mock user publications
+        // Get user's publications from API
+        let userPublications = [];
+        try {
+          const publicationsResponse = await fetch(`/api/users/${userId}/publications`);
+          if (publicationsResponse.ok) {
+            const publicationsData = await publicationsResponse.json();
+            userPublications = publicationsData.publications || [];
+          } else {
+            // Fallback to mock data if API fails
+            userPublications = mockPublications.slice(0, 2);
+          }
+        } catch (error) {
+          console.error('Error fetching user publications:', error);
+          // Fallback to mock data if API fails
+          userPublications = mockPublications.slice(0, 2);
+        }
 
         // Fetch user's blogs from API
         let userBlogs: Blog[] = [];
