@@ -74,7 +74,8 @@ export async function POST(
       userName: dbUser.name,
       postId: post._id,
       content,
-      media
+      media,
+      parentCommentId: null // Explicitly set to null for top-level comments
     });
 
     // Add comment to post's comments array
@@ -93,7 +94,11 @@ export async function POST(
           avatar: dbUser.profilePicture || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'
         },
         timestamp: comment.createdAt,
-        likes: 0
+        likes: 0,
+        likedBy: [],
+        isLikedByCurrentUser: false,
+        replies: [],
+        repliesCount: 0
       }
     });
   } catch (error) {
@@ -110,6 +115,7 @@ export async function GET(
   { params }: { params: Promise<{ postId: string }> }
 ) {
   try {
+    const { userId } = await auth();
     await connectDB();
 
     const url = new URL(request.url);
@@ -126,32 +132,58 @@ export async function GET(
       );
     }
 
-    const post = await Post.findById(new mongoose.Types.ObjectId(postId))
+    // First, get top-level comments (ensure parentCommentId is truly null/undefined)
+    const topLevelComments = await Comment
+      .find({ 
+        postId: new mongoose.Types.ObjectId(postId),
+        $or: [
+          { parentCommentId: null },
+          { parentCommentId: { $exists: false } }
+        ]
+      })
       .populate({
-        path: 'comments',
-        populate: {
-          path: 'author',
-          model: User,
-          select: 'name profilePicture email'
-        }
-      });
+        path: 'userId',
+        model: User,
+        select: 'name profilePicture email'
+      })
+      .sort({ createdAt: -1 });
 
-    if (!post) {
-      return NextResponse.json({ error: 'Post not found' }, { status: 404 });
-    }
+    // Then, get ALL replies for this post (must have a parentCommentId)
+    const allReplies = await Comment
+      .find({ 
+        postId: new mongoose.Types.ObjectId(postId),
+        parentCommentId: { $exists: true, $ne: null }
+      })
+      .populate({
+        path: 'userId',
+        model: User,
+        select: 'name profilePicture email'
+      })
+      .sort({ createdAt: 1 });
 
     const defaultAvatar = 'https://api.dicebear.com/7.x/avataaars/svg?seed=default';
 
-    let comments = post.comments;
-    if (emailFilter) {
-      comments = comments.filter((comment: any) =>
-        comment.userEmail === emailFilter ||
-        (comment.author && comment.author.email === emailFilter)
-      );
+    // Get current user for like status
+    let currentUser = null;
+    if (userId) {
+      currentUser = await User.findOne({ clerkId: userId });
     }
 
-    const formattedComments = comments.map((comment: any) => {
-      const author = comment.author || { name: comment.userName || 'Unknown User', email: comment.userEmail, profilePicture: defaultAvatar };
+    // Group ALL replies by their parent comment ID
+    const repliesByParent = allReplies.reduce((acc: any, reply: any) => {
+      const parentId = reply.parentCommentId.toString();
+      if (!acc[parentId]) {
+        acc[parentId] = [];
+      }
+      acc[parentId].push(reply);
+      return acc;
+    }, {});
+
+    const formatComment = (comment: any): any => {
+      const author = comment.userId || { name: comment.userName || 'Unknown User', email: comment.userEmail, profilePicture: defaultAvatar };
+      const isLikedByCurrentUser = currentUser && comment.likedBy ? comment.likedBy.includes(currentUser._id) : false;
+      const commentReplies = repliesByParent[comment._id.toString()] || [];
+      
       return {
         id: comment._id,
         content: comment.content,
@@ -163,9 +195,24 @@ export async function GET(
           avatar: author.profilePicture || defaultAvatar
         },
         timestamp: comment.createdAt,
-        likes: 0
+        likes: comment.likedBy ? comment.likedBy.length : 0,
+        likedBy: comment.likedBy || [],
+        isLikedByCurrentUser,
+        parentCommentId: comment.parentCommentId,
+        replies: commentReplies.map(formatComment), // This will recursively format nested replies
+        repliesCount: commentReplies.length
       };
-    });
+    };
+
+    let comments = topLevelComments;
+    if (emailFilter) {
+      comments = comments.filter((comment: any) =>
+        comment.userEmail === emailFilter ||
+        (comment.userId && comment.userId.email === emailFilter)
+      );
+    }
+
+    const formattedComments = comments.map(formatComment);
 
     return NextResponse.json({ comments: formattedComments });
   } catch (error) {

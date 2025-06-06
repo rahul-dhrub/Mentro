@@ -8,6 +8,10 @@ export interface IComment extends mongoose.Document {
   postId: mongoose.Types.ObjectId | string;
   content: string;
   media?: Media[];
+  parentCommentId?: mongoose.Types.ObjectId; // For replies to comments
+  replies: mongoose.Types.ObjectId[]; // Child comments
+  likedBy: mongoose.Types.ObjectId[]; // Users who liked this comment
+  likesCount: number; // Virtual field
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,7 +53,23 @@ const commentSchema = new mongoose.Schema<IComment>(
         position: Number // Position in the content where media should be inserted
       }],
       default: []
-    }
+    },
+    parentCommentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Comment',
+      default: null // null for top-level comments
+    },
+    replies: {
+      type: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Comment'
+      }],
+      default: []
+    },
+    likedBy: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }]
   },
   {
     timestamps: true,
@@ -57,6 +77,11 @@ const commentSchema = new mongoose.Schema<IComment>(
     toObject: { virtuals: true }
   }
 );
+
+// Virtual for likes count
+commentSchema.virtual('likesCount').get(function() {
+  return this.likedBy ? this.likedBy.length : 0;
+});
 
 // Virtual populate for author
 commentSchema.virtual('author', {
@@ -66,9 +91,11 @@ commentSchema.virtual('author', {
   justOne: true
 });
 
-// Clear mongoose model cache if it exists to avoid conflicts
-delete mongoose.models.Comment;
+// Index for performance
+commentSchema.index({ postId: 1 });
+commentSchema.index({ parentCommentId: 1 });
+commentSchema.index({ userId: 1 });
 
-const Comment = mongoose.model<IComment>('Comment', commentSchema);
+const Comment = mongoose.models.Comment || mongoose.model<IComment>('Comment', commentSchema);
 
 export default Comment; 

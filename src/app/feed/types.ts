@@ -33,6 +33,11 @@ export interface Comment {
   media?: Media[];
   timestamp: string;
   likes: number;
+  likedBy?: string[]; // User IDs who liked this comment
+  isLikedByCurrentUser?: boolean; // For UI state
+  parentCommentId?: string; // For replies
+  replies?: Comment[]; // Nested replies
+  repliesCount?: number; // Number of replies
 }
 
 export interface Post {
@@ -41,6 +46,8 @@ export interface Post {
   content: string;
   media?: Media[];
   likes: number;
+  likedBy?: string[]; // User IDs who liked this post
+  isLikedByCurrentUser?: boolean; // For UI state
   comments: Comment[];
   timestamp: string;
   tags?: string[];

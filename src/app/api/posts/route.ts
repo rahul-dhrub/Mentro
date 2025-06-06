@@ -88,7 +88,9 @@ export async function GET(request: NextRequest) {
       id: post._id.toString(),
       content: post.content,
       media: post.media || [],
-      likes: post.likes || 0,
+      likes: post.likedBy ? post.likedBy.length : 0,
+      likedBy: post.likedBy || [],
+      isLikedByCurrentUser: post.likedBy ? post.likedBy.includes(dbUser._id) : false,
       comments: (post.comments || []).map((comment: any) => ({
         id: comment._id.toString(),
         content: comment.content,
@@ -103,7 +105,9 @@ export async function GET(request: NextRequest) {
           avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'
         },
         timestamp: comment.createdAt,
-        likes: 0
+        likes: comment.likedBy ? comment.likedBy.length : 0,
+        likedBy: comment.likedBy || [],
+        isLikedByCurrentUser: comment.likedBy ? comment.likedBy.includes(dbUser._id) : false
       })),
       author: {
         id: post.userId._id.toString(),

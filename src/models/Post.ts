@@ -16,6 +16,8 @@ export interface IPost extends mongoose.Document {
   content: string;
   media: Media[];
   comments: mongoose.Types.ObjectId[] | string[];
+  likedBy: mongoose.Types.ObjectId[]; // Users who liked this post
+  likesCount: number; // Virtual field
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,6 +56,10 @@ const postSchema = new mongoose.Schema<IPost>(
     comments: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Comment'
+    }],
+    likedBy: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
     }]
   },
   {
@@ -62,6 +68,11 @@ const postSchema = new mongoose.Schema<IPost>(
     toObject: { virtuals: true }
   }
 );
+
+// Virtual for likes count
+postSchema.virtual('likesCount').get(function() {
+  return this.likedBy ? this.likedBy.length : 0;
+});
 
 // Virtual populate for author
 postSchema.virtual('author', {

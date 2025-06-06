@@ -258,12 +258,66 @@ export default function FeedPage() {
     setPosts(prev => [newPost, ...prev]);
   };
 
-  const handleLike = (postId: string) => {
-    setPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === postId ? { ...post, likes: post.likes + 1 } : post
-      )
+  const handleLike = async (postId: string) => {
+    // Find and optimistically update the post immediately
+    setPosts(prevPosts => 
+      prevPosts.map(post => {
+        if (post.id === postId) {
+          const wasLiked = post.isLikedByCurrentUser;
+          return {
+            ...post,
+            isLikedByCurrentUser: !wasLiked,
+            likes: wasLiked ? post.likes - 1 : post.likes + 1
+          };
+        }
+        return post;
+      })
     );
+
+    try {
+      // API call happens in the background - the UI is already updated
+      const response = await fetch(`/api/posts/${postId}/like`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to toggle post like');
+      }
+
+      const data = await response.json();
+      
+      // Update with the accurate server response
+      setPosts(prevPosts => 
+        prevPosts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              isLikedByCurrentUser: data.liked,
+              likes: data.likesCount
+            };
+          }
+          return post;
+        })
+      );
+
+    } catch (error) {
+      console.error('Error toggling post like:', error);
+      
+      // Revert the optimistic update on error
+      setPosts(prevPosts => 
+        prevPosts.map(post => {
+          if (post.id === postId) {
+            const currentLiked = post.isLikedByCurrentUser;
+            return {
+              ...post,
+              isLikedByCurrentUser: !currentLiked,
+              likes: currentLiked ? post.likes - 1 : post.likes + 1
+            };
+          }
+          return post;
+        })
+      );
+    }
   };
 
   const handleComment = (postId: string, content: string) => {
