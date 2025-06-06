@@ -531,7 +531,7 @@ export default function FeedPage() {
           <div className="fixed inset-0 z-50 lg:hidden">
             {/* Backdrop - Only covers the area to the right of sidebar */}
             <div 
-              className="fixed left-80 top-16 right-0 bottom-0 bg-black bg-opacity-20"
+              className="fixed left-80 top-16 right-0 bottom-0 bg-black bg-opacity-20 cursor-pointer"
               onClick={toggleSidebar}
             ></div>
             
@@ -542,7 +542,7 @@ export default function FeedPage() {
                 <h2 className="text-lg font-semibold text-gray-900">Menu</h2>
                 <button
                   onClick={toggleSidebar}
-                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
                   title="Close Sidebar"
                 >
                   <FiX size={20} />

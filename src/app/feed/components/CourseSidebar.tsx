@@ -37,7 +37,7 @@ export default function CourseSidebar({ courses, activeCourseId, isVisible, onCl
       {/* Transparent Overlay */}
       {isVisible && (
         <div
-          className="fixed inset-0 z-40"
+          className="fixed inset-0 z-40 cursor-pointer"
           onClick={onClose}
         />
       )}
@@ -51,7 +51,7 @@ export default function CourseSidebar({ courses, activeCourseId, isVisible, onCl
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-gray-600 hover:text-blue-600"
+          className="absolute top-4 right-4 p-2 text-gray-600 hover:text-blue-600 cursor-pointer"
         >
           <FiX size={20} />
         </button>
@@ -64,7 +64,7 @@ export default function CourseSidebar({ courses, activeCourseId, isVisible, onCl
               <div key={course.id} className="space-y-1">
                 <button
                   onClick={() => setExpandedCourse(expandedCourse === course.id ? null : course.id)}
-                  className={`w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 ${
+                  className={`w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 cursor-pointer ${
                     activeCourseId === course.id ? 'bg-blue-50' : ''
                   }`}
                 >
@@ -88,7 +88,7 @@ export default function CourseSidebar({ courses, activeCourseId, isVisible, onCl
                       <Link
                         key={item.href}
                         href={`/courses/${course.id}/${item.href}`}
-                        className="flex items-center space-x-2 p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg"
+                        className="flex items-center space-x-2 p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg cursor-pointer"
                         onClick={onClose}
                       >
                         <item.icon size={16} />
@@ -106,15 +106,15 @@ export default function CourseSidebar({ courses, activeCourseId, isVisible, onCl
         <div className="p-4 border-t border-gray-200">
           <h3 className="text-sm font-semibold text-gray-900 mb-2">Quick Actions</h3>
           <div className="space-y-2">
-            <button className="w-full flex items-center space-x-2 p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg">
+            <button className="w-full flex items-center space-x-2 p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg cursor-pointer">
               <FiCalendar size={16} />
               <span>Create New Class</span>
             </button>
-            <button className="w-full flex items-center space-x-2 p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg">
+            <button className="w-full flex items-center space-x-2 p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg cursor-pointer">
               <FiFileText size={16} />
               <span>Upload Materials</span>
             </button>
-            <button className="w-full flex items-center space-x-2 p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg">
+            <button className="w-full flex items-center space-x-2 p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg cursor-pointer">
               <FiUsers size={16} />
               <span>Manage Students</span>
             </button>

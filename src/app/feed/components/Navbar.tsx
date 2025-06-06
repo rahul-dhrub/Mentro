@@ -72,13 +72,13 @@ export default function Navbar({
             {!isSidebarVisible && (
               <button
                 onClick={onSidebarToggle}
-                className="lg:hidden p-2 text-gray-600 hover:text-blue-600"
+                className="lg:hidden p-2 text-gray-600 hover:text-blue-600 cursor-pointer"
                 title="Show Sidebar"
               >
                 <FiMenu size={24} />
               </button>
             )}
-            <Link href="/" className="flex items-center space-x-2">
+            <Link href="/" className="flex items-center space-x-2 cursor-pointer">
               <FiBook className="text-blue-600" size={24} />
               <span className="text-xl font-semibold text-gray-900">Mentro</span>
             </Link>
@@ -87,7 +87,7 @@ export default function Navbar({
             {isSearchActive && (
               <button
                 onClick={handleBackToFeed}
-                className="flex items-center space-x-2 px-3 py-1 text-sm text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-full transition-colors"
+                className="flex items-center space-x-2 px-3 py-1 text-sm text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-full transition-colors cursor-pointer"
               >
                 <FiX size={16} />
                 <span>Back to Feed</span>
@@ -97,16 +97,16 @@ export default function Navbar({
 
           {/* Navigation Links */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link href="/courses" className="text-gray-600 hover:text-blue-600">
+            <Link href="/courses" className="text-gray-600 hover:text-blue-600 cursor-pointer">
               Courses
             </Link>
-            <Link href="/schedule" className="text-gray-600 hover:text-blue-600">
+            <Link href="/schedule" className="text-gray-600 hover:text-blue-600 cursor-pointer">
               Schedule
             </Link>
-            <Link href="/students" className="text-gray-600 hover:text-blue-600">
+            <Link href="/students" className="text-gray-600 hover:text-blue-600 cursor-pointer">
               Students
             </Link>
-            <Link href="/resources" className="text-gray-600 hover:text-blue-600">
+            <Link href="/resources" className="text-gray-600 hover:text-blue-600 cursor-pointer">
               Resources
             </Link>
             
@@ -127,7 +127,7 @@ export default function Navbar({
             <div className="relative">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="p-2 text-gray-600 hover:text-blue-600 relative"
+                className="p-2 text-gray-600 hover:text-blue-600 relative cursor-pointer"
               >
                 <FiBell size={20} />
                 {notifications.some(n => n.unread) && (
@@ -144,7 +144,7 @@ export default function Navbar({
                     {notifications.map((notification) => (
                       <div
                         key={notification.id}
-                        className={`px-4 py-3 hover:bg-gray-50 ${
+                        className={`px-4 py-3 hover:bg-gray-50 cursor-pointer ${
                           notification.unread ? 'bg-blue-50' : ''
                         }`}
                       >
@@ -166,7 +166,7 @@ export default function Navbar({
             <div className="relative">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-2 cursor-pointer"
               >
                 <div className="relative w-8 h-8 rounded-full overflow-hidden">
                   <Image
@@ -188,20 +188,20 @@ export default function Navbar({
                   <div className="py-1">
                     <Link
                       href="/profile"
-                      className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50"
+                      className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 cursor-pointer"
                     >
                       <FiUser className="mr-2" size={16} />
                       Profile
                     </Link>
                     <Link
                       href="/settings"
-                      className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50"
+                      className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 cursor-pointer"
                     >
                       <FiSettings className="mr-2" size={16} />
                       Settings
                     </Link>
                     <button
-                      className="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-50"
+                      className="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-50 cursor-pointer"
                     >
                       <FiLogOut className="mr-2" size={16} />
                       Sign Out

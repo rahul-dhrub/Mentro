@@ -80,14 +80,14 @@ export default function Sidebar({ author, stats, socialLinks, onShowPublications
         <h3 className="font-semibold text-gray-900 mb-2">Quick Links</h3>
         <button
           onClick={handleBlogsClick}
-          className="flex items-center text-gray-600 hover:text-blue-600 transition-colors w-full text-left"
+          className="flex items-center text-gray-600 hover:text-blue-600 transition-colors w-full text-left cursor-pointer"
         >
           <FiBookOpen className="mr-2" />
           View All Blogs
         </button>
         <a
           href="#"
-          className="flex items-center text-gray-600 hover:text-blue-600 transition-colors"
+          className="flex items-center text-gray-600 hover:text-blue-600 transition-colors cursor-pointer"
           onClick={(e) => {
             e.preventDefault();
             if (onShowPublications) onShowPublications();
@@ -98,7 +98,7 @@ export default function Sidebar({ author, stats, socialLinks, onShowPublications
         </a>
         <a
           href="#"
-          className="flex items-center text-gray-600 hover:text-blue-600 transition-colors"
+          className="flex items-center text-gray-600 hover:text-blue-600 transition-colors cursor-pointer"
         >
           <FiUsers className="mr-2" />
           Student Projects
@@ -113,7 +113,7 @@ export default function Sidebar({ author, stats, socialLinks, onShowPublications
             {socialLinks.email && (
               <a
                 href={`mailto:${socialLinks.email}`}
-                className="text-gray-400 hover:text-blue-600 transition-colors"
+                className="text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
                 title="Email"
               >
                 <FiMail size={20} />
@@ -124,7 +124,7 @@ export default function Sidebar({ author, stats, socialLinks, onShowPublications
                 href={socialLinks.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-400 hover:text-blue-600 transition-colors"
+                className="text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
                 title="LinkedIn"
               >
                 <FiLinkedin size={20} />
@@ -135,7 +135,7 @@ export default function Sidebar({ author, stats, socialLinks, onShowPublications
                 href={socialLinks.twitter}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-400 hover:text-blue-600 transition-colors"
+                className="text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
                 title="Twitter"
               >
                 <FiTwitter size={20} />

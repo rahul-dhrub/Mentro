@@ -298,7 +298,7 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
                     <button
                       type="button"
                       onClick={() => removeHashtag(tag)}
-                      className="ml-1 text-blue-700 hover:text-blue-900"
+                      className="ml-1 text-blue-700 hover:text-blue-900 cursor-pointer"
                     >
                       <FiX className="w-4 h-4" />
                     </button>
@@ -322,7 +322,7 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
                 <button
                   type="button"
                   onClick={() => imageInputRef.current?.click()}
-                  className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                  className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors cursor-pointer"
                   disabled={isLoading}
                 >
                   <FiImage className="w-5 h-5" />
@@ -331,7 +331,7 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
                 <button
                   type="button"
                   onClick={() => videoInputRef.current?.click()}
-                  className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                  className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors cursor-pointer"
                   disabled={isLoading}
                 >
                   <FiVideo className="w-5 h-5" />
@@ -340,7 +340,7 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                  className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors cursor-pointer"
                   disabled={isLoading}
                 >
                   <FiFile className="w-5 h-5" />
@@ -349,7 +349,7 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
                 <button
                   type="button"
                   onClick={() => setShowHashtagInput(!showHashtagInput)}
-                  className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                  className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors cursor-pointer"
                   disabled={isLoading}
                 >
                   <FiHash className="w-5 h-5" />
@@ -422,7 +422,7 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
                     <button
                       type="button"
                           onClick={() => removeImage(index)}
-                          className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
+                          className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 cursor-pointer"
                           disabled={isLoading}
                     >
                           <FiX className="w-4 h-4" />
@@ -445,7 +445,7 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
                     <button
                       type="button"
                       onClick={removeVideo}
-                      className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
+                      className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 cursor-pointer"
                       disabled={isLoading}
                     >
                       <FiX className="w-4 h-4" />
@@ -466,7 +466,7 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
                     <button
                       type="button"
                         onClick={() => removeFile(index)}
-                        className="p-1.5 text-gray-500 hover:text-red-500 rounded-full hover:bg-red-50"
+                        className="p-1.5 text-gray-500 hover:text-red-500 rounded-full hover:bg-red-50 cursor-pointer"
                         disabled={isLoading}
                     >
                         <FiX className="w-4 h-4" />
@@ -527,7 +527,7 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
               className={`px-6 py-2.5 rounded-full text-white font-medium text-sm transition-colors ${
                 isLoading || !content.trim()
                   ? 'bg-gray-300 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700'
+                  : 'bg-blue-600 hover:bg-blue-700 cursor-pointer'
               }`}
           >
               {isLoading ? 'Posting...' : 'Post'}

@@ -445,7 +445,7 @@ const PublicationsModal: React.FC<PublicationsModalProps> = ({
                             <button
                               type="button"
                               onClick={handleRemoveThumbnail}
-                              className="absolute -top-2 -right-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-full p-1.5 transition-colors shadow-sm border border-white"
+                              className="absolute -top-2 -right-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-full p-1.5 transition-colors shadow-sm border border-white cursor-pointer"
                               title="Remove thumbnail"
                             >
                               <FiX size={14} />
@@ -479,7 +479,7 @@ const PublicationsModal: React.FC<PublicationsModalProps> = ({
                                 };
                                 input.click();
                               }}
-                              className="text-xs text-indigo-600 hover:text-indigo-700 font-medium underline"
+                              className="text-xs text-indigo-600 hover:text-indigo-700 font-medium underline cursor-pointer"
                             >
                               Replace image
                             </button>
@@ -497,7 +497,7 @@ const PublicationsModal: React.FC<PublicationsModalProps> = ({
                       className={`px-4 py-2 rounded-md text-white ${
                         isUploadingThumbnail || isSubmitting
                           ? 'bg-gray-400 cursor-not-allowed'
-                          : 'bg-indigo-600 hover:bg-indigo-700'
+                          : 'bg-indigo-600 hover:bg-indigo-700 cursor-pointer'
                       }`}
                     >
                       {isUploadingThumbnail ? (
@@ -522,7 +522,7 @@ const PublicationsModal: React.FC<PublicationsModalProps> = ({
                         setThumbnailPreview('');
                         setNewPublication(prev => ({ ...prev, thumbnail: '' }));
                       }}
-                      className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md"
+                      className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -566,7 +566,7 @@ const PublicationsModal: React.FC<PublicationsModalProps> = ({
                             href={publication.url} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="text-lg font-medium text-indigo-600 hover:text-indigo-700 flex items-center flex-grow"
+                            className="text-lg font-medium text-indigo-600 hover:text-indigo-700 flex items-center flex-grow cursor-pointer"
                           >
                             {publication.title}
                             <FiExternalLink className="ml-2" size={16} />
@@ -575,7 +575,7 @@ const PublicationsModal: React.FC<PublicationsModalProps> = ({
                           {onDeletePublication && (
                             <button
                               onClick={() => handleDeletePublication(publication.id)}
-                              className="ml-4 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                              className="ml-4 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
                               title="Delete publication"
                             >
                               <FiTrash2 size={16} />

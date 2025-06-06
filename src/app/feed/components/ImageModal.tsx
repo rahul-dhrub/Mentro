@@ -38,10 +38,10 @@ export default function ImageModal({ isOpen, onClose, imageUrl, imageTitle }: Im
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel className="relative max-w-5xl w-full bg-black rounded-lg overflow-hidden">
-                <button
-                  onClick={onClose}
-                  className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10"
-                >
+                        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10 cursor-pointer"
+        >
                   <FiX size={24} />
                 </button>
                 

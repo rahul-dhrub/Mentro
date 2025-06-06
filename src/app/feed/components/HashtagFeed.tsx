@@ -93,14 +93,14 @@ export default function HashtagFeed({
             </div>
           </div>
 
-          <button
-            onClick={handleFollow}
-            className={`px-6 py-2 rounded-full font-semibold transition-colors ${
-              isFollowing
-                ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            }`}
-          >
+                  <button
+          onClick={handleFollow}
+          className={`px-6 py-2 rounded-full font-semibold transition-colors cursor-pointer ${
+            isFollowing
+              ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
+        >
             {isFollowing ? 'Following' : 'Follow'}
           </button>
         </div>
@@ -115,7 +115,7 @@ export default function HashtagFeed({
             .map((relatedHashtag) => (
               <button
                 key={relatedHashtag.id}
-                className="px-3 py-1 bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700 rounded-full text-sm transition-colors"
+                className="px-3 py-1 bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700 rounded-full text-sm transition-colors cursor-pointer"
               >
                 {relatedHashtag.name}
               </button>

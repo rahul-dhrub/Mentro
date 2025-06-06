@@ -116,7 +116,7 @@ export default function RightSidebar({ upcomingClasses, messages: mockMessages }
           {upcomingClasses.map((classItem) => (
             <div
               key={classItem.id}
-              className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors"
+              className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors cursor-pointer"
             >
               <div className="flex items-start justify-between">
                 <div>

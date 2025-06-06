@@ -326,7 +326,7 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
                 {authorEmail && (
                   <button 
                     onClick={() => toggleEmailFilter(authorEmail)}
-                    className="text-xs text-gray-500 hover:text-blue-600"
+                    className="text-xs text-gray-500 hover:text-blue-600 cursor-pointer"
                   >
                     {authorEmail}
                   </button>
@@ -356,7 +356,7 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
             <div className="flex items-center space-x-4 mt-2">
               <button 
                 onClick={() => handleCommentLike(comment.id)}
-                className={`text-sm hover:text-red-600 flex items-center space-x-1 transition-all duration-200 transform hover:scale-105 ${
+                className={`text-sm hover:text-red-600 flex items-center space-x-1 transition-all duration-200 transform hover:scale-105 cursor-pointer ${
                   comment.isLikedByCurrentUser ? 'text-red-500' : 'text-gray-500'
                 }`}
               >
@@ -372,7 +372,7 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
               {depth < maxDepth && (
                 <button 
                   onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-                  className="text-gray-500 text-sm hover:text-blue-600"
+                  className="text-gray-500 text-sm hover:text-blue-600 cursor-pointer"
                 >
                   Reply
                 </button>
@@ -381,7 +381,7 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
               {hasReplies && (
                 <button 
                   onClick={() => toggleReplies(comment.id)}
-                  className="text-gray-500 text-sm hover:text-blue-600 flex items-center space-x-1"
+                  className="text-gray-500 text-sm hover:text-blue-600 flex items-center space-x-1 cursor-pointer"
                 >
                   <span>{showReplies ? 'Hide' : 'Show'} {comment.repliesCount} {comment.repliesCount === 1 ? 'reply' : 'replies'}</span>
                 </button>
@@ -405,7 +405,7 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
                   <button
                     type="button"
                     onClick={() => replyFileInputRef.current?.click()}
-                    className="p-2 text-gray-500 hover:text-blue-600"
+                    className="p-2 text-gray-500 hover:text-blue-600 cursor-pointer"
                     disabled={isSubmittingReply}
                   >
                     <FiImage size={16} />
@@ -413,14 +413,14 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
                   <button
                     type="submit"
                     disabled={(!replyContent.trim() && replyMedia.length === 0) || isSubmittingReply}
-                    className="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
+                    className="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm cursor-pointer"
                   >
                     {isSubmittingReply ? 'Posting...' : 'Reply'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setReplyingTo(null)}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-500 hover:text-gray-700 cursor-pointer"
                     disabled={isSubmittingReply}
                   >
                     <FiX size={16} />
@@ -449,7 +449,7 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
                           />
                           <button
                             onClick={() => setReplyMedia(replyMedia.filter((_, i) => i !== index))}
-                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 text-xs"
+                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 text-xs cursor-pointer"
                           >
                             ×
                           </button>
@@ -529,7 +529,7 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
           <h3 className="text-gray-900 font-semibold text-lg">{post.author.name}</h3>
           <p className="text-gray-600 text-sm">{post.author.title} • {post.author.department}</p>
         </div>
-        <button className="ml-auto text-gray-400 hover:text-gray-600">
+        <button className="ml-auto text-gray-400 hover:text-gray-600 cursor-pointer">
           <FiMoreHorizontal size={20} />
         </button>
       </div>
@@ -566,7 +566,7 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
       <div className="flex items-center space-x-6 border-t border-b border-gray-100 py-3 mb-4">
         <button
           onClick={handlePostLike}
-          className={`flex items-center space-x-2 transition-all duration-200 transform hover:scale-105 ${
+          className={`flex items-center space-x-2 transition-all duration-200 transform hover:scale-105 cursor-pointer ${
             post.isLikedByCurrentUser ? 'text-red-500' : 'text-gray-500'
           } hover:text-red-600`}
         >
@@ -580,12 +580,12 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
         </button>
         <button
           onClick={() => setShowComments(!showComments)}
-          className="flex items-center space-x-2 text-gray-500 hover:text-blue-600"
+          className="flex items-center space-x-2 text-gray-500 hover:text-blue-600 cursor-pointer"
         >
           <FiMessageCircle size={20} />
           <span className="font-medium">{post.comments?.length || 0}</span>
         </button>
-        <button className="flex items-center space-x-2 text-gray-500 hover:text-green-600">
+        <button className="flex items-center space-x-2 text-gray-500 hover:text-green-600 cursor-pointer">
           <FiShare2 size={20} />
           <span className="font-medium">Share</span>
         </button>
@@ -603,7 +603,7 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
                   <span>Showing only: {emailFilter}</span>
                   <button 
                     onClick={() => setEmailFilter(null)}
-                    className="ml-2 text-blue-800 hover:text-blue-600"
+                    className="ml-2 text-blue-800 hover:text-blue-600 cursor-pointer"
                   >
                     <FiX size={16} />
                   </button>
@@ -611,7 +611,7 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
               )}
               <button 
                 onClick={() => toggleEmailFilter(currentUser.email || null)}
-                className={`flex items-center space-x-1 ${emailFilter === currentUser.email ? 'text-blue-600' : 'text-gray-500'} hover:text-blue-600`}
+                className={`flex items-center space-x-1 cursor-pointer ${emailFilter === currentUser.email ? 'text-blue-600' : 'text-gray-500'} hover:text-blue-600`}
               >
                 <FiFilter size={16} />
                 <span className="text-sm">My Comments</span>
@@ -638,7 +638,7 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="p-2 text-gray-500 hover:text-blue-600"
+                className="p-2 text-gray-500 hover:text-blue-600 cursor-pointer"
                 disabled={isUploading || isSubmitting}
               >
                 <FiImage size={20} />
@@ -646,7 +646,7 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
               <button
                 type="button"
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className="p-2 text-gray-500 hover:text-blue-600"
+                className="p-2 text-gray-500 hover:text-blue-600 cursor-pointer"
                 disabled={isSubmitting}
               >
                 <FiSmile size={20} />
@@ -654,7 +654,7 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
               <button
                 type="submit"
                 disabled={(!comment.trim() && commentMedia.length === 0) || isUploading || isSubmitting}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium cursor-pointer"
               >
                 {isSubmitting ? 'Posting...' : isUploading ? 'Uploading...' : 'Comment'}
               </button>
@@ -688,7 +688,7 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
                       />
                       <button
                         onClick={() => setCommentMedia(commentMedia.filter((_, i) => i !== index))}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 cursor-pointer"
                       >
                         ×
                       </button>
