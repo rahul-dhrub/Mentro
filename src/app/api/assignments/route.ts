@@ -1,3 +1,126 @@
+/**
+ * @swagger
+ * /api/assignments:
+ *   get:
+ *     summary: Get assignments
+ *     description: Retrieve all assignments or filter by course/lesson
+ *     tags: [Assignments]
+ *     parameters:
+ *       - in: query
+ *         name: courseId
+ *         schema:
+ *           type: string
+ *         description: Filter assignments by course ID
+ *       - in: query
+ *         name: lessonId
+ *         schema:
+ *           type: string
+ *         description: Filter assignments by lesson ID
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved assignments
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Assignment'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *   post:
+ *     summary: Create a new assignment
+ *     description: Create a new assignment for a course or lesson
+ *     tags: [Assignments]
+ *     security:
+ *       - ClerkAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - dueDate
+ *               - totalMarks
+ *               - courseId
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: Assignment title
+ *                 example: "Chapter 5 Quiz"
+ *               description:
+ *                 type: string
+ *                 description: Assignment description
+ *                 example: "Complete the quiz on data structures"
+ *               content:
+ *                 type: string
+ *                 description: Assignment content/instructions
+ *               dueDate:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Assignment due date
+ *                 example: "2024-12-31T23:59:59Z"
+ *               totalMarks:
+ *                 type: integer
+ *                 minimum: 1
+ *                 description: Total marks for the assignment
+ *                 example: 100
+ *               attachments:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of attachment URLs
+ *               courseId:
+ *                 type: string
+ *                 description: Course ID this assignment belongs to
+ *               lessonId:
+ *                 type: string
+ *                 description: Lesson ID this assignment belongs to (optional)
+ *               isPublished:
+ *                 type: boolean
+ *                 default: false
+ *                 description: Whether the assignment is published
+ *               createdBy:
+ *                 type: string
+ *                 description: ID of the user who created the assignment
+ *     responses:
+ *       201:
+ *         description: Assignment created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Assignment'
+ *       400:
+ *         description: Bad request - Missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Assignment from '@/models/Assignment';
