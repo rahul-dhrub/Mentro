@@ -62,7 +62,7 @@ export default function CourseHeader({ course }: CourseHeaderProps) {
               </div>
               <div className="flex items-center">
                 <FiClock className="mr-1" />
-                <span>Last updated {course.lastUpdated.toLocaleDateString()}</span>
+                <span>Last updated {new Date(course.lastUpdated).toLocaleDateString()}</span>
               </div>
             </div>
             <div className="flex items-center">

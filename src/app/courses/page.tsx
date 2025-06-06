@@ -9,6 +9,7 @@ import CreateCourseModal from './components/CreateCourseModal';
 import Sidebar from './components/Sidebar';
 import MainContent from './components/MainContent';
 import { Course, Category, CourseFilter } from './types';
+import { coursesAPI } from '@/lib/api/courses';
 
 export default function StudentCoursesPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -17,6 +18,10 @@ export default function StudentCoursesPage() {
   const [isCreateCourseModalOpen, setIsCreateCourseModalOpen] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isLoadingRole, setIsLoadingRole] = useState(true);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingCourses, setIsLoadingCourses] = useState(true);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [filters, setFilters] = useState<CourseFilter>({
     level: undefined,
     rating: undefined,
@@ -51,59 +56,87 @@ export default function StudentCoursesPage() {
     fetchUserRole();
   }, [isLoaded, isSignedIn, userId]);
 
-  // Mock categories data
-  const categories: Category[] = [
-    { id: '1', name: 'Development', icon: '💻', courseCount: 120 },
-    { id: '2', name: 'Business', icon: '📊', courseCount: 85 },
-    { id: '3', name: 'Design', icon: '🎨', courseCount: 65 },
-    { id: '4', name: 'Marketing', icon: '📈', courseCount: 45 },
-    { id: '5', name: 'Music', icon: '🎵', courseCount: 30 }
-  ];
+  // Fetch courses from database
+  useEffect(() => {
+    const fetchCourses = async () => {
+      setIsLoadingCourses(true);
+      try {
+        const response = await coursesAPI.getAll({
+          category: selectedCategory || undefined,
+          search: searchQuery || undefined,
+          level: filters.level,
+          isPublished: true // Only show published courses to students
+        });
+        
+        if (response.success && response.data) {
+          setCourses(response.data);
+        } else {
+          console.error('Failed to fetch courses:', response.error);
+          // Keep existing courses if fetch fails
+        }
+      } catch (error) {
+        console.error('Error fetching courses:', error);
+      } finally {
+        setIsLoadingCourses(false);
+      }
+    };
 
-  // Mock courses data
-  const [courses, setCourses] = useState<Course[]>([
-    {
-      id: '1',
-      title: 'Complete Web Development Bootcamp',
-      description: 'Learn web development from scratch. Master HTML, CSS, JavaScript, React, Node.js, and more.',
-      instructor: {
-        name: 'John Doe',
-        image: 'https://observatory.tec.mx/wp-content/uploads/2020/09/maestroprofesorinstructor.jpg',
-        rating: 4.8,
-        reviews: 1250
-      },
-      rating: 4.7,
-      reviews: 2500,
-      students: 15000,
-      price: 49.99,
-      originalPrice: 199.99,
-      thumbnail: 'https://wpassets.brainstation.io/app/uploads/2021/10/24135334/Web-Dev.jpg',
-      category: 'Development',
-      level: 'Beginner',
-      duration: '45 hours',
-      lastUpdated: new Date('2024-03-15'),
-      features: ['Lifetime access', 'Certificate of completion', 'Downloadable resources'],
-      requirements: ['Basic computer knowledge', 'No programming experience needed'],
-      whatYouWillLearn: [
-        'Build responsive websites',
-        'Create web applications',
-        'Deploy to production'
-      ],
-      curriculum: []
-    },
-    // Add more mock courses here...
-  ]);
+    // Debounce search
+    const timeoutId = setTimeout(() => {
+      fetchCourses();
+    }, 300);
 
-  // Filter courses based on search query and filters
+    return () => clearTimeout(timeoutId);
+  }, [selectedCategory, searchQuery, filters.level]);
+
+  // Fetch categories from database
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setIsLoadingCategories(true);
+      try {
+        const response = await coursesAPI.getCategories();
+        
+        if (response.success && response.data) {
+          const formattedCategories: Category[] = response.data.map((cat, index) => ({
+            id: (index + 1).toString(),
+            name: cat.name,
+            icon: cat.icon,
+            courseCount: cat.count
+          }));
+          setCategories(formattedCategories);
+        } else {
+          // Use default categories if API fails
+          setCategories([
+            { id: '1', name: 'Development', icon: '💻', courseCount: 0 },
+            { id: '2', name: 'Business', icon: '📊', courseCount: 0 },
+            { id: '3', name: 'Design', icon: '🎨', courseCount: 0 },
+            { id: '4', name: 'Marketing', icon: '📈', courseCount: 0 },
+            { id: '5', name: 'Music', icon: '🎵', courseCount: 0 }
+          ]);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        // Use default categories if error occurs
+        setCategories([
+          { id: '1', name: 'Development', icon: '💻', courseCount: 0 },
+          { id: '2', name: 'Business', icon: '📊', courseCount: 0 },
+          { id: '3', name: 'Design', icon: '🎨', courseCount: 0 },
+          { id: '4', name: 'Marketing', icon: '📈', courseCount: 0 },
+          { id: '5', name: 'Music', icon: '🎵', courseCount: 0 }
+        ]);
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Filter courses based on local filters (rating, duration)
   const filteredCourses = courses.filter(course => {
-    const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !selectedCategory || course.category === selectedCategory;
-    const matchesLevel = !filters.level || course.level === filters.level;
     const matchesRating = !filters.rating || course.rating >= filters.rating;
     const matchesDuration = !filters.duration || course.duration.includes(filters.duration);
-
-    return matchesSearch && matchesCategory && matchesLevel && matchesRating && matchesDuration;
+    return matchesRating && matchesDuration;
   });
 
   const handleFilterChange = (newFilters: CourseFilter) => {
@@ -118,13 +151,27 @@ export default function StudentCoursesPage() {
     });
   };
 
-  const handleCreateCourse = (courseData: Partial<Course>) => {
-    const newCourse: Course = {
-      ...courseData as Course,
-      id: `${courses.length + 1}`, // Generate a simple ID
-    };
-    
-    setCourses((prevCourses) => [...prevCourses, newCourse]);
+  const handleCreateCourse = async (courseData: Partial<Course>) => {
+    try {
+      // Create course with required code field
+      const courseWithCode = {
+        ...courseData,
+        code: `COURSE_${Date.now()}` // Generate a unique code
+      };
+      
+      const response = await coursesAPI.create(courseWithCode);
+      
+      if (response.success && response.data) {
+        // Add the new course to the local state
+        setCourses(prevCourses => [response.data!, ...prevCourses]);
+        setIsCreateCourseModalOpen(false);
+      } else {
+        console.error('Failed to create course:', response.error);
+        // You might want to show an error message to the user here
+      }
+    } catch (error) {
+      console.error('Error creating course:', error);
+    }
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,6 +230,7 @@ export default function StudentCoursesPage() {
             onSearchChange={handleSearchChange}
             onFilterClick={() => setIsFilterModalOpen(true)}
             filteredCourses={filteredCourses}
+            isLoading={isLoadingCourses}
           />
         </div>
       </div>

@@ -160,7 +160,7 @@ export default function CourseSidebar({ course, isStudent = false }: CourseSideb
           <div className="flex items-center justify-between">
             <span className="text-gray-700">Last Updated</span>
             <span className="font-medium text-gray-900">
-              {course.lastUpdated.toLocaleDateString()}
+              {new Date(course.lastUpdated).toLocaleDateString()}
             </span>
           </div>
         </div>

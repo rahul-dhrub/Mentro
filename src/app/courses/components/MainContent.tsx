@@ -8,13 +8,15 @@ interface MainContentProps {
   onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onFilterClick: () => void;
   filteredCourses: Course[];
+  isLoading?: boolean;
 }
 
 export default function MainContent({ 
   searchQuery, 
   onSearchChange, 
   onFilterClick, 
-  filteredCourses 
+  filteredCourses,
+  isLoading = false
 }: MainContentProps) {
   return (
     <div className="flex-1">
@@ -26,7 +28,7 @@ export default function MainContent({
       />
 
       {/* Course Grid */}
-      <CourseGrid courses={filteredCourses} />
+      <CourseGrid courses={filteredCourses} isLoading={isLoading} />
     </div>
   );
 } 
