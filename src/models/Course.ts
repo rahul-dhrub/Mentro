@@ -14,12 +14,7 @@ export interface ICourse extends Document {
   title: string;
   description: string;
   code: string; // Course code (e.g., CS101)
-  instructor: {
-    name: string;
-    image?: string;
-    rating?: number;
-    reviews?: number;
-  };
+  instructorId: mongoose.Types.ObjectId; // Reference to User
   faculty: IFaculty[]; // Faculty members for this course
   students: mongoose.Types.ObjectId[]; // Array of student IDs
   chapters: mongoose.Types.ObjectId[]; // Array of chapter IDs
@@ -43,13 +38,16 @@ export interface ICourse extends Document {
   
   // Analytics
   totalStudents: number;
-  rating: number;
-  reviews: number;
+  rating: number; // Average rating (calculated from ratings array)
+  ratings: number[]; // Individual ratings (1-5)
+  reviews: number; // Total review count (calculated from reviewIds length)
+  reviewIds: mongoose.Types.ObjectId[]; // Array of review IDs
   
   // Timestamps
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
+  lastUpdated: Date; // Explicit last updated field
 }
 
 const FacultySchema = new Schema<IFaculty>({
@@ -100,22 +98,10 @@ const CourseSchema = new Schema<ICourse>(
       uppercase: true,
       trim: true,
     },
-    instructor: {
-      name: {
-        type: String,
-        required: true,
-      },
-      image: String,
-      rating: {
-        type: Number,
-        default: 0,
-        min: 0,
-        max: 5,
-      },
-      reviews: {
-        type: Number,
-        default: 0,
-      },
+    instructorId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
     },
     faculty: [FacultySchema],
     students: [{
@@ -178,9 +164,22 @@ const CourseSchema = new Schema<ICourse>(
       min: 0,
       max: 5,
     },
+    ratings: [{
+      type: Number,
+      min: 1,
+      max: 5,
+    }],
     reviews: {
       type: Number,
       default: 0,
+    },
+    reviewIds: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Review',
+    }],
+    lastUpdated: {
+      type: Date,
+      default: Date.now,
     },
     createdBy: {
       type: String,
@@ -198,9 +197,25 @@ CourseSchema.index({ category: 1 });
 CourseSchema.index({ isPublished: 1, isActive: 1 });
 CourseSchema.index({ 'faculty.email': 1 });
 
-// Pre-save middleware to update totalStudents
+// Pre-save middleware to update calculated fields
 CourseSchema.pre('save', function(this: ICourse, next) {
+  // Update total students count
   this.totalStudents = this.students.length;
+  
+  // Calculate average rating from ratings array
+  if (this.ratings && this.ratings.length > 0) {
+    const sum = this.ratings.reduce((acc, rating) => acc + rating, 0);
+    this.rating = Math.round((sum / this.ratings.length) * 10) / 10; // Round to 1 decimal place
+  } else {
+    this.rating = 0;
+  }
+  
+  // Update review count from reviewIds array
+  this.reviews = this.reviewIds ? this.reviewIds.length : 0;
+  
+  // Update lastUpdated timestamp
+  this.lastUpdated = new Date();
+  
   next();
 });
 
@@ -233,6 +248,52 @@ CourseSchema.methods.transferOwnership = function(newOwnerEmail: string) {
   }
   
   return this.save();
+};
+
+// Methods for rating and review management
+CourseSchema.methods.addRating = function(rating: number) {
+  if (rating >= 1 && rating <= 5) {
+    this.ratings.push(rating);
+    return this.save();
+  }
+  throw new Error('Rating must be between 1 and 5');
+};
+
+CourseSchema.methods.addReview = function(reviewId: mongoose.Types.ObjectId, rating?: number) {
+  this.reviewIds.push(reviewId);
+  if (rating && rating >= 1 && rating <= 5) {
+    this.ratings.push(rating);
+  }
+  return this.save();
+};
+
+CourseSchema.methods.removeReview = function(reviewId: mongoose.Types.ObjectId, ratingIndex?: number) {
+  this.reviewIds = this.reviewIds.filter((id: mongoose.Types.ObjectId) => !id.equals(reviewId));
+  if (ratingIndex !== undefined && ratingIndex >= 0 && ratingIndex < this.ratings.length) {
+    this.ratings.splice(ratingIndex, 1);
+  }
+  return this.save();
+};
+
+CourseSchema.methods.getRatingStats = function() {
+  if (!this.ratings || this.ratings.length === 0) {
+    return {
+      average: 0,
+      total: 0,
+      distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+    };
+  }
+  
+  const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  this.ratings.forEach((rating: number) => {
+    distribution[rating as keyof typeof distribution]++;
+  });
+  
+  return {
+    average: this.rating,
+    total: this.ratings.length,
+    distribution
+  };
 };
 
 // Clear mongoose model cache if it exists

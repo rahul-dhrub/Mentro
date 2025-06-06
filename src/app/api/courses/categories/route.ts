@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import connectDB from '@/lib/db';
 import Course from '@/models/Course';
 
@@ -7,13 +8,37 @@ export async function GET(request: NextRequest) {
   try {
     await connectDB();
     
+    // Get authentication info
+    const { userId } = await auth();
+    let userRole = 'student'; // Default to student
+    
+    // If user is authenticated, get their role
+    if (userId) {
+      try {
+        const User = (await import('@/models/User')).default;
+        const currentUser = await User.findOne({ clerkId: userId });
+        if (currentUser) {
+          userRole = currentUser.role || 'student';
+        }
+      } catch (error) {
+        console.error('Error fetching user role:', error);
+        // Continue with default student role
+      }
+    }
+    
+    // Build match filter based on user role
+    let matchFilter: any = { isActive: true };
+    
+    // For students, only count published courses
+    // For instructors/admins, count all active courses (published and unpublished)
+    if (userRole === 'student') {
+      matchFilter.isPublished = true;
+    }
+    
     // Aggregate courses by category to get counts
     const categoryCounts = await Course.aggregate([
       { 
-        $match: { 
-          isActive: true,
-          isPublished: true 
-        } 
+        $match: matchFilter
       },
       {
         $group: {

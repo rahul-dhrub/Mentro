@@ -8,6 +8,9 @@ export async function GET(request: NextRequest) {
   try {
     await connectDB();
     
+    // Import User model
+    const User = (await import('@/models/User')).default;
+    
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
     const level = searchParams.get('level');
@@ -41,9 +44,10 @@ export async function GET(request: NextRequest) {
     // Calculate skip for pagination
     const skip = (page - 1) * limit;
     
-    // Fetch courses with pagination
+    // Fetch courses with pagination and populate instructor
     const courses = await Course
       .find(filter)
+      .populate('instructorId', 'name profilePicture title department')
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -52,31 +56,42 @@ export async function GET(request: NextRequest) {
     const totalCourses = await Course.countDocuments(filter);
     
     // Transform courses to match frontend interface
-    const transformedCourses = courses.map(course => ({
-      id: course._id.toString(),
-      title: course.title,
-      description: course.description,
-      instructor: {
-        name: course.instructor.name,
-        image: course.instructor.image || 'https://observatory.tec.mx/wp-content/uploads/2020/09/maestroprofesorinstructor.jpg',
-        rating: course.instructor.rating || 0,
-        reviews: course.instructor.reviews || 0
-      },
-      rating: course.rating,
-      reviews: course.reviews,
-      students: course.totalStudents,
-      price: course.price,
-      originalPrice: course.originalPrice,
-      thumbnail: course.thumbnail || 'https://wpassets.brainstation.io/app/uploads/2021/10/24135334/Web-Dev.jpg',
-      category: course.category,
-      level: course.level,
-      duration: course.duration,
-      lastUpdated: course.updatedAt,
-      features: course.features,
-      requirements: course.requirements,
-      whatYouWillLearn: course.whatYouWillLearn,
-      curriculum: [] // Will be populated from chapters/lessons if needed
-    }));
+    const transformedCourses = courses.map(course => {
+      // Use populated instructor data
+      const instructorData = course.instructorId ? {
+        name: (course.instructorId as any).name || 'Unknown Instructor',
+        image: (course.instructorId as any).profilePicture || 'https://observatory.tec.mx/wp-content/uploads/2020/09/maestroprofesorinstructor.jpg',
+        rating: 0, // This could be calculated from course reviews
+        reviews: 0 // This could be calculated from course reviews
+      } : {
+        name: 'Unknown Instructor',
+        image: 'https://observatory.tec.mx/wp-content/uploads/2020/09/maestroprofesorinstructor.jpg',
+        rating: 0,
+        reviews: 0
+      };
+
+      return {
+        id: course._id.toString(),
+        title: course.title,
+        description: course.description,
+        instructor: instructorData,
+        rating: course.rating,
+        reviews: course.reviews,
+        students: course.totalStudents,
+        price: course.price,
+        originalPrice: course.originalPrice,
+        thumbnail: course.thumbnail || 'https://wpassets.brainstation.io/app/uploads/2021/10/24135334/Web-Dev.jpg',
+        category: course.category,
+        level: course.level,
+        duration: course.duration,
+        lastUpdated: course.lastUpdated || course.updatedAt,
+        features: course.features,
+        requirements: course.requirements,
+        whatYouWillLearn: course.whatYouWillLearn,
+        isPublished: course.isPublished,
+        curriculum: [] // Will be populated from chapters/lessons if needed
+      };
+    });
     
     return NextResponse.json({
       success: true,
@@ -110,12 +125,23 @@ export async function POST(request: NextRequest) {
     
     await connectDB();
     
+    // Import User model
+    const User = (await import('@/models/User')).default;
+    
+    // Fetch current user details
+    const currentUser = await User.findOne({ clerkId: userId });
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+    
     const body = await request.json();
     const {
       title,
       description,
       code,
-      instructor,
       category,
       level,
       duration,
@@ -149,13 +175,6 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    if (!instructor || !instructor.name) {
-      return NextResponse.json(
-        { success: false, error: 'Instructor information is required' },
-        { status: 400 }
-      );
-    }
-    
     // Check if course code already exists
     const existingCourse = await Course.findOne({ code: code.toUpperCase() });
     if (existingCourse) {
@@ -165,17 +184,12 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Create new course
+    // Create new course with instructor information from current user
     const newCourse = new Course({
       title: title.trim(),
       description: description || '',
       code: code.toUpperCase().trim(),
-      instructor: {
-        name: instructor.name,
-        image: instructor.image || 'https://observatory.tec.mx/wp-content/uploads/2020/09/maestroprofesorinstructor.jpg',
-        rating: instructor.rating || 0,
-        reviews: instructor.reviews || 0
-      },
+      instructorId: currentUser._id,
       category,
       level: level || 'Beginner',
       duration: duration || '',
@@ -190,17 +204,29 @@ export async function POST(request: NextRequest) {
       createdBy: userId,
       faculty: [],
       students: [],
-      chapters: []
+      chapters: [],
+      // Initialize new rating and review fields
+      ratings: [],
+      reviewIds: [],
+      lastUpdated: new Date()
     });
     
     await newCourse.save();
+    
+    // Add the course to the instructor's ownedCourseIds
+    await currentUser.addOwnedCourse(newCourse._id);
     
     // Transform response to match frontend interface
     const transformedCourse = {
       id: newCourse._id.toString(),
       title: newCourse.title,
       description: newCourse.description,
-      instructor: newCourse.instructor,
+      instructor: {
+        name: currentUser.name,
+        image: currentUser.profilePicture || 'https://observatory.tec.mx/wp-content/uploads/2020/09/maestroprofesorinstructor.jpg',
+        rating: 0,
+        reviews: 0
+      },
       rating: newCourse.rating,
       reviews: newCourse.reviews,
       students: newCourse.totalStudents,
@@ -210,10 +236,11 @@ export async function POST(request: NextRequest) {
       category: newCourse.category,
       level: newCourse.level,
       duration: newCourse.duration,
-      lastUpdated: newCourse.updatedAt,
+      lastUpdated: newCourse.lastUpdated || newCourse.updatedAt,
       features: newCourse.features,
       requirements: newCourse.requirements,
       whatYouWillLearn: newCourse.whatYouWillLearn,
+      isPublished: newCourse.isPublished,
       curriculum: []
     };
     

@@ -66,6 +66,9 @@ commentSchema.virtual('author', {
   justOne: true
 });
 
-const Comment = mongoose.models.Comment || mongoose.model<IComment>('Comment', commentSchema);
+// Clear mongoose model cache if it exists to avoid conflicts
+delete mongoose.models.Comment;
+
+const Comment = mongoose.model<IComment>('Comment', commentSchema);
 
 export default Comment; 

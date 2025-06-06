@@ -3,7 +3,7 @@ import { Category } from '../types';
 interface CategorySidebarProps {
   categories: Category[];
   selectedCategory: string | null;
-  onCategorySelect: (categoryId: string) => void;
+  onCategorySelect: (categoryId: string | null) => void;
 }
 
 export default function CategorySidebar({ categories, selectedCategory, onCategorySelect }: CategorySidebarProps) {
@@ -12,6 +12,21 @@ export default function CategorySidebar({ categories, selectedCategory, onCatego
       <div className="bg-white rounded-lg border border-gray-200 p-4">
         <h2 className="text-lg font-bold text-gray-900 mb-4">Categories</h2>
         <div className="space-y-2">
+          {/* All Categories option */}
+          <button
+            onClick={() => onCategorySelect(null)}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors duration-200 cursor-pointer ${
+              !selectedCategory
+                ? 'bg-blue-50 text-blue-800 font-medium'
+                : 'text-gray-800 hover:bg-gray-50'
+            }`}
+          >
+            <div className="flex items-center">
+              <span className="text-lg mr-3">📚</span>
+              <span>All Categories</span>
+            </div>
+          </button>
+          
           {categories.map((category) => (
             <button
               key={category.id}

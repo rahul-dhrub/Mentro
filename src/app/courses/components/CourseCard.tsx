@@ -61,6 +61,14 @@ export default function CourseCard({ course }: CourseCardProps) {
             alt={course.title}
             className="w-full h-full object-cover"
           />
+          
+          {/* Unpublished Badge */}
+          {course.isPublished === false && (
+            <div className="absolute top-3 left-3 bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-medium z-10">
+              Draft
+            </div>
+          )}
+          
           <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
             <span className="bg-white text-gray-900 px-4 py-2 rounded-full font-medium">
               View Course
@@ -114,7 +122,9 @@ export default function CourseCard({ course }: CourseCardProps) {
       </Link>
 
       {/* Wishlist Button - Top Left */}
-      <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+      <div className={`absolute top-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
+        course.isPublished === false ? 'left-20' : 'left-4'
+      }`}>
         <button
           onClick={handleWishlistToggle}
           className={`p-2 rounded-full shadow-lg transition-colors cursor-pointer ${

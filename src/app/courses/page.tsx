@@ -61,11 +61,19 @@ export default function StudentCoursesPage() {
     const fetchCourses = async () => {
       setIsLoadingCourses(true);
       try {
+        // Convert selectedCategory ID to category name
+        let categoryName: string | undefined = undefined;
+        if (selectedCategory) {
+          const selectedCat = categories.find(cat => cat.id === selectedCategory);
+          categoryName = selectedCat?.name;
+        }
+        
         const response = await coursesAPI.getAll({
-          category: selectedCategory || undefined,
+          category: categoryName,
           search: searchQuery || undefined,
           level: filters.level,
-          isPublished: true // Only show published courses to students
+          // Only filter by isPublished for students
+          isPublished: userRole === 'student' ? true : undefined
         });
         
         if (response.success && response.data) {
@@ -81,13 +89,16 @@ export default function StudentCoursesPage() {
       }
     };
 
-    // Debounce search
-    const timeoutId = setTimeout(() => {
-      fetchCourses();
-    }, 300);
+    // Only fetch if userRole is determined
+    if (userRole !== null) {
+      // Debounce search
+      const timeoutId = setTimeout(() => {
+        fetchCourses();
+      }, 300);
 
-    return () => clearTimeout(timeoutId);
-  }, [selectedCategory, searchQuery, filters.level]);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedCategory, searchQuery, filters.level, userRole, categories]);
 
   // Fetch categories from database
   useEffect(() => {
@@ -151,27 +162,30 @@ export default function StudentCoursesPage() {
     });
   };
 
-  const handleCreateCourse = async (courseData: Partial<Course>) => {
-    try {
-      // Create course with required code field
-      const courseWithCode = {
-        ...courseData,
-        code: `COURSE_${Date.now()}` // Generate a unique code
-      };
-      
-      const response = await coursesAPI.create(courseWithCode);
-      
-      if (response.success && response.data) {
-        // Add the new course to the local state
-        setCourses(prevCourses => [response.data!, ...prevCourses]);
-        setIsCreateCourseModalOpen(false);
-      } else {
-        console.error('Failed to create course:', response.error);
-        // You might want to show an error message to the user here
+  const handleCreateCourse = (newCourse: Course) => {
+    // The course has already been created in the database by the modal
+    // Just add it to the local state and refresh categories
+    setCourses(prevCourses => [newCourse, ...prevCourses]);
+    
+    // Refresh categories to update the course count
+    const refreshCategories = async () => {
+      try {
+        const response = await coursesAPI.getCategories();
+        if (response.success && response.data) {
+          const formattedCategories: Category[] = response.data.map((cat, index) => ({
+            id: (index + 1).toString(),
+            name: cat.name,
+            icon: cat.icon,
+            courseCount: cat.count
+          }));
+          setCategories(formattedCategories);
+        }
+      } catch (error) {
+        console.error('Error refreshing categories:', error);
       }
-    } catch (error) {
-      console.error('Error creating course:', error);
-    }
+    };
+    
+    refreshCategories();
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {

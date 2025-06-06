@@ -11,6 +11,18 @@ export interface IUser extends mongoose.Document {
   role: 'admin' | 'instructor' | 'student';
   isOnline: boolean;
   lastActive: Date;
+  
+  // User activity and relationships
+  ratings: number[]; // Array of ratings given/received by this user
+  reviewIds: mongoose.Types.ObjectId[]; // Array of review IDs associated with this user
+  ownedCourseIds: mongoose.Types.ObjectId[]; // Array of course IDs owned by this user (for instructors)
+  enrolledCourseIds: mongoose.Types.ObjectId[]; // Array of course IDs user is enrolled in (for students)
+  
+  // User statistics
+  averageRating: number; // Average rating as an instructor
+  totalReviews: number; // Total number of reviews received as instructor
+  totalStudents: number; // Total students across all owned courses
+  
   createdAt: Date;
   updatedAt: Date;
 }
@@ -66,11 +78,125 @@ const userSchema = new mongoose.Schema<IUser>(
       type: Date,
       default: Date.now,
     },
+    
+    // User activity and relationships
+    ratings: [{
+      type: Number,
+      min: 1,
+      max: 5,
+    }],
+    reviewIds: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Review',
+    }],
+    ownedCourseIds: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Course',
+    }],
+    enrolledCourseIds: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Course',
+    }],
+    
+    // User statistics
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
+    totalReviews: {
+      type: Number,
+      default: 0,
+    },
+    totalStudents: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// Indexes for better performance
+userSchema.index({ clerkId: 1 });
+userSchema.index({ email: 1 });
+userSchema.index({ role: 1 });
+userSchema.index({ ownedCourseIds: 1 });
+userSchema.index({ enrolledCourseIds: 1 });
+
+// Pre-save middleware to calculate statistics
+userSchema.pre('save', function(this: IUser, next) {
+  // Calculate average rating
+  if (this.ratings.length > 0) {
+    const sum = this.ratings.reduce((acc, rating) => acc + rating, 0);
+    this.averageRating = sum / this.ratings.length;
+  } else {
+    this.averageRating = 0;
+  }
+  
+  // Set total reviews count
+  this.totalReviews = this.reviewIds.length;
+  
+  next();
+});
+
+// Instance methods
+userSchema.methods.addRating = function(rating: number) {
+  if (rating >= 1 && rating <= 5) {
+    this.ratings.push(rating);
+    return this.save();
+  }
+  throw new Error('Rating must be between 1 and 5');
+};
+
+userSchema.methods.addReview = function(reviewId: mongoose.Types.ObjectId) {
+  if (!this.reviewIds.includes(reviewId)) {
+    this.reviewIds.push(reviewId);
+    return this.save();
+  }
+  return this;
+};
+
+userSchema.methods.addOwnedCourse = function(courseId: mongoose.Types.ObjectId) {
+  if (!this.ownedCourseIds.includes(courseId)) {
+    this.ownedCourseIds.push(courseId);
+    return this.save();
+  }
+  return this;
+};
+
+userSchema.methods.removeOwnedCourse = function(courseId: mongoose.Types.ObjectId) {
+  this.ownedCourseIds = this.ownedCourseIds.filter((id: mongoose.Types.ObjectId) => !id.equals(courseId));
+  return this.save();
+};
+
+userSchema.methods.enrollInCourse = function(courseId: mongoose.Types.ObjectId) {
+  if (!this.enrolledCourseIds.includes(courseId)) {
+    this.enrolledCourseIds.push(courseId);
+    return this.save();
+  }
+  return this;
+};
+
+userSchema.methods.unenrollFromCourse = function(courseId: mongoose.Types.ObjectId) {
+  this.enrolledCourseIds = this.enrolledCourseIds.filter((id: mongoose.Types.ObjectId) => !id.equals(courseId));
+  return this.save();
+};
+
+userSchema.methods.updateTotalStudents = async function() {
+  if (this.role === 'instructor') {
+    const Course = mongoose.model('Course');
+    const courses = await Course.find({ instructorId: this._id });
+    this.totalStudents = courses.reduce((total, course) => total + course.totalStudents, 0);
+    return this.save();
+  }
+  return this;
+};
+
+// Clear mongoose model cache if it exists
+delete mongoose.models.User;
 
 const User = mongoose.models.User || mongoose.model<IUser>('User', userSchema);
 

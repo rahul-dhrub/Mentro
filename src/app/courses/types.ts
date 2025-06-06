@@ -21,6 +21,7 @@ export interface Course {
   features: string[];
   requirements: string[];
   whatYouWillLearn: string[];
+  isPublished?: boolean;
   curriculum: {
     title: string;
     lectures: number;
