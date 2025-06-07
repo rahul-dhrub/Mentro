@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FiMapPin, FiUsers, FiEdit, FiCalendar, FiBook, FiAward, FiFileText, FiUserPlus } from 'react-icons/fi';
+import { FiMapPin, FiUsers, FiEdit, FiCalendar, FiBook, FiAward, FiFileText, FiUserPlus, FiStar } from 'react-icons/fi';
 import { Author, Post, UserProfile as UserProfileType, Blog } from '../types';
 import { mockAuthors, mockPosts, mockPublications } from '../mockData';
 import PostCard from './PostCard';
+import RatingModal from './RatingModal';
 
 interface UserProfileProps {
   userId: string;
@@ -25,6 +26,7 @@ export default function UserProfile({
   const [activeTab, setActiveTab] = useState<'posts' | 'publications' | 'blogs' | 'about'>('posts');
   const [isLoading, setIsLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
 
   // Fetch user profile data
   useEffect(() => {
@@ -165,7 +167,7 @@ export default function UserProfile({
             )}
 
             {/* Stats */}
-            <div className="flex justify-center md:justify-start space-x-6">
+            <div className="flex justify-center md:justify-start space-x-6 items-start">
               <div className="text-center">
                 <div className="flex items-center justify-center mb-1">
                   <FiEdit className="w-4 h-4 text-gray-600 mr-1" />
@@ -186,6 +188,17 @@ export default function UserProfile({
                   <div className="text-xl font-bold text-gray-900">{userProfile.following}</div>
                 </div>
                 <div className="text-sm text-gray-500">Following</div>
+              </div>
+              <div 
+                className="text-center cursor-pointer hover:bg-gray-50 rounded-lg transition-colors px-1"
+                onClick={() => setIsRatingModalOpen(true)}
+                title="View ratings and reviews"
+              >
+                <div className="flex items-center justify-center mb-1">
+                  <FiStar className="w-4 h-4 text-yellow-500 mr-1" />
+                  <div className="text-xl font-bold text-gray-900">4.8</div>
+                </div>
+                <div className="text-sm text-gray-500">Rating</div>
               </div>
             </div>
           </div>
@@ -349,6 +362,19 @@ export default function UserProfile({
           </div>
         )}
       </div>
+
+      {/* Rating Modal */}
+      <RatingModal
+        isOpen={isRatingModalOpen}
+        onClose={() => setIsRatingModalOpen(false)}
+        userId={userProfile.id}
+        userName={userProfile.name}
+        currentUser={{
+          id: currentUser.id,
+          name: currentUser.name,
+          avatar: currentUser.avatar
+        }}
+      />
     </div>
   );
 } 
