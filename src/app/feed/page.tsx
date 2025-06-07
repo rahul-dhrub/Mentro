@@ -589,6 +589,7 @@ export default function FeedPage() {
           onLike={handleLike}
           onComment={handleComment}
           onShare={handleShare}
+          onUserSelect={handleUserSelect}
         />
       );
     }
@@ -612,6 +613,7 @@ export default function FeedPage() {
               onLike={handleLike}
               onComment={handleComment}
               onShare={handleShare}
+              onUserSelect={handleUserSelect}
             />
           ))}
           

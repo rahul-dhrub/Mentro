@@ -14,11 +14,12 @@ interface PostCardProps {
   onComment: (postId: string, comment: string, media?: Media[]) => void;
   onShare: (postId: string) => void;
   currentUser: Author;
+  onUserSelect?: (userId: string) => void;
 }
 
 const defaultAvatar = 'https://api.dicebear.com/7.x/avataaars/svg?seed=default';
 
-export default function PostCard({ post, onLike, onComment, onShare, currentUser }: PostCardProps) {
+export default function PostCard({ post, onLike, onComment, onShare, currentUser, onUserSelect }: PostCardProps) {
   const [comment, setComment] = useState('');
   const [showComments, setShowComments] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -308,10 +309,19 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
     const leftPadding = depth > 0 ? `pl-${Math.min(depth * 8, 32)}` : '';
     const maxDepth = 4; // Limit visual nesting to prevent too much indentation
 
+    const handleCommentUserClick = () => {
+      if (onUserSelect && comment.author?.id) {
+        onUserSelect(comment.author.id);
+      }
+    };
+
     return (
       <div key={comment.id} className={`${depth > 0 ? 'border-l-2 border-gray-100 ml-4' : ''}`}>
         <div className={`flex space-x-3 ${depth > 0 ? 'ml-4 mt-3' : 'mt-4'}`}>
-          <div className="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+          <div 
+            className="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={handleCommentUserClick}
+          >
             <Image
               src={authorAvatar}
               alt={authorName}
@@ -322,7 +332,12 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
           <div className="flex-1">
             <div className="bg-gray-50 rounded-lg p-3">
               <div className="flex items-center justify-between">
-                <p className="text-gray-900 font-medium text-sm">{authorName}</p>
+                <p 
+                  className="text-gray-900 font-medium text-sm cursor-pointer hover:text-blue-600 transition-colors"
+                  onClick={handleCommentUserClick}
+                >
+                  {authorName}
+                </p>
                 {authorEmail && (
                   <button 
                     onClick={() => toggleEmailFilter(authorEmail)}
@@ -513,11 +528,20 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
     }
   };
 
+  const handleUserClick = () => {
+    if (onUserSelect) {
+      onUserSelect(post.author.id);
+    }
+  };
+
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm p-4 mb-6">
       {/* Author Info */}
       <div className="flex items-center mb-4">
-        <div className="relative w-12 h-12 rounded-full overflow-hidden">
+        <div 
+          className="relative w-12 h-12 rounded-full overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={handleUserClick}
+        >
           <Image
             src={post.author.avatar}
             alt={post.author.name}
@@ -526,7 +550,12 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
           />
         </div>
         <div className="ml-3">
-          <h3 className="text-gray-900 font-semibold text-lg">{post.author.name}</h3>
+          <h3 
+            className="text-gray-900 font-semibold text-lg cursor-pointer hover:text-blue-600 transition-colors"
+            onClick={handleUserClick}
+          >
+            {post.author.name}
+          </h3>
           <p className="text-gray-600 text-sm">{post.author.title} • {post.author.department}</p>
         </div>
         <button className="ml-auto text-gray-400 hover:text-gray-600 cursor-pointer">

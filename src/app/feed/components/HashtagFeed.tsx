@@ -12,6 +12,7 @@ interface HashtagFeedProps {
   onLike: (postId: string) => void;
   onComment: (postId: string, content: string) => void;
   onShare: (postId: string) => void;
+  onUserSelect?: (userId: string) => void;
 }
 
 export default function HashtagFeed({ 
@@ -19,7 +20,8 @@ export default function HashtagFeed({
   currentUser, 
   onLike, 
   onComment, 
-  onShare 
+  onShare,
+  onUserSelect
 }: HashtagFeedProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -133,6 +135,7 @@ export default function HashtagFeed({
               onLike={onLike}
               onComment={onComment}
               onShare={onShare}
+              onUserSelect={onUserSelect}
             />
           ))
         ) : (

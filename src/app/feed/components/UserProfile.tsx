@@ -440,6 +440,7 @@ export default function UserProfile({
                   onLike={onLike}
                   onComment={onComment}
                   onShare={onShare}
+                  onUserSelect={onUserSelect}
                 />
               ))
             ) : (
