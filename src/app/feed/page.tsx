@@ -614,6 +614,7 @@ export default function FeedPage() {
               onComment={handleComment}
               onShare={handleShare}
               onUserSelect={handleUserSelect}
+              onHashtagSelect={handleHashtagSelect}
             />
           ))}
           

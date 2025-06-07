@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { FiHeart, FiMessageCircle, FiShare2, FiMoreHorizontal, FiImage, FiSmile, FiFilter, FiX } from 'react-icons/fi';
+import { FiHeart, FiMessageCircle, FiShare2, FiMoreHorizontal, FiImage, FiSmile, FiFilter, FiX, FiHash } from 'react-icons/fi';
 import { Post, Author, Media, Comment } from '../types';
 import MediaPreview from './MediaPreview';
 import EmojiPicker from 'emoji-picker-react';
@@ -15,11 +15,21 @@ interface PostCardProps {
   onShare: (postId: string) => void;
   currentUser: Author;
   onUserSelect?: (userId: string) => void;
+  onHashtagSelect?: (hashtag: string) => void;
+}
+
+interface PostHashtag {
+  id: string;
+  name: string;
+  followers: number;
+  posts: number;
+  category: string;
+  description: string;
 }
 
 const defaultAvatar = 'https://api.dicebear.com/7.x/avataaars/svg?seed=default';
 
-export default function PostCard({ post, onLike, onComment, onShare, currentUser, onUserSelect }: PostCardProps) {
+export default function PostCard({ post, onLike, onComment, onShare, currentUser, onUserSelect, onHashtagSelect }: PostCardProps) {
   const [comment, setComment] = useState('');
   const [showComments, setShowComments] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -35,6 +45,8 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
   const [replyMedia, setReplyMedia] = useState<Media[]>([]);
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
+  const [hashtags, setHashtags] = useState<PostHashtag[]>([]);
+  const [isLoadingHashtags, setIsLoadingHashtags] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const replyFileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -60,6 +72,59 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
       fetchComments();
     }
   }, [showComments, emailFilter]);
+
+  // Fetch hashtags when component mounts
+  useEffect(() => {
+    fetchHashtags();
+  }, [post.id]);
+
+  const fetchHashtags = async () => {
+    // Check if the post.id is a valid MongoDB ObjectId (24 hex characters)
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(post.id);
+    
+    if (!isValidObjectId) {
+      // For mock data posts, use the tags from post.tags if available
+      if (post.tags && post.tags.length > 0) {
+        const mockHashtags = post.tags.map((tag, index) => ({
+          id: `mock-${index}`,
+          name: tag,
+          followers: 0,
+          posts: 0,
+          category: 'general',
+          description: ''
+        }));
+        setHashtags(mockHashtags);
+      }
+      return;
+    }
+
+    setIsLoadingHashtags(true);
+    try {
+      const response = await fetch(`/api/posts/${post.id}/hashtags`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch hashtags');
+      }
+
+      const data = await response.json();
+      setHashtags(data.hashtags);
+    } catch (error) {
+      console.error('Error fetching hashtags:', error);
+      // Fallback to post.tags if API fails
+      if (post.tags && post.tags.length > 0) {
+        const fallbackHashtags = post.tags.map((tag, index) => ({
+          id: `fallback-${index}`,
+          name: tag,
+          followers: 0,
+          posts: 0,
+          category: 'general',
+          description: ''
+        }));
+        setHashtags(fallbackHashtags);
+      }
+    } finally {
+      setIsLoadingHashtags(false);
+    }
+  };
 
   const fetchComments = async () => {
     if (!showComments) return;
@@ -577,13 +642,30 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
         </div>
       )}
 
-      {/* Tags */}
-      {post.tags && post.tags.length > 0 && (
+      {/* Database Hashtags */}
+      {hashtags && hashtags.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {hashtags.map((hashtag) => (
+            <button
+              key={hashtag.id}
+              onClick={() => onHashtagSelect && onHashtagSelect(hashtag.name)}
+              className="bg-blue-100 text-blue-800 hover:bg-blue-200 px-3 py-1 rounded-full text-sm font-medium transition-colors cursor-pointer flex items-center space-x-1"
+            >
+              <FiHash size={12} />
+              <span>{hashtag.name.replace('#', '')}</span>
+              <span className="text-xs opacity-70">({hashtag.posts})</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Fallback to Tags if no hashtags loaded */}
+      {(!hashtags || hashtags.length === 0) && post.tags && post.tags.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
           {post.tags.map((tag) => (
             <span
               key={tag}
-              className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
+              className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm font-medium"
             >
               {tag}
             </span>

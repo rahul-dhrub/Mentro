@@ -135,6 +135,7 @@ import connectDB from '@/lib/db';
 import Post from '@/models/Post';
 import User from '@/models/User';
 import Comment from '@/models/Comment';
+import Hashtag from '@/models/Hashtag';
 import { bunnyClient } from '@/lib/bunny';
 import { mockPosts } from '@/app/feed/mockData';
 import mongoose from 'mongoose';
@@ -436,14 +437,25 @@ export async function POST(request: NextRequest) {
     const files = formData.getAll('files') as File[];
     const video = formData.get('video') as File | null;
     const mediaDataStr = formData.get('media') as string;
+    const hashtagsStr = formData.get('hashtags') as string;
 
     console.log('Received form data:', {
       content,
       imagesCount: images.length,
       filesCount: files.length,
       hasVideo: !!video,
-      mediaDataStr
+      mediaDataStr,
+      hashtagsStr
     });
+
+    // Parse hashtags from client
+    let hashtags: string[] = [];
+    try {
+      hashtags = JSON.parse(hashtagsStr || '[]');
+      console.log('Parsed hashtags:', hashtags);
+    } catch (e) {
+      console.error('Error parsing hashtags:', e);
+    }
 
     // Parse media data from client
     let clientMediaData = [];
@@ -583,22 +595,80 @@ export async function POST(request: NextRequest) {
             throw new Error('Some media items are missing URLs');
           }
 
+          // Process hashtags and create/update hashtag records
+          const processedHashtags = await Promise.all(
+            hashtags.map(async (hashtagName: string) => {
+              const normalizedName = hashtagName.toLowerCase().trim();
+              
+              // Find existing hashtag or create new one
+              let hashtag = await Hashtag.findOne({ name: normalizedName });
+              
+              if (!hashtag) {
+                // Create new hashtag
+                hashtag = await Hashtag.create({
+                  name: normalizedName,
+                  description: `Hashtag for ${normalizedName}`,
+                  posts: 0,
+                  followers: 0,
+                  category: 'general',
+                  createdBy: dbUser._id
+                });
+                console.log('Created new hashtag:', hashtag.name);
+              }
+              
+              return hashtag._id;
+            })
+          );
+
+          console.log('Processed hashtags:', processedHashtags);
+
           const post = await Post.create({
             userId: dbUser._id,
             content,
-            media: mediaArray
+            media: mediaArray,
+            hashtags: processedHashtags
           });
 
-          console.log('Created post:', post.toObject());
+          // Add post ID to each hashtag's postIds array and update count
+          await Promise.all(
+            processedHashtags.map(async (hashtagId) => {
+              const hashtag = await Hashtag.findById(hashtagId);
+              if (hashtag) {
+                await hashtag.addPost(post._id);
+              }
+            })
+          );
+
+          console.log('Created post with hashtags and updated hashtag post lists:', post.toObject());
 
           // Fetch the created post with author information
-          const populatedPost = await Post.findById(post._id).populate({
-            path: 'userId',
-            model: User,
-            select: 'name email profilePicture',
-          });
+          const populatedPost = await Post.findById(post._id)
+            .populate({
+              path: 'userId',
+              model: User,
+              select: 'name email profilePicture',
+            });
+
+          // Try to populate hashtags separately to handle potential schema issues
+          let populatedHashtags = [];
+          try {
+            await populatedPost.populate({
+              path: 'hashtags',
+              model: Hashtag,
+              select: 'name followers posts',
+            });
+            populatedHashtags = populatedPost.hashtags || [];
+          } catch (hashtagError) {
+            console.warn('Could not populate hashtags:', hashtagError);
+            // Fetch hashtags manually if population fails
+            if (post.hashtags && post.hashtags.length > 0) {
+              populatedHashtags = await Hashtag.find({ _id: { $in: post.hashtags } })
+                .select('name followers posts');
+            }
+          }
 
           console.log('Populated post:', populatedPost.toObject());
+          console.log('Populated hashtags:', populatedHashtags);
 
           // Format the response
           postResponse = {
@@ -609,7 +679,9 @@ export async function POST(request: NextRequest) {
               email: dbUser.email,
               avatar: dbUser.profilePicture,
             },
-            media: mediaArray // Explicitly include media array in response
+            media: mediaArray, // Explicitly include media array in response
+            tags: populatedHashtags?.map((hashtag: any) => hashtag.name) || [], // Add hashtag names as tags
+            hashtags: populatedHashtags // Include full hashtag objects
           };
 
           console.log('Final post response:', postResponse);

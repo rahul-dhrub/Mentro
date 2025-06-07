@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, FormEvent, ChangeEvent, useRef, KeyboardEvent } from 'react';
-import { FiImage, FiVideo, FiFile, FiX, FiHash, FiUser } from 'react-icons/fi';
+import { useState, FormEvent, ChangeEvent, useRef, KeyboardEvent, useEffect } from 'react';
+import { FiImage, FiVideo, FiFile, FiX, FiHash, FiUser, FiUsers } from 'react-icons/fi';
 import { Post, Media, Author } from '../types';
 
 interface CreatePostProps {
@@ -17,6 +17,12 @@ interface UploadProgress {
   type: 'image' | 'video' | 'file';
 }
 
+interface HashtagSuggestion {
+  name: string;
+  followerCount: number;
+  postCount: number;
+}
+
 export default function CreatePost({ currentUser, onPostCreate, onTogglePersonalPosts, isPersonalPosts = false }: CreatePostProps) {
   const [content, setContent] = useState('');
   const [hashtags, setHashtags] = useState<string[]>([]);
@@ -30,12 +36,73 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string>('');
   const [showHashtagInput, setShowHashtagInput] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
+  const [hashtagSuggestions, setHashtagSuggestions] = useState<HashtagSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
 
   // Refs for file inputs
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const hashtagInputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Fetch hashtag suggestions
+  const fetchHashtagSuggestions = async (query: string) => {
+    if (!query.trim()) {
+      setHashtagSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/hashtags/search?q=${encodeURIComponent(query)}&limit=10`);
+      if (response.ok) {
+        const data = await response.json();
+        setHashtagSuggestions(data.hashtags || []);
+        setShowSuggestions(true);
+        setSelectedSuggestionIndex(-1);
+      }
+    } catch (error) {
+      console.error('Error fetching hashtag suggestions:', error);
+      // Fallback to mock suggestions for development
+      const mockSuggestions: HashtagSuggestion[] = [
+        { name: `#${query}research`, followerCount: 245, postCount: 89 },
+        { name: `#${query}science`, followerCount: 156, postCount: 67 },
+        { name: `#${query}education`, followerCount: 198, postCount: 43 },
+        { name: `#${query}technology`, followerCount: 302, postCount: 125 },
+        { name: `#${query}innovation`, followerCount: 89, postCount: 34 }
+      ].filter(suggestion => 
+        suggestion.name.toLowerCase().includes(query.toLowerCase()) &&
+        !hashtags.includes(suggestion.name)
+      );
+      setHashtagSuggestions(mockSuggestions.slice(0, 5));
+      setShowSuggestions(mockSuggestions.length > 0);
+      setSelectedSuggestionIndex(-1);
+    }
+  };
+
+  // Handle hashtag input changes
+  const handleHashtagInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/^#/, '');
+    setHashtagInput(value);
+    fetchHashtagSuggestions(value);
+  };
+
+  // Handle clicking outside suggestions
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+        setSelectedSuggestionIndex(-1);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -91,7 +158,7 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
       // Add media data to form
       formData.append('media', JSON.stringify(mediaData));
 
-      console.log('Sending media data:', { content, mediaData });
+      console.log('Sending media data:', { content, mediaData, hashtags });
 
       const response = await fetch('/api/posts', {
         method: 'POST',
@@ -139,7 +206,12 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
                 imagePreviewUrls.forEach(url => URL.revokeObjectURL(url));
                 if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
 
-                // Post creation completed
+                // Post creation completed - hashtag associations are handled by the backend
+                console.log('Post created successfully with hashtags:', {
+                  postId: data.post._id,
+                  hashtags: data.post.tags || [],
+                  hashtagObjects: data.post.hashtags || []
+                });
                 onPostCreate(data.post);
                 
                 // Reset form
@@ -153,6 +225,8 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
                 setVideoPreviewUrl('');
                 setShowHashtagInput(false);
                 setUploadProgress([]);
+                setHashtagSuggestions([]);
+                setShowSuggestions(false);
                 setIsLoading(false);
                 return;
               } else if (data.fileName && typeof data.progress === 'number') {
@@ -180,17 +254,51 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
   };
 
   const handleHashtagKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
+    if (e.key === 'ArrowDown') {
       e.preventDefault();
-      const tag = hashtagInput.trim().replace(/^#/, '');
-      if (tag && !hashtags.includes(`#${tag}`)) {
-        setHashtags([...hashtags, `#${tag}`]);
-        setHashtagInput('');
+      setSelectedSuggestionIndex(prev => 
+        prev < hashtagSuggestions.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedSuggestionIndex(prev => prev > 0 ? prev - 1 : -1);
+    } else if (e.key === 'Tab' && selectedSuggestionIndex >= 0) {
+      e.preventDefault();
+      const selectedSuggestion = hashtagSuggestions[selectedSuggestionIndex];
+      addHashtag(selectedSuggestion.name);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (selectedSuggestionIndex >= 0) {
+        const selectedSuggestion = hashtagSuggestions[selectedSuggestionIndex];
+        addHashtag(selectedSuggestion.name);
+      } else {
+        const tag = hashtagInput.trim().replace(/^#/, '');
+        if (tag) {
+          addHashtag(`#${tag}`);
+        }
       }
-    } else if (e.key === 'Backspace' && !hashtagInput) {
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+      setSelectedSuggestionIndex(-1);
+    } else if (e.key === 'Backspace' && !hashtagInput && hashtags.length > 0) {
       e.preventDefault();
       setHashtags(hashtags.slice(0, -1));
     }
+  };
+
+  const addHashtag = (tag: string) => {
+    const formattedTag = tag.startsWith('#') ? tag : `#${tag}`;
+    if (!hashtags.includes(formattedTag)) {
+      setHashtags([...hashtags, formattedTag]);
+      setHashtagInput('');
+      setHashtagSuggestions([]);
+      setShowSuggestions(false);
+      setSelectedSuggestionIndex(-1);
+    }
+  };
+
+  const selectSuggestion = (suggestion: HashtagSuggestion) => {
+    addHashtag(suggestion.name);
   };
 
   const removeHashtag = (tagToRemove: string) => {
@@ -354,20 +462,58 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
 
             {/* Hashtag input */}
             {showHashtagInput && (
-              <div className="px-4 py-3 border-t border-gray-200">
+              <div className="px-4 py-3 border-t border-gray-200 relative">
                 <div className="flex items-center bg-gray-50 rounded-lg p-2">
                   <FiHash className="w-5 h-5 text-gray-400 mx-2" />
                   <input
                     ref={hashtagInputRef}
                     type="text"
                     value={hashtagInput}
-                    onChange={(e) => setHashtagInput(e.target.value)}
+                    onChange={handleHashtagInputChange}
                     onKeyDown={handleHashtagKeyDown}
                     placeholder="Add a hashtag (press Enter)"
                     className="flex-1 bg-transparent border-none focus:outline-none text-gray-900 placeholder-gray-500 text-sm"
                     disabled={isLoading}
                   />
                 </div>
+                
+                {/* Hashtag Suggestions */}
+                {showSuggestions && hashtagSuggestions.length > 0 && (
+                  <div 
+                    ref={suggestionsRef}
+                    className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                    style={{ left: '16px', right: '16px', width: 'calc(100% - 32px)' }}
+                  >
+                    {hashtagSuggestions.map((suggestion, index) => (
+                      <div
+                        key={suggestion.name}
+                        onClick={() => selectSuggestion(suggestion)}
+                        className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors ${
+                          index === selectedSuggestionIndex
+                            ? 'bg-blue-50 border-blue-200'
+                            : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <FiHash className="w-4 h-4 text-blue-500" />
+                            <span className="font-medium text-gray-900">{suggestion.name}</span>
+                          </div>
+                          <div className="flex items-center space-x-4 text-sm text-gray-500">
+                            <div className="flex items-center space-x-1">
+                              <FiUsers className="w-3 h-3" />
+                              <span>{suggestion.followerCount.toLocaleString()}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <FiHash className="w-3 h-3" />
+                              <span>{suggestion.postCount.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

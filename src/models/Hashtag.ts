@@ -4,6 +4,8 @@ export interface IHashtag extends mongoose.Document {
   name: string;
   description: string;
   posts: number;
+  postIds: mongoose.Types.ObjectId[];
+  followers: number;
   category?: string;
   isActive: boolean;
   createdBy?: mongoose.Types.ObjectId;
@@ -33,6 +35,15 @@ const hashtagSchema = new mongoose.Schema<IHashtag>(
       default: 0,
       min: [0, 'Posts count cannot be negative'],
     },
+    postIds: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: 'Post',
+    },
+    followers: {
+      type: Number,
+      default: 0,
+      min: [0, 'Followers count cannot be negative'],
+    },
     category: {
       type: String,
       enum: ['education', 'research', 'technology', 'science', 'general'],
@@ -53,10 +64,13 @@ const hashtagSchema = new mongoose.Schema<IHashtag>(
 );
 
 // Indexes for better performance
-hashtagSchema.index({ name: 1 });
+// Note: name field already has unique index from schema definition
 hashtagSchema.index({ category: 1 });
 hashtagSchema.index({ isActive: 1 });
 hashtagSchema.index({ posts: -1 }); // Descending order for popular hashtags
+hashtagSchema.index({ followers: -1 }); // Descending order for popular hashtags by followers
+hashtagSchema.index({ name: 'text', description: 'text' }); // Text search index
+hashtagSchema.index({ postIds: 1 }); // Index for post ID lookups
 
 // Ensure hashtag name starts with #
 hashtagSchema.pre('save', function(this: IHashtag, next) {
@@ -76,6 +90,32 @@ hashtagSchema.methods.decrementPosts = function() {
   if (this.posts > 0) {
     this.posts -= 1;
   }
+  return this.save();
+};
+
+hashtagSchema.methods.incrementFollowers = function() {
+  this.followers += 1;
+  return this.save();
+};
+
+hashtagSchema.methods.decrementFollowers = function() {
+  if (this.followers > 0) {
+    this.followers -= 1;
+  }
+  return this.save();
+};
+
+hashtagSchema.methods.addPost = function(postId: mongoose.Types.ObjectId) {
+  if (!this.postIds.includes(postId)) {
+    this.postIds.push(postId);
+    this.posts = this.postIds.length;
+  }
+  return this.save();
+};
+
+hashtagSchema.methods.removePost = function(postId: mongoose.Types.ObjectId) {
+  this.postIds = this.postIds.filter((id: mongoose.Types.ObjectId) => !id.equals(postId));
+  this.posts = this.postIds.length;
   return this.save();
 };
 

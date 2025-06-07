@@ -15,6 +15,7 @@ export interface IPost extends mongoose.Document {
   userId: mongoose.Types.ObjectId | string;
   content: string;
   media: Media[];
+  hashtags: mongoose.Types.ObjectId[]; // Hashtag references
   comments: mongoose.Types.ObjectId[] | string[];
   likedBy: mongoose.Types.ObjectId[]; // Users who liked this post
   likesCount: number; // Virtual field
@@ -53,6 +54,10 @@ const postSchema = new mongoose.Schema<IPost>(
       type: [mediaSchema],
       default: []
     },
+    hashtags: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Hashtag'
+    }],
     comments: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Comment'
@@ -81,6 +86,9 @@ postSchema.virtual('author', {
   foreignField: '_id',
   justOne: true
 });
+
+// Clear mongoose model cache if it exists
+delete mongoose.models.Post;
 
 const Post = mongoose.models.Post || mongoose.model<IPost>('Post', postSchema);
 

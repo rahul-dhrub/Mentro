@@ -21,6 +21,7 @@ export interface IUser extends mongoose.Document {
   // Social connections
   followers: mongoose.Types.ObjectId[]; // Array of user IDs who follow this user
   following: mongoose.Types.ObjectId[]; // Array of user IDs this user follows
+  followedHashtags: mongoose.Types.ObjectId[]; // Array of hashtag IDs this user follows
   
   // User statistics
   averageRating: number; // Average rating as an instructor
@@ -110,6 +111,10 @@ const userSchema = new mongoose.Schema<IUser>(
     following: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
+    }],
+    followedHashtags: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Hashtag',
     }],
     
     // User statistics

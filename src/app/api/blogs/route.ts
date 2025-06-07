@@ -62,6 +62,7 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import connectDB from '@/lib/db';
 import Blog from '@/models/Blog';
 import User from '@/models/User';
+import mongoose from 'mongoose';
 
 // GET endpoint for fetching blogs
 export async function GET(request: NextRequest) {
@@ -82,12 +83,24 @@ export async function GET(request: NextRequest) {
       // Handle both MongoDB ObjectId and Clerk user ID
       // First, try to find the user in the database to get both IDs
       try {
-        const user = await User.findOne({
-          $or: [
-            { _id: userId },      // MongoDB ObjectId
-            { clerkId: userId }   // Clerk user ID
-          ]
-        });
+        // Check if userId is a valid MongoDB ObjectId
+        const isValidObjectId = mongoose.Types.ObjectId.isValid(userId);
+        
+        let userQuery: any = {};
+        if (isValidObjectId) {
+          // If it's a valid ObjectId, search by both _id and clerkId
+          userQuery = {
+            $or: [
+              { _id: userId },      // MongoDB ObjectId
+              { clerkId: userId }   // Clerk user ID (just in case)
+            ]
+          };
+        } else {
+          // If it's not a valid ObjectId, it's likely a Clerk ID
+          userQuery = { clerkId: userId };
+        }
+        
+        const user = await User.findOne(userQuery);
         
         if (user) {
           // Search for blogs by both the MongoDB ObjectId and Clerk ID

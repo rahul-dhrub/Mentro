@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { FiMapPin, FiUsers, FiEdit, FiCalendar, FiBook, FiAward, FiFileText, FiUserPlus, FiStar } from 'react-icons/fi';
 import { Author, Post, UserProfile as UserProfileType, Blog } from '../types';
 import { mockAuthors, mockPosts, mockPublications } from '../mockData';
@@ -25,6 +26,7 @@ export default function UserProfile({
   onShare,
   onUserSelect
 }: UserProfileProps) {
+  const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfileType | null>(null);
   const [activeTab, setActiveTab] = useState<'posts' | 'publications' | 'blogs' | 'about'>('posts');
   const [isLoading, setIsLoading] = useState(true);
@@ -441,6 +443,11 @@ export default function UserProfile({
                   onComment={onComment}
                   onShare={onShare}
                   onUserSelect={onUserSelect}
+                  onHashtagSelect={(hashtag) => {
+                    // Navigate to the selected hashtag using Next.js router
+                    const cleanHashtag = hashtag.startsWith('#') ? hashtag : `#${hashtag}`;
+                    router.push(`/feed/hashtag/${encodeURIComponent(cleanHashtag)}`);
+                  }}
                 />
               ))
             ) : (
