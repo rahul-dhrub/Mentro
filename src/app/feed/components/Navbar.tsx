@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { FiBell, FiBook, FiCalendar, FiMessageSquare, FiSettings, FiUser, FiLogOut, FiMenu, FiX } from 'react-icons/fi';
+import { FiBell, FiBook, FiCalendar, FiMessageSquare, FiSettings, FiUser, FiLogOut, FiMenu, FiX, FiMoreHorizontal } from 'react-icons/fi';
 import SearchBar from './SearchBar';
 
 interface NavbarProps {
@@ -14,6 +14,8 @@ interface NavbarProps {
   };
   onSidebarToggle: () => void;
   isSidebarVisible: boolean;
+  onRightSidebarToggle: () => void;
+  isRightSidebarVisible: boolean;
   onUserSelect: (userId: string) => void;
   onHashtagSelect: (hashtag: string) => void;
   isSearchActive: boolean;
@@ -24,7 +26,9 @@ interface NavbarProps {
 export default function Navbar({ 
   user, 
   onSidebarToggle, 
-  isSidebarVisible, 
+  isSidebarVisible,
+  onRightSidebarToggle,
+  isRightSidebarVisible,
   onUserSelect, 
   onHashtagSelect,
   isSearchActive,
@@ -33,6 +37,7 @@ export default function Navbar({
 }: NavbarProps) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showNavMenu, setShowNavMenu] = useState(false);
 
   const notifications = [
     {
@@ -95,7 +100,7 @@ export default function Navbar({
             )}
           </div>
 
-          {/* Navigation Links */}
+          {/* Navigation Links - Desktop */}
           <div className="hidden md:flex items-center space-x-8">
             <Link href="/courses" className="text-gray-600 hover:text-blue-600 cursor-pointer">
               Courses
@@ -110,7 +115,7 @@ export default function Navbar({
               Resources
             </Link>
             
-            {/* Search Bar - after Resources */}
+            {/* Search Bar - Desktop */}
             <div className="w-80">
               <SearchBar
                 onUserSelect={onUserSelect}
@@ -121,8 +126,82 @@ export default function Navbar({
             </div>
           </div>
 
+          {/* Mobile Search Bar - Always visible */}
+          <div className="md:hidden flex-1 max-w-md mx-4">
+            <SearchBar
+              onUserSelect={onUserSelect}
+              onHashtagSelect={onHashtagSelect}
+              isSearchActive={isSearchActive}
+              setIsSearchActive={setIsSearchActive}
+            />
+          </div>
+
           {/* Right Side Actions */}
           <div className="flex items-center space-x-4">
+            {/* Navigation Menu Toggle - only show on mobile */}
+            <div className="relative md:hidden">
+              <button
+                onClick={() => setShowNavMenu(!showNavMenu)}
+                className="p-2 text-gray-600 hover:text-blue-600 cursor-pointer"
+                title="Navigation Menu"
+              >
+                <FiMoreHorizontal size={20} />
+              </button>
+
+              {showNavMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2">
+                  <div className="px-4 py-2 border-b border-gray-100">
+                    <h3 className="font-semibold text-gray-900">Navigation</h3>
+                  </div>
+                  <div className="py-1">
+                    <Link
+                      href="/courses"
+                      className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setShowNavMenu(false)}
+                    >
+                      <FiBook className="mr-2" size={16} />
+                      Courses
+                    </Link>
+                    <Link
+                      href="/schedule"
+                      className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setShowNavMenu(false)}
+                    >
+                      <FiCalendar className="mr-2" size={16} />
+                      Schedule
+                    </Link>
+                    <Link
+                      href="/students"
+                      className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setShowNavMenu(false)}
+                    >
+                      <FiUser className="mr-2" size={16} />
+                      Students
+                    </Link>
+                    <Link
+                      href="/resources"
+                      className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setShowNavMenu(false)}
+                    >
+                      <FiBook className="mr-2" size={16} />
+                      Resources
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Sidebar Toggle - only show on mobile when right sidebar is hidden */}
+            {!isRightSidebarVisible && (
+              <button
+                onClick={onRightSidebarToggle}
+                className="md:hidden p-2 text-gray-600 hover:text-blue-600 cursor-pointer"
+                title="Show Right Sidebar"
+              >
+                <FiMessageSquare size={20} />
+              </button>
+            )}
+            
             {/* Notifications */}
             <div className="relative">
               <button

@@ -21,6 +21,7 @@ import { mockAuthors, mockPublications } from './mockData';
 export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+  const [isRightSidebarVisible, setIsRightSidebarVisible] = useState(false);
   const [isPersonalPosts, setIsPersonalPosts] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -313,6 +314,10 @@ export default function FeedPage() {
 
   const toggleSidebar = () => {
     setIsSidebarVisible(!isSidebarVisible);
+  };
+
+  const toggleRightSidebar = () => {
+    setIsRightSidebarVisible(!isRightSidebarVisible);
   };
 
   const handlePostCreate = (newPost: Post) => {
@@ -643,6 +648,8 @@ export default function FeedPage() {
         }} 
         onSidebarToggle={toggleSidebar} 
         isSidebarVisible={isSidebarVisible}
+        onRightSidebarToggle={toggleRightSidebar}
+        isRightSidebarVisible={isRightSidebarVisible}
         onUserSelect={handleUserSelect}
         onHashtagSelect={handleHashtagSelect}
         isSearchActive={isSearchActive}
@@ -651,7 +658,7 @@ export default function FeedPage() {
       />
       
       <div className="pt-16 flex max-w-7xl mx-auto">
-        {/* Left Sidebar - Hidden on mobile, visible on desktop */}
+        {/* Left Sidebar - Hidden on mobile and tablet, visible on desktop */}
         <div className="hidden lg:block w-80 flex-shrink-0">
           <div className="sticky top-20 h-[calc(100vh-80px)] overflow-y-auto pr-2">
             <Sidebar
@@ -727,12 +734,82 @@ export default function FeedPage() {
             </div>
           </div>
         )}
+
+        {/* Mobile Right Sidebar Overlay */}
+        {isRightSidebarVisible && (
+          <div className="fixed inset-0 z-50 md:hidden">
+            {/* Backdrop - Only covers the area to the left of right sidebar */}
+            <div 
+              className="fixed left-0 top-16 right-96 bottom-0 bg-black bg-opacity-20 cursor-pointer"
+              onClick={toggleRightSidebar}
+            ></div>
+            
+            {/* Right Sidebar Content */}
+            <div className="fixed right-0 top-16 bottom-0 w-96 bg-white shadow-xl overflow-y-auto border-l border-gray-200">
+              {/* Right Sidebar Header with Close Button */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white sticky top-0 z-10">
+                <h2 className="text-lg font-semibold text-gray-900">Activity</h2>
+                <button
+                  onClick={toggleRightSidebar}
+                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                  title="Close Right Sidebar"
+                >
+                  <FiX size={20} />
+                </button>
+              </div>
+              
+              <div className="p-4">
+                <RightSidebar 
+                  upcomingClasses={[
+                    {
+                      id: '1',
+                      title: 'Advanced Machine Learning',
+                      time: '10:00 AM - 11:30 AM',
+                      room: 'CS-101',
+                      students: 35
+                    },
+                    {
+                      id: '2',
+                      title: 'Data Structures',
+                      time: '2:00 PM - 3:30 PM',
+                      room: 'CS-203',
+                      students: 42
+                    }
+                  ]}
+                  messages={[
+                    {
+                      id: '1',
+                      sender: {
+                        name: 'Dr. Michael Chen',
+                        avatar: mockAuthors[1].avatar
+                      },
+                      content: 'Can we discuss the research proposal tomorrow?',
+                      time: '5m ago',
+                      unread: true
+                    },
+                    {
+                      id: '2',
+                      sender: {
+                        name: 'Dr. Emily Rodriguez',
+                        avatar: mockAuthors[2].avatar
+                      },
+                      content: 'The workshop materials are ready for review.',
+                      time: '1h ago',
+                      unread: false
+                    }
+                  ]}
+                />
+              </div>
+            </div>
+          </div>
+        )}
         
         <main className="flex-1 p-6">
           {renderMainContent()}
         </main>
         
-        <div className="hidden lg:block w-96 flex-shrink-0">
+        {/* Right Sidebar - Hidden on mobile, visible from tablet up */}
+        <div className="hidden md:block w-96 flex-shrink-0">
           <div className="sticky top-20 h-[calc(100vh-80px)] overflow-y-auto">
             <RightSidebar 
               upcomingClasses={[

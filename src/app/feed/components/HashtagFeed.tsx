@@ -73,17 +73,22 @@ export default function HashtagFeed({
 
   useEffect(() => {
     const loadHashtagData = async () => {
-      if (activeTab === 'posts') {
-        await fetchHashtagData();
-      } else {
-        await fetchHashtagBlogs();
-      }
+      // Load both posts and blogs when hashtag changes
+      await Promise.all([
+        fetchHashtagData(),
+        fetchHashtagBlogs()
+      ]);
       // Check follow status after hashtag data is loaded
       await checkFollowStatus();
     };
     
     loadHashtagData();
-  }, [hashtag, activeTab]);
+  }, [hashtag]);
+
+  // Separate effect for tab changes (no need to reload data)
+  useEffect(() => {
+    // Tab switching doesn't require data reload since both are already loaded
+  }, [activeTab]);
 
   const fetchHashtagData = async (page = 1) => {
       setIsLoading(true);
@@ -353,7 +358,7 @@ export default function HashtagFeed({
                 <div className="flex items-center">
                   <FiFileText className="mr-1" size={14} />
                   <span>
-                    {isLoading && activeTab === 'blogs' ? 'Loading...' : `${blogs.length || 0} blogs`}
+                    {isLoading ? 'Loading...' : `${hashtagInfo?.blogs || blogs.length || 0} blogs`}
                   </span>
                 </div>
                 <div className="flex items-center">
@@ -403,7 +408,7 @@ export default function HashtagFeed({
             >
               <div className="flex items-center space-x-2">
                 <FiEdit size={16} />
-                <span>Posts ({hashtagInfo?.posts || 0})</span>
+                <span>Posts ({isLoading ? '...' : hashtagInfo?.posts || 0})</span>
               </div>
             </button>
             <button
@@ -416,7 +421,7 @@ export default function HashtagFeed({
             >
               <div className="flex items-center space-x-2">
                 <FiFileText size={16} />
-                <span>Blogs ({blogs.length || 0})</span>
+                <span>Blogs ({isLoading ? '...' : hashtagInfo?.blogs || blogs.length || 0})</span>
               </div>
             </button>
           </nav>
