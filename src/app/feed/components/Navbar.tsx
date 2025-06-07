@@ -101,7 +101,7 @@ export default function Navbar({
           </div>
 
           {/* Navigation Links - Desktop */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-8 pl-3">
             <Link href="/courses" className="text-gray-600 hover:text-blue-600 cursor-pointer">
               Courses
             </Link>
@@ -114,20 +114,10 @@ export default function Navbar({
             <Link href="/resources" className="text-gray-600 hover:text-blue-600 cursor-pointer">
               Resources
             </Link>
-            
-            {/* Search Bar - Desktop */}
-            <div className="w-80">
-              <SearchBar
-                onUserSelect={onUserSelect}
-                onHashtagSelect={onHashtagSelect}
-                isSearchActive={isSearchActive}
-                setIsSearchActive={setIsSearchActive}
-              />
-            </div>
           </div>
 
-          {/* Mobile Search Bar - Always visible */}
-          <div className="md:hidden flex-1 max-w-md mx-4">
+          {/* Search Bar - Responsive positioning */}
+          <div className="flex-1 max-w-md mx-4 md:max-w-xs md:mx-0">
             <SearchBar
               onUserSelect={onUserSelect}
               onHashtagSelect={onHashtagSelect}
