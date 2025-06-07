@@ -270,13 +270,7 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-      <div className="flex items-start space-x-4">
-        <img
-          src={currentUser.avatar}
-          alt={currentUser.name}
-          className="w-12 h-12 rounded-full"
-        />
-        <form onSubmit={handleSubmit} className="flex-1 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative bg-white rounded-xl border border-gray-200 focus-within:border-blue-500 transition-colors">
         <textarea
           value={content}
@@ -534,7 +528,6 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
           </button>
         </div>
       </form>
-      </div>
     </div>
   );
 } 

@@ -10,7 +10,15 @@ export async function GET(
     await connectDB();
     
     const { id } = await params;
-    const user = await User.findById(id).select('-password');
+    
+    // Find user by MongoDB ID or Clerk ID
+    let user = null;
+    if (require('mongoose').Types.ObjectId.isValid(id)) {
+      user = await User.findById(id).select('-password');
+    } else {
+      user = await User.findOne({ clerkId: id }).select('-password');
+    }
+    
     if (!user) {
       return NextResponse.json(
         { error: 'User not found' },
@@ -18,7 +26,14 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ user }, { status: 200 });
+    // Include followers and following counts
+    const userWithCounts = {
+      ...user.toObject(),
+      followersCount: user.followers?.length || 0,
+      followingCount: user.following?.length || 0
+    };
+
+    return NextResponse.json({ user: userWithCounts }, { status: 200 });
   } catch (error: any) {
     console.error('Error fetching user:', error);
     return NextResponse.json(

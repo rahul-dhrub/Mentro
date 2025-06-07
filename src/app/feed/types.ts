@@ -86,6 +86,8 @@ export interface UserProfile extends Author {
   courses?: Course[];
   blogs?: Blog[];
   isFollowing?: boolean;
+  averageRating?: number;
+  totalReviews?: number;
 }
 
 export interface Course {

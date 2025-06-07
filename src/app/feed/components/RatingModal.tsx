@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
-import { FiX, FiStar, FiFilter, FiThumbsUp } from 'react-icons/fi';
+import { FiX, FiStar, FiFilter, FiThumbsUp, FiTrash2 } from 'react-icons/fi';
 
 interface Review {
   id: string;
@@ -27,6 +27,8 @@ interface RatingModalProps {
     name: string;
     avatar: string;
   };
+  onReviewsChange?: () => void; // Callback to notify parent of review changes
+  showGiveRatingTab?: boolean; // Whether to show the "Give Rating" tab
 }
 
 const RatingModal: React.FC<RatingModalProps> = ({
@@ -34,7 +36,9 @@ const RatingModal: React.FC<RatingModalProps> = ({
   onClose,
   userId,
   userName,
-  currentUser
+  currentUser,
+  onReviewsChange,
+  showGiveRatingTab = true
 }) => {
   const [activeTab, setActiveTab] = useState<'give' | 'view'>('view');
   const [rating, setRating] = useState(0);
@@ -44,6 +48,16 @@ const RatingModal: React.FC<RatingModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [filterRating, setFilterRating] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
+  const [averageRating, setAverageRating] = useState(0);
+  const [totalReviews, setTotalReviews] = useState(0);
+  const [ratingDistribution, setRatingDistribution] = useState({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
+
+  // Refetch reviews when sort or filter changes
+  useEffect(() => {
+    if (isOpen && userId) {
+      fetchReviews();
+    }
+  }, [sortBy, filterRating]);
 
   // Mock reviews data
   const mockReviews: Review[] = [
@@ -95,92 +109,152 @@ const RatingModal: React.FC<RatingModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setReviews(mockReviews);
+      fetchReviews();
     }
-  }, [isOpen]);
+  }, [isOpen, userId]);
+
+  const fetchReviews = async () => {
+    try {
+      const response = await fetch(`/api/users/${userId}/reviews?limit=50&sortBy=${sortBy}${filterRating ? `&rating=${filterRating}` : ''}`);
+      if (response.ok) {
+        const data = await response.json();
+        setReviews(data.reviews || []);
+        setAverageRating(data.averageRating || 0);
+        setTotalReviews(data.totalReviews || 0);
+        setRatingDistribution(data.ratingDistribution || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
+      } else {
+        console.error('Error fetching reviews:', response.statusText);
+        // Fallback to mock data if API fails
+        setReviews(mockReviews);
+        setAverageRating(4.2);
+        setTotalReviews(mockReviews.length);
+        setRatingDistribution({ 1: 1, 2: 0, 3: 1, 4: 1, 5: 2 });
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      // Fallback to mock data if API fails
+      setReviews(mockReviews);
+      setAverageRating(4.2);
+      setTotalReviews(mockReviews.length);
+      setRatingDistribution({ 1: 1, 2: 0, 3: 1, 4: 1, 5: 2 });
+    }
+  };
 
   const handleSubmitRating = async () => {
     if (rating === 0) return;
     
     setIsSubmitting(true);
     try {
-      // Here you would make an API call to submit the rating
-      const newReview: Review = {
-        id: Date.now().toString(),
-        userId: currentUser.id,
-        userName: currentUser.name,
-        userAvatar: currentUser.avatar,
-        rating,
-        comment,
-        createdAt: new Date().toISOString(),
-        likes: 0,
-        isLikedByCurrentUser: false
-      };
+      const response = await fetch(`/api/users/${userId}/reviews`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          rating,
+          comment: comment.trim()
+        }),
+      });
 
-      setReviews(prev => [newReview, ...prev]);
-      setRating(0);
-      setComment('');
-      setActiveTab('view');
+      if (response.ok) {
+        const data = await response.json();
+        // Refresh the reviews list
+        await fetchReviews();
+        setRating(0);
+        setComment('');
+        setActiveTab('view');
+        // Notify parent component of review changes
+        if (onReviewsChange) {
+          onReviewsChange();
+        }
+      } else {
+        const errorData = await response.json();
+        console.error('Error submitting rating:', errorData.error);
+        alert(errorData.error || 'Failed to submit rating');
+      }
     } catch (error) {
       console.error('Error submitting rating:', error);
+      alert('Failed to submit rating. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleLikeReview = (reviewId: string) => {
-    setReviews(prev => prev.map(review => 
-      review.id === reviewId 
-        ? { 
-            ...review, 
-            likes: review.isLikedByCurrentUser ? review.likes - 1 : review.likes + 1,
-            isLikedByCurrentUser: !review.isLikedByCurrentUser 
-          }
-        : review
-    ));
+  const handleLikeReview = async (reviewId: string) => {
+    try {
+      const response = await fetch(`/api/reviews/${reviewId}/like`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Update the review in the state
+        setReviews(prev => prev.map(review => 
+          review.id === reviewId 
+            ? { 
+                ...review, 
+                likes: data.likes,
+                isLikedByCurrentUser: data.isLiked 
+              }
+            : review
+        ));
+      } else {
+        console.error('Error liking review:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error liking review:', error);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: string, reviewAuthor: string) => {
+    if (!confirm(`Are you sure you want to delete your review? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/reviews/${reviewId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Refresh the reviews list to get updated counts
+        await fetchReviews();
+        // Notify parent component of review changes
+        if (onReviewsChange) {
+          onReviewsChange();
+        }
+      } else {
+        const errorData = await response.json();
+        console.error('Error deleting review:', errorData.error);
+        alert(errorData.error || 'Failed to delete review');
+      }
+    } catch (error) {
+      console.error('Error deleting review:', error);
+      alert('Failed to delete review. Please try again.');
+    }
   };
 
   const getFilteredAndSortedReviews = () => {
-    let filteredReviews = reviews;
-
-    // Filter by rating
-    if (filterRating !== null) {
-      filteredReviews = filteredReviews.filter(review => review.rating === filterRating);
-    }
-
-    // Sort reviews
-    return filteredReviews.sort((a, b) => {
-      switch (sortBy) {
-        case 'newest':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        case 'oldest':
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        case 'highest':
-          return b.rating - a.rating;
-        case 'lowest':
-          return a.rating - b.rating;
-        default:
-          return 0;
-      }
-    });
+    // Since the API already handles filtering and sorting, just return the reviews
+    return reviews;
   };
 
   const getAverageRating = (): number => {
-    if (reviews.length === 0) return 0;
-    const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
-    return sum / reviews.length;
+    return averageRating;
   };
 
   const getAverageRatingString = (): string => {
-    return getAverageRating().toFixed(1);
+    return averageRating.toFixed(1);
   };
 
   const getRatingDistribution = () => {
-    const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    reviews.forEach(review => {
-      distribution[review.rating as keyof typeof distribution]++;
-    });
-    return distribution;
+    return ratingDistribution;
   };
 
   const renderStars = (currentRating: number, interactive = false, size = 20) => {
@@ -256,18 +330,20 @@ const RatingModal: React.FC<RatingModalProps> = ({
                         : 'border-transparent text-gray-500 hover:text-gray-700'
                     }`}
                   >
-                    View Reviews ({reviews.length})
+                    View Reviews ({totalReviews})
                   </button>
-                  <button
-                    onClick={() => setActiveTab('give')}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors cursor-pointer ${
-                      activeTab === 'give'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    Give Rating
-                  </button>
+                  {showGiveRatingTab && (
+                    <button
+                      onClick={() => setActiveTab('give')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors cursor-pointer ${
+                        activeTab === 'give'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Give Rating
+                    </button>
+                  )}
                 </nav>
               </div>
 
@@ -284,7 +360,7 @@ const RatingModal: React.FC<RatingModalProps> = ({
                           <div className="flex items-center justify-center mb-2">
                             {renderStars(getAverageRating())}
                           </div>
-                          <p className="text-gray-600">Based on {reviews.length} reviews</p>
+                          <p className="text-gray-600">Based on {totalReviews} reviews</p>
                         </div>
                         
                         <div className="flex-1 max-w-sm ml-8">
@@ -294,7 +370,7 @@ const RatingModal: React.FC<RatingModalProps> = ({
                               <div className="flex-1 mx-2 bg-gray-200 rounded-full h-2">
                                 <div 
                                   className="bg-yellow-400 h-2 rounded-full transition-all"
-                                  style={{ width: `${reviews.length > 0 ? (count / reviews.length) * 100 : 0}%` }}
+                                  style={{ width: `${totalReviews > 0 ? (count / totalReviews) * 100 : 0}%` }}
                                 />
                               </div>
                               <span className="text-sm text-gray-600 w-8">{count}</span>
@@ -375,6 +451,18 @@ const RatingModal: React.FC<RatingModalProps> = ({
                                   <FiThumbsUp size={16} />
                                   <span>{review.likes}</span>
                                 </button>
+                                
+                                {/* Delete button - only show for current user's reviews */}
+                                {review.userId === currentUser.id && (
+                                  <button
+                                    onClick={() => handleDeleteReview(review.id, review.userName)}
+                                    className="flex items-center space-x-1 text-sm text-red-500 hover:text-red-700 transition-colors cursor-pointer"
+                                    title="Delete your review"
+                                  >
+                                    <FiTrash2 size={16} />
+                                    <span>Delete</span>
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </div>

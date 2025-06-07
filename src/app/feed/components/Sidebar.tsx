@@ -2,13 +2,14 @@
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { FiUsers, FiStar, FiBookOpen, FiAward, FiMail, FiLinkedin, FiTwitter } from 'react-icons/fi';
+import { FiUsers, FiStar, FiBookOpen, FiAward, FiMail, FiLinkedin, FiTwitter, FiUserPlus } from 'react-icons/fi';
 import { Author } from '../types';
 
 interface SidebarProps {
   author: Author;
   stats: {
     followers: number;
+    following: number;
     rating: number;
     blogs: number;
     publications: number;
@@ -19,9 +20,10 @@ interface SidebarProps {
     twitter?: string;
   };
   onShowPublications?: () => void;
+  onRatingClick?: () => void;
 }
 
-export default function Sidebar({ author, stats, socialLinks, onShowPublications }: SidebarProps) {
+export default function Sidebar({ author, stats, socialLinks, onShowPublications, onRatingClick }: SidebarProps) {
   const router = useRouter();
 
   const handleBlogsClick = () => {
@@ -46,56 +48,46 @@ export default function Sidebar({ author, stats, socialLinks, onShowPublications
       </div>
 
       {/* Stats Section */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-gray-50 rounded-lg p-4 text-center">
-          <FiUsers className="mx-auto mb-2 text-blue-500" size={24} />
-          <p className="text-2xl font-semibold text-gray-900">{stats.followers}</p>
-          <p className="text-sm text-gray-500">Followers</p>
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="bg-gray-50 rounded-lg p-3 text-center">
+          <FiUsers className="mx-auto mb-2 text-blue-500" size={20} />
+          <p className="text-lg font-semibold text-gray-900">{stats.followers}</p>
+          <p className="text-xs text-gray-500">Followers</p>
         </div>
-        <div className="bg-gray-50 rounded-lg p-4 text-center">
-          <FiStar className="mx-auto mb-2 text-yellow-500" size={24} />
-          <p className="text-2xl font-semibold text-gray-900">{stats.rating}</p>
-          <p className="text-sm text-gray-500">Rating</p>
+        <div className="bg-gray-50 rounded-lg p-3 text-center">
+          <FiUserPlus className="mx-auto mb-2 text-indigo-500" size={20} />
+          <p className="text-lg font-semibold text-gray-900">{stats.following}</p>
+          <p className="text-xs text-gray-500">Following</p>
         </div>
         <div 
-          className="bg-gray-50 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-100 transition-colors"
+          className="bg-gray-50 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-100 transition-colors"
+          onClick={onRatingClick}
+        >
+          <FiStar className="mx-auto mb-2 text-yellow-500" size={20} />
+          <p className="text-lg font-semibold text-gray-900">{stats.rating.toFixed(1)}</p>
+          <p className="text-xs text-gray-500">Rating</p>
+        </div>
+        <div 
+          className="bg-gray-50 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-100 transition-colors"
           onClick={handleBlogsClick}
         >
-          <FiBookOpen className="mx-auto mb-2 text-green-500" size={24} />
-          <p className="text-2xl font-semibold text-gray-900">{stats.blogs}</p>
-          <p className="text-sm text-gray-500">Blogs</p>
+          <FiBookOpen className="mx-auto mb-2 text-green-500" size={20} />
+          <p className="text-lg font-semibold text-gray-900">{stats.blogs}</p>
+          <p className="text-xs text-gray-500">Blogs</p>
         </div>
         <div 
-          className="bg-gray-50 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-100 transition-colors"
+          className="bg-gray-50 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-100 transition-colors col-span-2"
           onClick={onShowPublications}
         >
-          <FiAward className="mx-auto mb-2 text-purple-500" size={24} />
-          <p className="text-2xl font-semibold text-gray-900">{stats.publications}</p>
-          <p className="text-sm text-gray-500">Publications</p>
+          <FiAward className="mx-auto mb-2 text-purple-500" size={20} />
+          <p className="text-lg font-semibold text-gray-900">{stats.publications}</p>
+          <p className="text-xs text-gray-500">Publications</p>
         </div>
       </div>
 
       {/* Quick Links */}
       <div className="space-y-3 mb-6">
         <h3 className="font-semibold text-gray-900 mb-2">Quick Links</h3>
-        <button
-          onClick={handleBlogsClick}
-          className="flex items-center text-gray-600 hover:text-blue-600 transition-colors w-full text-left cursor-pointer"
-        >
-          <FiBookOpen className="mr-2" />
-          View All Blogs
-        </button>
-        <a
-          href="#"
-          className="flex items-center text-gray-600 hover:text-blue-600 transition-colors cursor-pointer"
-          onClick={(e) => {
-            e.preventDefault();
-            if (onShowPublications) onShowPublications();
-          }}
-        >
-          <FiAward className="mr-2" />
-          Research Publications
-        </a>
         <a
           href="#"
           className="flex items-center text-gray-600 hover:text-blue-600 transition-colors cursor-pointer"

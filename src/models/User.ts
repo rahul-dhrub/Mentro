@@ -18,6 +18,10 @@ export interface IUser extends mongoose.Document {
   ownedCourseIds: mongoose.Types.ObjectId[]; // Array of course IDs owned by this user (for instructors)
   enrolledCourseIds: mongoose.Types.ObjectId[]; // Array of course IDs user is enrolled in (for students)
   
+  // Social connections
+  followers: mongoose.Types.ObjectId[]; // Array of user IDs who follow this user
+  following: mongoose.Types.ObjectId[]; // Array of user IDs this user follows
+  
   // User statistics
   averageRating: number; // Average rating as an instructor
   totalReviews: number; // Total number of reviews received as instructor
@@ -96,6 +100,16 @@ const userSchema = new mongoose.Schema<IUser>(
     enrolledCourseIds: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Course',
+    }],
+    
+    // Social connections
+    followers: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    }],
+    following: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
     }],
     
     // User statistics
@@ -191,6 +205,33 @@ userSchema.methods.updateTotalStudents = async function() {
     return this.save();
   }
   return this;
+};
+
+// Social connection methods
+userSchema.methods.followUser = function(userId: mongoose.Types.ObjectId) {
+  if (!this.following.includes(userId) && !this._id.equals(userId)) {
+    this.following.push(userId);
+    return this.save();
+  }
+  return this;
+};
+
+userSchema.methods.unfollowUser = function(userId: mongoose.Types.ObjectId) {
+  this.following = this.following.filter((id: mongoose.Types.ObjectId) => !id.equals(userId));
+  return this.save();
+};
+
+userSchema.methods.addFollower = function(userId: mongoose.Types.ObjectId) {
+  if (!this.followers.includes(userId) && !this._id.equals(userId)) {
+    this.followers.push(userId);
+    return this.save();
+  }
+  return this;
+};
+
+userSchema.methods.removeFollower = function(userId: mongoose.Types.ObjectId) {
+  this.followers = this.followers.filter((id: mongoose.Types.ObjectId) => !id.equals(userId));
+  return this.save();
 };
 
 // Clear mongoose model cache if it exists

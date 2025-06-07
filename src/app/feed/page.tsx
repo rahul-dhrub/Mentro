@@ -13,6 +13,7 @@ import PublicationsModal from './components/PublicationsModal';
 import SearchBar from './components/SearchBar';
 import UserProfile from './components/UserProfile';
 import HashtagFeed from './components/HashtagFeed';
+import RatingModal from './components/RatingModal';
 import { Post, Author, Publication } from './types';
 import { mockAuthors, mockPublications } from './mockData';
 import Lottie from "lottie-react";
@@ -57,12 +58,81 @@ export default function FeedPage() {
   const { userId, isLoaded, isSignedIn } = useAuth();
   const [isPublicationsModalOpen, setIsPublicationsModalOpen] = useState(false);
   const [publications, setPublications] = useState<Publication[]>([]);
+  const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+  
+  // Sidebar stats state
+  const [sidebarStats, setSidebarStats] = useState({
+    followers: 0,
+    following: 0,
+    rating: 0,
+    blogs: 0,
+    publications: 0,
+  });
 
   // Search-related state
   const [viewMode, setViewMode] = useState<'feed' | 'user' | 'hashtag'>('feed');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedHashtag, setSelectedHashtag] = useState<string | null>(null);
   const [isSearchActive, setIsSearchActive] = useState(false);
+
+  // Fetch sidebar stats for current user
+  const fetchSidebarStats = async (userIdToQuery: string) => {
+    try {
+      // Fetch user data with followers/following counts
+      const userResponse = await fetch(`/api/users/${userIdToQuery}`, {
+        credentials: 'include'
+      });
+      
+      let userFollowersCount = 0;
+      let userFollowingCount = 0;
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        userFollowersCount = userData.user?.followersCount || 0;
+        userFollowingCount = userData.user?.followingCount || 0;
+      }
+
+      // Fetch user's rating data
+      let averageRating = 0;
+      try {
+        const reviewsResponse = await fetch(`/api/users/${userIdToQuery}/reviews?limit=1`, {
+          credentials: 'include'
+        });
+        if (reviewsResponse.ok) {
+          const reviewsData = await reviewsResponse.json();
+          averageRating = reviewsData.averageRating || 0;
+        }
+      } catch (error) {
+        console.error('Error fetching user reviews:', error);
+      }
+
+      // Fetch user's blogs count
+      let blogsCount = 0;
+      try {
+        const blogsResponse = await fetch(`/api/blogs?userId=${userIdToQuery}&limit=1`, {
+          credentials: 'include'
+        });
+        if (blogsResponse.ok) {
+          const blogsData = await blogsResponse.json();
+          blogsCount = blogsData.pagination?.total || 0;
+        }
+      } catch (error) {
+        console.error('Error fetching user blogs:', error);
+      }
+
+      // Update sidebar stats
+      setSidebarStats({
+        followers: userFollowersCount,
+        following: userFollowingCount,
+        rating: averageRating,
+        blogs: blogsCount,
+        publications: publications.length, // Keep current publications count
+      });
+
+    } catch (error) {
+      console.error('Error fetching sidebar stats:', error);
+      // Keep default stats on error
+    }
+  };
 
   // Fetch current user data
   useEffect(() => {
@@ -79,14 +149,18 @@ export default function FeedPage() {
         })
         .then(data => {
           if (data.user) {
-            setCurrentUser({
+            const userData = {
               id: data.user._id || data.user.id,
               name: data.user.name,
               email: data.user.email,
               avatar: data.user.profilePicture,
               title: data.user.title || 'Faculty Member',
               department: data.user.department || 'Computer Science'
-            });
+            };
+            setCurrentUser(userData);
+            
+            // Fetch sidebar stats for this user
+            fetchSidebarStats(userData.id);
           }
         })
         .catch(error => {
@@ -352,6 +426,10 @@ export default function FeedPage() {
     console.log('Shared post:', postId);
   };
 
+  const handleRatingClick = () => {
+    setIsRatingModalOpen(true);
+  };
+
   // Publications handling
   const fetchPublications = async () => {
     try {
@@ -361,13 +439,28 @@ export default function FeedPage() {
       if (!response.ok) {
         console.log('API error, using mock publications');
         setPublications(mockPublications);
+        setSidebarStats(prev => ({
+          ...prev,
+          publications: mockPublications.length
+        }));
         return;
       }
       const data = await response.json();
-      setPublications(data.publications || []);
+      const publicationsList = data.publications || [];
+      setPublications(publicationsList);
+      
+      // Update sidebar stats with publications count
+      setSidebarStats(prev => ({
+        ...prev,
+        publications: publicationsList.length
+      }));
     } catch (error) {
       console.error('Error fetching publications:', error);
       setPublications(mockPublications);
+      setSidebarStats(prev => ({
+        ...prev,
+        publications: mockPublications.length
+      }));
     }
   };
 
@@ -391,7 +484,15 @@ export default function FeedPage() {
       }
 
       const data = await response.json();
-      setPublications(prev => [data.publication, ...prev]);
+      setPublications(prev => {
+        const newList = [data.publication, ...prev];
+        // Update sidebar stats
+        setSidebarStats(prevStats => ({
+          ...prevStats,
+          publications: newList.length
+        }));
+        return newList;
+      });
       return { success: true, publication: data.publication };
     } catch (error) {
       console.error('Error adding publication:', error);
@@ -399,7 +500,15 @@ export default function FeedPage() {
         id: Date.now().toString(),
         ...newPublication
       };
-      setPublications(prev => [mockPublication, ...prev]);
+      setPublications(prev => {
+        const newList = [mockPublication, ...prev];
+        // Update sidebar stats
+        setSidebarStats(prevStats => ({
+          ...prevStats,
+          publications: newList.length
+        }));
+        return newList;
+      });
       return { success: true, publication: mockPublication };
     }
   };
@@ -417,21 +526,45 @@ export default function FeedPage() {
         // If it's an invalid ObjectId (mock data), just remove it from the frontend
         if (errorData.error?.includes('Invalid publication ID format')) {
           console.log('Removing mock publication from frontend only');
-          setPublications(prev => prev.filter(pub => pub.id !== publicationId));
+          setPublications(prev => {
+            const newList = prev.filter(pub => pub.id !== publicationId);
+            // Update sidebar stats
+            setSidebarStats(prevStats => ({
+              ...prevStats,
+              publications: newList.length
+            }));
+            return newList;
+          });
           return;
         }
         
         throw new Error(errorData.error || 'Failed to delete publication');
       }
 
-      setPublications(prev => prev.filter(pub => pub.id !== publicationId));
+      setPublications(prev => {
+        const newList = prev.filter(pub => pub.id !== publicationId);
+        // Update sidebar stats
+        setSidebarStats(prevStats => ({
+          ...prevStats,
+          publications: newList.length
+        }));
+        return newList;
+      });
     } catch (error) {
       console.error('Error deleting publication:', error);
       
       // For network errors or other issues, still try to remove from frontend
       if (error instanceof Error && error.message.includes('fetch')) {
         console.log('Network error, removing from frontend only');
-        setPublications(prev => prev.filter(pub => pub.id !== publicationId));
+        setPublications(prev => {
+          const newList = prev.filter(pub => pub.id !== publicationId);
+          // Update sidebar stats
+          setSidebarStats(prevStats => ({
+            ...prevStats,
+            publications: newList.length
+          }));
+          return newList;
+        });
       } else {
         alert(`Failed to delete publication: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
@@ -524,18 +657,14 @@ export default function FeedPage() {
           <div className="sticky top-20 h-[calc(100vh-80px)] overflow-y-auto pr-2">
             <Sidebar
               author={currentUser}
-              stats={{
-                followers: currentUser.followers || 128,
-                rating: 4.8,
-                blogs: currentUser.posts || 12,
-                publications: publications.length,
-              }}
+              stats={sidebarStats}
               socialLinks={{
                 email: currentUser.email,
                 linkedin: 'https://linkedin.com/in/example',
                 twitter: 'https://twitter.com/example',
               }}
               onShowPublications={() => setIsPublicationsModalOpen(true)}
+              onRatingClick={handleRatingClick}
             />
           </div>
         </div>
@@ -582,18 +711,14 @@ export default function FeedPage() {
                 
                 <Sidebar
                   author={currentUser}
-                  stats={{
-                    followers: currentUser.followers || 128,
-                    rating: 4.8,
-                    blogs: currentUser.posts || 12,
-                    publications: publications.length,
-                  }}
+                  stats={sidebarStats}
                   socialLinks={{
                     email: currentUser.email,
                     linkedin: 'https://linkedin.com/in/example',
                     twitter: 'https://twitter.com/example',
                   }}
                   onShowPublications={() => setIsPublicationsModalOpen(true)}
+                  onRatingClick={handleRatingClick}
                 />
               </div>
             </div>
@@ -656,6 +781,23 @@ export default function FeedPage() {
         publications={publications}
         onAddPublication={handleAddPublication}
         onDeletePublication={handleDeletePublication}
+      />
+
+      <RatingModal
+        isOpen={isRatingModalOpen}
+        onClose={() => setIsRatingModalOpen(false)}
+        userId={currentUser.id}
+        userName={currentUser.name}
+        currentUser={{
+          id: currentUser.id,
+          name: currentUser.name,
+          avatar: currentUser.avatar,
+        }}
+        showGiveRatingTab={false}
+        onReviewsChange={() => {
+          // Refresh sidebar stats when reviews change
+          fetchSidebarStats(currentUser.id);
+        }}
       />
     </div>
   );

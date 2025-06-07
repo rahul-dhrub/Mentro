@@ -6,6 +6,7 @@ import { Author, Post, UserProfile as UserProfileType, Blog } from '../types';
 import { mockAuthors, mockPosts, mockPublications } from '../mockData';
 import PostCard from './PostCard';
 import RatingModal from './RatingModal';
+import FollowersModal from './FollowersModal';
 
 interface UserProfileProps {
   userId: string;
@@ -27,6 +28,30 @@ export default function UserProfile({
   const [isLoading, setIsLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+  const [followersModalOpen, setFollowersModalOpen] = useState(false);
+  const [followingModalOpen, setFollowingModalOpen] = useState(false);
+
+  // Function to refresh rating data
+  const refreshRatingData = async () => {
+    if (!userProfile) return;
+    
+    try {
+      const reviewsResponse = await fetch(`/api/users/${userProfile.id}/reviews?limit=1`);
+      if (reviewsResponse.ok) {
+        const reviewsData = await reviewsResponse.json();
+        setUserProfile(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            averageRating: reviewsData.averageRating || 0,
+            totalReviews: reviewsData.totalReviews || 0
+          };
+        });
+      }
+    } catch (error) {
+      console.error('Error refreshing rating data:', error);
+    }
+  };
 
   // Fetch user profile data
   useEffect(() => {
@@ -47,9 +72,9 @@ export default function UserProfile({
               department: userData.user.department,
               bio: userData.user.bio,
               avatar: userData.user.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.user.name)}&background=0D8ABC&color=fff`,
-              followers: Math.floor(Math.random() * 500) + 100, // Mock for now
-              following: Math.floor(Math.random() * 200) + 50, // Mock for now
-              posts: Math.floor(Math.random() * 50) + 5 // Mock for now
+              followers: userData.user.followersCount || 0,
+              following: userData.user.followingCount || 0,
+              posts: 0 // Will be set with real data after fetching posts
             };
           }
         } catch (error) {
@@ -67,20 +92,24 @@ export default function UserProfile({
 
         // Get user's posts from database
         let userPosts: Post[] = [];
+        let totalPostsCount = 0;
         try {
           const postsResponse = await fetch(`/api/posts?userId=${userId}&limit=20`);
           if (postsResponse.ok) {
             const postsData = await postsResponse.json();
             userPosts = postsData.posts || [];
+            totalPostsCount = postsData.pagination?.total || userPosts.length;
           } else {
             console.warn(`Posts API returned ${postsResponse.status} for user ${userId}`);
             // Fallback to mock data if API fails
             userPosts = mockPosts.filter(post => post.author.id === userId);
+            totalPostsCount = userPosts.length;
           }
         } catch (error) {
           console.error('Error fetching user posts:', error);
           // Fallback to mock data if API fails
           userPosts = mockPosts.filter(post => post.author.id === userId);
+          totalPostsCount = userPosts.length;
         }
         
         // If no posts found (neither from database nor mock), create sample posts
@@ -107,6 +136,12 @@ export default function UserProfile({
               tags: ['research', 'publication']
             }
           ];
+          totalPostsCount = userPosts.length;
+        }
+
+        // Update user object with real posts count
+        if (user) {
+          user.posts = totalPostsCount;
         }
         
         // Get user's publications from API
@@ -142,16 +177,46 @@ export default function UserProfile({
           userBlogs = [];
         }
 
+        // Check if current user is following this user
+        let isFollowing = false;
+        if (user && user.id !== currentUser.id) {
+          try {
+            const followStatusResponse = await fetch(`/api/users/${userId}/follow-status`);
+            if (followStatusResponse.ok) {
+              const followStatusData = await followStatusResponse.json();
+              isFollowing = followStatusData.isFollowing;
+            }
+          } catch (error) {
+            console.error('Error fetching follow status:', error);
+          }
+        }
+
+        // Fetch user's rating data
+        let averageRating = 0;
+        let totalReviews = 0;
+        try {
+          const reviewsResponse = await fetch(`/api/users/${userId}/reviews?limit=1`);
+          if (reviewsResponse.ok) {
+            const reviewsData = await reviewsResponse.json();
+            averageRating = reviewsData.averageRating || 0;
+            totalReviews = reviewsData.totalReviews || 0;
+          }
+        } catch (error) {
+          console.error('Error fetching user reviews:', error);
+        }
+
         const profile: UserProfileType = {
           ...user,
           userPosts,
           publications: userPublications,
           blogs: userBlogs,
-          isFollowing: Math.random() > 0.5 // Random following status for demo
+          isFollowing,
+          averageRating,
+          totalReviews
         };
 
         setUserProfile(profile);
-        setIsFollowing(profile.isFollowing || false);
+        setIsFollowing(isFollowing);
       } catch (error) {
         console.error('Error fetching user profile:', error);
       } finally {
@@ -162,10 +227,39 @@ export default function UserProfile({
     fetchUserProfile();
   }, [userId]);
 
-  const handleFollow = () => {
-    setIsFollowing(!isFollowing);
-    // Here you would typically make an API call
-    console.log(`${isFollowing ? 'Unfollowed' : 'Followed'} ${userProfile?.name}`);
+  const handleFollow = async () => {
+    if (!userProfile) return;
+
+    try {
+      const method = isFollowing ? 'DELETE' : 'POST';
+      const response = await fetch(`/api/users/${userProfile.id}/follow`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setIsFollowing(data.isFollowing);
+        
+        // Update the follower count in the profile
+        setUserProfile(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            followers: data.followersCount
+          };
+        });
+        
+        console.log(data.message);
+      } else {
+        const errorData = await response.json();
+        console.error('Error:', errorData.error);
+      }
+    } catch (error) {
+      console.error('Error updating follow status:', error);
+    }
   };
 
   if (isLoading) {
@@ -243,14 +337,20 @@ export default function UserProfile({
                 </div>
                 <div className="text-sm text-gray-500">Posts</div>
               </div>
-              <div className="text-center">
+              <div 
+                className="text-center cursor-pointer hover:bg-gray-50 rounded-lg transition-colors px-1"
+                onClick={() => setFollowersModalOpen(true)}
+              >
                 <div className="flex items-center justify-center mb-1">
                   <FiUsers className="w-4 h-4 text-gray-600 mr-1" />
                   <div className="text-xl font-bold text-gray-900">{userProfile.followers}</div>
                 </div>
                 <div className="text-sm text-gray-500">Followers</div>
               </div>
-              <div className="text-center">
+              <div 
+                className="text-center cursor-pointer hover:bg-gray-50 rounded-lg transition-colors px-1"
+                onClick={() => setFollowingModalOpen(true)}
+              >
                 <div className="flex items-center justify-center mb-1">
                   <FiUserPlus className="w-4 h-4 text-gray-600 mr-1" />
                   <div className="text-xl font-bold text-gray-900">{userProfile.following}</div>
@@ -264,9 +364,13 @@ export default function UserProfile({
               >
                 <div className="flex items-center justify-center mb-1">
                   <FiStar className="w-4 h-4 text-yellow-500 mr-1" />
-                  <div className="text-xl font-bold text-gray-900">4.8</div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {userProfile.averageRating ? userProfile.averageRating.toFixed(1) : '0.0'}
+                  </div>
                 </div>
-                <div className="text-sm text-gray-500">Rating</div>
+                <div className="text-sm text-gray-500">
+                  Rating {userProfile.totalReviews ? `(${userProfile.totalReviews})` : '(0)'}
+                </div>
               </div>
             </div>
           </div>
@@ -442,6 +546,25 @@ export default function UserProfile({
           name: currentUser.name,
           avatar: currentUser.avatar
         }}
+        onReviewsChange={refreshRatingData}
+      />
+
+      {/* Followers Modal */}
+      <FollowersModal
+        isOpen={followersModalOpen}
+        onClose={() => setFollowersModalOpen(false)}
+        userId={userProfile.id}
+        userName={userProfile.name}
+        type="followers"
+      />
+
+      {/* Following Modal */}
+      <FollowersModal
+        isOpen={followingModalOpen}
+        onClose={() => setFollowingModalOpen(false)}
+        userId={userProfile.id}
+        userName={userProfile.name}
+        type="following"
       />
     </div>
   );

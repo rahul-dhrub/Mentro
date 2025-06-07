@@ -24,41 +24,74 @@ const BlogsPage = () => {
     const fetchBlogs = async () => {
         setIsLoading(true);
         try {
-            // Fetch all blogs
-            const response = await fetch('/api/blogs');
+            if (userId) {
+                // Fetch user's blogs using API filtering (supports both MongoDB _id and Clerk ID)
+                const myBlogsResponse = await fetch(`/api/blogs?userId=${userId}`);
+                
+                // Fetch all blogs for "others" section
+                const allBlogsResponse = await fetch('/api/blogs');
 
-            if (response.ok) {
-                const data = await response.json();
-                const blogs = data.blogs;
-                
-                // Sort blogs by creation date (latest first)
-                const sortedBlogs = blogs.sort((a: Blog, b: Blog) => 
-                    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-                );
-                
-                setAllBlogs(sortedBlogs);
-                
-                // Separate my blogs and others' blogs
-                if (userId) {
-                    const userBlogs = sortedBlogs.filter((blog: Blog) => blog.author.id === userId);
-                    const otherUserBlogs = sortedBlogs.filter((blog: Blog) => blog.author.id !== userId);
+                if (myBlogsResponse.ok && allBlogsResponse.ok) {
+                    const myBlogsData = await myBlogsResponse.json();
+                    const allBlogsData = await allBlogsResponse.json();
                     
-                    setMyBlogs(userBlogs);
+                    const userBlogs = myBlogsData.blogs;
+                    const allBlogs = allBlogsData.blogs;
+                    
+                    // Sort blogs by creation date (latest first)
+                    const sortedUserBlogs = userBlogs.sort((a: Blog, b: Blog) => 
+                        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                    );
+                    const sortedAllBlogs = allBlogs.sort((a: Blog, b: Blog) => 
+                        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                    );
+
+                    // Create a Set of user blog IDs for efficient filtering
+                    const userBlogIds = new Set(userBlogs.map((blog: Blog) => blog._id));
+                    
+                    // Filter out user's blogs from all blogs to get others' blogs
+                    const otherUserBlogs = sortedAllBlogs.filter((blog: Blog) => 
+                        !userBlogIds.has(blog._id)
+                    );
+                    
+                    setMyBlogs(sortedUserBlogs);
                     setOthersBlogs(otherUserBlogs);
+                    setAllBlogs(sortedAllBlogs);
                 } else {
-                    // If not signed in, all blogs are "others"
+                    // Fall back to mock data if API calls fail
+                    const sortedMockBlogs = [...initialMockBlogs].sort((a, b) => 
+                        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                    );
+                    
+                    setAllBlogs(sortedMockBlogs);
                     setMyBlogs([]);
-                    setOthersBlogs(sortedBlogs);
+                    setOthersBlogs(sortedMockBlogs);
                 }
             } else {
-                // Fall back to mock data
-                const sortedMockBlogs = [...initialMockBlogs].sort((a, b) => 
-                    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-                );
+                // If not signed in, just fetch all blogs for "others"
+                const response = await fetch('/api/blogs');
                 
-                setAllBlogs(sortedMockBlogs);
-                setMyBlogs([]); // No mock "my blogs" since we don't have user ID
-                setOthersBlogs(sortedMockBlogs);
+                if (response.ok) {
+                    const data = await response.json();
+                    const blogs = data.blogs;
+                    
+                    const sortedBlogs = blogs.sort((a: Blog, b: Blog) => 
+                        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                    );
+                    
+                    setAllBlogs(sortedBlogs);
+                    setMyBlogs([]);
+                    setOthersBlogs(sortedBlogs);
+                } else {
+                    // Fall back to mock data
+                    const sortedMockBlogs = [...initialMockBlogs].sort((a, b) => 
+                        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                    );
+                    
+                    setAllBlogs(sortedMockBlogs);
+                    setMyBlogs([]);
+                    setOthersBlogs(sortedMockBlogs);
+                }
             }
         } catch (error) {
             console.error('Error fetching blogs:', error);
