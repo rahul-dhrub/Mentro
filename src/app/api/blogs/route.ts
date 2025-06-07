@@ -62,6 +62,7 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import connectDB from '@/lib/db';
 import Blog from '@/models/Blog';
 import User from '@/models/User';
+import Hashtag from '@/models/Hashtag';
 import mongoose from 'mongoose';
 
 // GET endpoint for fetching blogs
@@ -192,6 +193,55 @@ export async function POST(request: NextRequest) {
         ? tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
         : [];
 
+    // Extract hashtags from title and content
+    const extractHashtags = (text: string): string[] => {
+      const hashtagRegex = /#[\w]+/g;
+      return text.match(hashtagRegex) || [];
+    };
+
+    const hashtagsFromContent = [
+      ...extractHashtags(title),
+      ...extractHashtags(content)
+    ];
+
+    // Also process tags from the form input as hashtags
+    const hashtagsFromTags = tagArray.map(tag => {
+      // Ensure tag starts with # for consistency
+      return tag.startsWith('#') ? tag : `#${tag}`;
+    });
+
+    // Combine all hashtags and remove duplicates
+    const allHashtags = [
+      ...hashtagsFromContent,
+      ...hashtagsFromTags
+    ];
+
+    // Remove duplicates and normalize
+    const uniqueHashtags = [...new Set(allHashtags.map(tag => tag.toLowerCase()))];
+
+    // Create or find hashtags and get their ObjectIds
+    const hashtagIds: mongoose.Types.ObjectId[] = [];
+    
+    for (const hashtagName of uniqueHashtags) {
+      try {
+        let hashtag = await Hashtag.findOne({ name: hashtagName });
+        
+        if (!hashtag) {
+          // Create new hashtag
+          hashtag = await Hashtag.create({
+            name: hashtagName,
+            description: `Posts and blogs tagged with ${hashtagName}`,
+            category: 'general'
+          });
+        }
+        
+        hashtagIds.push(hashtag._id);
+      } catch (error) {
+        console.error(`Error processing hashtag ${hashtagName}:`, error);
+        // Continue with other hashtags even if one fails
+      }
+    }
+
     // Create blog
     const blog = await Blog.create({
       title,
@@ -204,8 +254,61 @@ export async function POST(request: NextRequest) {
         avatar: user.imageUrl || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(`${user.firstName} ${user.lastName}`.trim()),
       },
       tags: tagArray,
+      hashtags: hashtagIds,
       readTime
     });
+
+    // Add blog ID to each hashtag's blogIds array
+    console.log(`Adding blog ${blog._id} to ${hashtagIds.length} hashtags`);
+    for (const hashtagId of hashtagIds) {
+      try {
+        // Try direct database update as a fallback to method-based approach
+        const hashtag = await Hashtag.findById(hashtagId);
+        if (hashtag) {
+          console.log(`Before adding blog - Hashtag: ${hashtag.name}, blog count: ${hashtag.blogs}, blogIds length: ${hashtag.blogIds.length}`);
+          
+          // Try the instance method first
+          try {
+            const updatedHashtag = await hashtag.addBlog(blog._id);
+            console.log(`After addBlog method - Hashtag: ${updatedHashtag.name}, blog count: ${updatedHashtag.blogs}, blogIds length: ${updatedHashtag.blogIds.length}`);
+          } catch (methodError) {
+            console.error(`addBlog method failed, trying direct update:`, methodError);
+            
+            // Fallback: Direct database update
+            // First check if the blog ID is already in the array
+            const existingHashtag = await Hashtag.findById(hashtagId);
+            const blogExists = existingHashtag?.blogIds.some((id: any) => id.equals(blog._id));
+            
+            if (!blogExists) {
+              // Use a more robust approach: first add to set, then sync count
+              await Hashtag.findByIdAndUpdate(
+                hashtagId,
+                { $addToSet: { blogIds: blog._id } }
+              );
+              
+              // Then update the count to match the array length
+              const result = await Hashtag.findByIdAndUpdate(
+                hashtagId,
+                [{ $set: { blogs: { $size: "$blogIds" } } }], // Use aggregation to set count = array size
+                { new: true }
+              );
+              console.log(`After direct update - Hashtag: ${result?.name}, blog count: ${result?.blogs}, blogIds length: ${result?.blogIds.length}`);
+            } else {
+              console.log(`Blog already exists in hashtag ${existingHashtag?.name}`);
+            }
+          }
+          
+          // Final verification
+          const verifyHashtag = await Hashtag.findById(hashtagId);
+          console.log(`Final verification - Hashtag: ${verifyHashtag?.name}, blog count: ${verifyHashtag?.blogs}, blogIds length: ${verifyHashtag?.blogIds.length}`);
+        } else {
+          console.log(`Hashtag not found for ID: ${hashtagId}`);
+        }
+      } catch (error) {
+        console.error(`Error adding blog to hashtag ${hashtagId}:`, error);
+        // Continue with other hashtags even if one fails
+      }
+    }
 
     return NextResponse.json({
       message: 'Blog created successfully',

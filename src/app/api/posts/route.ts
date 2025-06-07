@@ -644,10 +644,10 @@ export async function POST(request: NextRequest) {
           // Fetch the created post with author information
           const populatedPost = await Post.findById(post._id)
             .populate({
-              path: 'userId',
-              model: User,
-              select: 'name email profilePicture',
-            });
+            path: 'userId',
+            model: User,
+            select: 'name email profilePicture',
+          });
 
           // Try to populate hashtags separately to handle potential schema issues
           let populatedHashtags = [];

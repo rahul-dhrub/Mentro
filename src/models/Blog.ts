@@ -19,6 +19,7 @@ export interface IBlog extends mongoose.Document {
   createdAt: Date;
   updatedAt: Date;
   tags: string[];
+  hashtags: mongoose.Types.ObjectId[];
   readTime: number;
 }
 
@@ -62,6 +63,11 @@ const blogSchema = new mongoose.Schema<IBlog>(
     },
     tags: {
       type: [String],
+      default: []
+    },
+    hashtags: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: 'Hashtag',
       default: []
     },
     readTime: {

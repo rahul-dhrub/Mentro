@@ -1,10 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
+import { FiUsers, FiHash } from 'react-icons/fi';
 import BlogEditor from './BlogEditor';
 import CoverImageUpload from './CoverImageUpload';
+
+interface HashtagSuggestion {
+    name: string;
+    followerCount: number;
+    postCount: number;
+    description?: string;
+}
 
 interface BlogFormProps {
     userId: string | null | undefined;
@@ -22,7 +30,107 @@ const BlogForm: React.FC<BlogFormProps> = ({ userId, isSignedIn, onBlogCreated }
     const [editorSelection, setEditorSelection] = useState<{ start: number, end: number } | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isCoverUploading, setIsCoverUploading] = useState(false);
+    
+    // Hashtag suggestions state
+    const [hashtagSuggestions, setHashtagSuggestions] = useState<HashtagSuggestion[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+    const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+    
     const router = useRouter();
+    const tagsInputRef = useRef<HTMLInputElement>(null);
+    const suggestionsRef = useRef<HTMLDivElement>(null);
+
+    // Debounce hashtag search
+    useEffect(() => {
+        const delayedSearch = setTimeout(() => {
+            const currentInput = tags.split(',').pop()?.trim() || '';
+            if (currentInput.length > 0 && (currentInput.startsWith('#') || currentInput.length >= 2)) {
+                searchHashtags(currentInput);
+            } else {
+                setHashtagSuggestions([]);
+                setShowSuggestions(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(delayedSearch);
+    }, [tags]);
+
+    const searchHashtags = async (query: string) => {
+        try {
+            setIsLoadingSuggestions(true);
+            const searchQuery = query.startsWith('#') ? query.slice(1) : query;
+            const response = await fetch(`/api/hashtags/search?q=${encodeURIComponent(searchQuery)}&limit=8`);
+            
+            if (response.ok) {
+                const data = await response.json();
+                setHashtagSuggestions(data.hashtags || []);
+                setShowSuggestions(data.hashtags?.length > 0);
+            } else {
+                // Fallback suggestions for development
+                const mockSuggestions: HashtagSuggestion[] = [
+                    { name: '#education', followerCount: 1250, postCount: 340 },
+                    { name: '#research', followerCount: 890, postCount: 180 },
+                    { name: '#technology', followerCount: 2100, postCount: 520 },
+                    { name: '#science', followerCount: 1500, postCount: 290 }
+                ].filter(h => h.name.toLowerCase().includes(searchQuery.toLowerCase()));
+                
+                setHashtagSuggestions(mockSuggestions);
+                setShowSuggestions(mockSuggestions.length > 0);
+            }
+        } catch (error) {
+            console.error('Error fetching hashtag suggestions:', error);
+            setHashtagSuggestions([]);
+            setShowSuggestions(false);
+        } finally {
+            setIsLoadingSuggestions(false);
+        }
+    };
+
+    const handleTagsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (!showSuggestions || hashtagSuggestions.length === 0) return;
+
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                setSelectedSuggestionIndex(prev => 
+                    prev < hashtagSuggestions.length - 1 ? prev + 1 : 0
+                );
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                setSelectedSuggestionIndex(prev => 
+                    prev > 0 ? prev - 1 : hashtagSuggestions.length - 1
+                );
+                break;
+            case 'Tab':
+            case 'Enter':
+                e.preventDefault();
+                if (selectedSuggestionIndex >= 0) {
+                    selectHashtag(hashtagSuggestions[selectedSuggestionIndex]);
+                }
+                break;
+            case 'Escape':
+                setShowSuggestions(false);
+                setSelectedSuggestionIndex(-1);
+                break;
+        }
+    };
+
+    const selectHashtag = (hashtag: HashtagSuggestion) => {
+        const tagsList = tags.split(',').map(t => t.trim());
+        tagsList[tagsList.length - 1] = hashtag.name.startsWith('#') ? hashtag.name.slice(1) : hashtag.name;
+        
+        setTags(tagsList.join(', ') + ', ');
+        setShowSuggestions(false);
+        setSelectedSuggestionIndex(-1);
+        tagsInputRef.current?.focus();
+    };
+
+    const handleTagsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setTags(e.target.value);
+        setSelectedSuggestionIndex(-1);
+    };
 
     const handleCreateBlog = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -207,18 +315,71 @@ const BlogForm: React.FC<BlogFormProps> = ({ userId, isSignedIn, onBlogCreated }
                     handleCoverImageUpload={handleCoverImageUpload}
                 />
 
-                <div className="mb-4">
+                <div className="mb-4 relative">
                     <label htmlFor="tags" className="block text-sm font-semibold text-gray-800 mb-1">
                         Tags (comma separated)
                     </label>
                     <input
+                        ref={tagsInputRef}
                         type="text"
                         id="tags"
                         value={tags}
-                        onChange={(e) => setTags(e.target.value)}
+                        onChange={handleTagsChange}
+                        onKeyDown={handleTagsKeyDown}
                         className="w-full px-3 py-2 border border-gray-400 bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                         placeholder="Education, Research, Technology"
                     />
+                    
+                    {/* Hashtag Suggestions Dropdown */}
+                    {showSuggestions && (
+                        <div 
+                            ref={suggestionsRef}
+                            className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto"
+                        >
+                            {isLoadingSuggestions ? (
+                                <div className="px-4 py-2 text-gray-500">Loading suggestions...</div>
+                            ) : (
+                                hashtagSuggestions.map((hashtag, index) => (
+                                    <div
+                                        key={hashtag.name}
+                                        className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 ${
+                                            index === selectedSuggestionIndex 
+                                                ? 'bg-indigo-50 border-indigo-200' 
+                                                : 'hover:bg-gray-50'
+                                        }`}
+                                        onClick={() => selectHashtag(hashtag)}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex-1">
+                                                <div className="font-medium text-gray-900">
+                                                    {hashtag.name}
+                                                </div>
+                                                {hashtag.description && (
+                                                    <div className="text-sm text-gray-600 mt-1">
+                                                        {hashtag.description}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center space-x-4 text-sm text-gray-500 ml-4">
+                                                <div className="flex items-center space-x-1">
+                                                    <FiUsers className="w-4 h-4" />
+                                                    <span>{hashtag.followerCount}</span>
+                                                </div>
+                                                <div className="flex items-center space-x-1">
+                                                    <FiHash className="w-4 h-4" />
+                                                    <span>{hashtag.postCount}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    )}
+
+                    <p className="text-xs text-gray-600 mt-1">
+                        Tip: Use hashtags (#tag) in your title or content to make your blog discoverable!
+                    </p>
                 </div>
 
                 <button

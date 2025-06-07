@@ -272,7 +272,7 @@ export default function CreatePost({ currentUser, onPostCreate, onTogglePersonal
         const selectedSuggestion = hashtagSuggestions[selectedSuggestionIndex];
         addHashtag(selectedSuggestion.name);
       } else {
-        const tag = hashtagInput.trim().replace(/^#/, '');
+      const tag = hashtagInput.trim().replace(/^#/, '');
         if (tag) {
           addHashtag(`#${tag}`);
         }
