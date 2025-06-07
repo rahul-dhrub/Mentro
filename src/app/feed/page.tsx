@@ -68,7 +68,9 @@ export default function FeedPage() {
   useEffect(() => {
     if (isLoaded && isSignedIn && userId) {
       // Fetch user profile from our database
-      fetch(`/api/users/profile?clerkId=${userId}`)
+      fetch(`/api/users/profile?clerkId=${userId}`, {
+        credentials: 'include'
+      })
         .then(response => {
           if (!response.ok) {
             throw new Error('Failed to fetch user profile');
@@ -103,7 +105,7 @@ export default function FeedPage() {
       .catch(error => console.error('Error loading animation:', error));
   }, []);
 
-  const fetchPosts = useCallback(async () => {
+  const fetchPosts = useCallback(async (pageNum = page) => {
     if (isLoading || !hasMore) return;
 
     setIsLoading(true);
@@ -117,8 +119,8 @@ export default function FeedPage() {
         console.log('Skipping API call due to recent error');
         // Use mock data instead
         import('./mockData').then(({ mockPosts }) => {
-          const startIndex = (page - 1) * 10;
-          const endIndex = page * 10;
+          const startIndex = (pageNum - 1) * 10;
+          const endIndex = pageNum * 10;
           
           // Filter mock posts by current user if personal posts are selected
           const filteredPosts = isPersonalPosts 
@@ -126,19 +128,22 @@ export default function FeedPage() {
             : mockPosts;
           
           const paginatedPosts = filteredPosts.slice(startIndex, endIndex);
-          setPosts(prev => page === 1 ? paginatedPosts : [...prev, ...paginatedPosts]);
+          setPosts(prev => pageNum === 1 ? paginatedPosts : [...prev, ...paginatedPosts]);
           setHasMore(endIndex < filteredPosts.length);
           setIsLoading(false);
         });
         return; // Don't throw, just return to prevent the error block
       }
 
-      // Build API URL with user ID for personal posts
+      // Build API URL for personal posts - no need to pass userId for personal posts
+      // as the API will use the authenticated user's MongoDB _id automatically
       const apiUrl = isPersonalPosts 
-        ? `/api/posts?type=personal&userId=${currentUser.id}&page=${page}&limit=10`
-        : `/api/posts?type=all&page=${page}&limit=10`;
+        ? `/api/posts?type=personal&page=${pageNum}&limit=10`
+        : `/api/posts?type=all&page=${pageNum}&limit=10`;
 
-      const response = await fetch(apiUrl);
+      const response = await fetch(apiUrl, {
+        credentials: 'include'
+      });
 
       if (!response.ok) {
         // Record the time of the error
@@ -156,7 +161,7 @@ export default function FeedPage() {
             : mockPosts;
           
           const paginatedPosts = filteredPosts.slice(startIndex, endIndex);
-          setPosts(prev => page === 1 ? paginatedPosts : [...prev, ...paginatedPosts]);
+          setPosts(prev => pageNum === 1 ? paginatedPosts : [...prev, ...paginatedPosts]);
           setHasMore(endIndex < filteredPosts.length);
           setIsLoading(false);
         });
@@ -188,15 +193,18 @@ export default function FeedPage() {
         };
       });
 
-      setPosts(prev => page === 1 ? formattedPosts : [...prev, ...formattedPosts]);
+      setPosts(prev => pageNum === 1 ? formattedPosts : [...prev, ...formattedPosts]);
       setHasMore(data.pagination.hasMore);
-      setPage(prev => data.pagination.hasMore ? prev + 1 : prev);
+      // Only increment page if there are more pages and we're not on the last page
+      if (data.pagination.hasMore) {
+        setPage(prev => prev + 1);
+      }
     } catch (error) {
       console.error('Error fetching posts:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [page, isPersonalPosts, hasMore, isLoading, currentUser.id]);
+  }, [isPersonalPosts, hasMore, isLoading, currentUser.id]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -221,7 +229,8 @@ export default function FeedPage() {
     setPage(1);
     setPosts([]);
     setHasMore(true);
-    fetchPosts();
+    // Call fetchPosts with explicit page 1
+    fetchPosts(1);
   }, [isPersonalPosts]);
 
   // Search handlers
@@ -278,6 +287,7 @@ export default function FeedPage() {
       // API call happens in the background - the UI is already updated
       const response = await fetch(`/api/posts/${postId}/like`, {
         method: 'POST',
+        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -345,7 +355,9 @@ export default function FeedPage() {
   // Publications handling
   const fetchPublications = async () => {
     try {
-      const response = await fetch('/api/publications');
+      const response = await fetch('/api/publications', {
+        credentials: 'include'
+      });
       if (!response.ok) {
         console.log('API error, using mock publications');
         setPublications(mockPublications);
@@ -370,6 +382,7 @@ export default function FeedPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(newPublication),
       });
 
@@ -395,6 +408,7 @@ export default function FeedPage() {
     try {
       const response = await fetch(`/api/publications/${publicationId}`, {
         method: 'DELETE',
+        credentials: 'include'
       });
 
       if (!response.ok) {

@@ -33,15 +33,81 @@ export default function UserProfile({
     const fetchUserProfile = async () => {
       setIsLoading(true);
       try {
-        // Find user in mock data
-        const user = mockAuthors.find(author => author.id === userId);
-        if (!user) {
-          setIsLoading(false);
-          return;
+        // Fetch user from database first
+        let user = null;
+        try {
+          const userResponse = await fetch(`/api/users/${userId}`);
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            user = {
+              id: userData.user._id,
+              name: userData.user.name,
+              email: userData.user.email,
+              title: userData.user.title,
+              department: userData.user.department,
+              bio: userData.user.bio,
+              avatar: userData.user.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.user.name)}&background=0D8ABC&color=fff`,
+              followers: Math.floor(Math.random() * 500) + 100, // Mock for now
+              following: Math.floor(Math.random() * 200) + 50, // Mock for now
+              posts: Math.floor(Math.random() * 50) + 5 // Mock for now
+            };
+          }
+        } catch (error) {
+          console.error('Error fetching user from database:', error);
         }
 
-        // Get user's posts
-        const userPosts = mockPosts.filter(post => post.author.id === userId);
+        // If database fetch failed, try mock data as fallback
+        if (!user) {
+          user = mockAuthors.find(author => author.id === userId);
+          if (!user) {
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        // Get user's posts from database
+        let userPosts: Post[] = [];
+        try {
+          const postsResponse = await fetch(`/api/posts?userId=${userId}&limit=20`);
+          if (postsResponse.ok) {
+            const postsData = await postsResponse.json();
+            userPosts = postsData.posts || [];
+          } else {
+            console.warn(`Posts API returned ${postsResponse.status} for user ${userId}`);
+            // Fallback to mock data if API fails
+            userPosts = mockPosts.filter(post => post.author.id === userId);
+          }
+        } catch (error) {
+          console.error('Error fetching user posts:', error);
+          // Fallback to mock data if API fails
+          userPosts = mockPosts.filter(post => post.author.id === userId);
+        }
+        
+        // If no posts found (neither from database nor mock), create sample posts
+        if (userPosts.length === 0 && user) {
+          userPosts = [
+            {
+              id: `${userId}_post_1`,
+              author: user,
+              content: `Welcome to my profile! I'm excited to share my research and thoughts with the academic community.`,
+              media: [],
+              likes: Math.floor(Math.random() * 20) + 5,
+              comments: [],
+              timestamp: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toLocaleString(),
+              tags: ['introduction', 'research']
+            },
+            {
+              id: `${userId}_post_2`,
+              author: user,
+              content: `Just published a new paper on ${user.department}. Looking forward to discussing the findings with colleagues.`,
+              media: [],
+              likes: Math.floor(Math.random() * 30) + 10,
+              comments: [],
+              timestamp: new Date(Date.now() - Math.random() * 14 * 24 * 60 * 60 * 1000).toLocaleString(),
+              tags: ['research', 'publication']
+            }
+          ];
+        }
         
         // Get user's publications from API
         let userPublications = [];
@@ -63,10 +129,12 @@ export default function UserProfile({
         // Fetch user's blogs from API
         let userBlogs: Blog[] = [];
         try {
-          const blogsResponse = await fetch(`/api/blogs?userId=${userId}`);
+          const blogsResponse = await fetch(`/api/blogs?userId=${userId}&limit=20`);
           if (blogsResponse.ok) {
             const blogsData = await blogsResponse.json();
             userBlogs = blogsData.blogs || [];
+          } else {
+            console.warn(`Blog API returned ${blogsResponse.status} for user ${userId}`);
           }
         } catch (error) {
           console.error('Error fetching user blogs:', error);
@@ -274,7 +342,7 @@ export default function UserProfile({
                       {publication.journal} • {publication.year}
                     </p>
                     {publication.abstract && (
-                      <p className="text-sm text-gray-700 mb-2">{publication.abstract}</p>
+                      <p className="text-sm text-gray-700 mb-2 line-clamp-5 overflow-hidden">{publication.abstract}</p>
                     )}
                     <div className="flex items-center space-x-4 text-xs text-gray-500">
                       <span>Citations: {publication.citationCount}</span>

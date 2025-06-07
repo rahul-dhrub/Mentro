@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { FiSearch, FiUser, FiHash } from 'react-icons/fi';
 import { SearchResult } from '../types';
-import { mockAuthors, mockHashtags } from '../mockData';
 
 interface SearchBarProps {
   onUserSelect: (userId: string) => void;
@@ -11,6 +10,15 @@ interface SearchBarProps {
   isSearchActive: boolean;
   setIsSearchActive: (active: boolean) => void;
 }
+
+// Helper function to get current user ID from authentication
+// This should be replaced with your actual authentication logic
+const getCurrentUserId = (): string | null => {
+  // Example: return useAuth().user?.id || null;
+  // Example: return auth.currentUser?.uid || null;
+  // For now, return null since we don't have auth implemented
+  return null;
+};
 
 export default function SearchBar({ 
   onUserSelect, 
@@ -25,52 +33,40 @@ export default function SearchBar({
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Search function
-  const performSearch = (searchQuery: string) => {
+  // Search function using API
+  const performSearch = async (searchQuery: string) => {
     if (!searchQuery.trim()) {
       setResults([]);
       return;
     }
 
-    const searchResults: SearchResult[] = [];
-    const lowercaseQuery = searchQuery.toLowerCase();
-
-    // Search users
-    const userResults = mockAuthors
-      .filter(author => 
-        author.name.toLowerCase().includes(lowercaseQuery) ||
-        author.title?.toLowerCase().includes(lowercaseQuery) ||
-        author.department?.toLowerCase().includes(lowercaseQuery) ||
-        author.email?.toLowerCase().includes(lowercaseQuery)
-      )
-      .map(author => ({
-        type: 'user' as const,
-        id: author.id,
-        name: author.name,
-        avatar: author.avatar,
-        title: author.title,
-        department: author.department,
-        followers: author.followers,
-        posts: author.posts
-      }));
-
-    // Search hashtags
-    const hashtagResults = mockHashtags
-      .filter(hashtag => 
-        hashtag.name.toLowerCase().includes(lowercaseQuery) ||
-        hashtag.description.toLowerCase().includes(lowercaseQuery)
-      )
-      .map(hashtag => ({
-        type: 'hashtag' as const,
-        id: hashtag.id,
-        name: hashtag.name,
-        description: hashtag.description,
-        posts: hashtag.posts
-      }));
-
-    // Combine and limit results
-    searchResults.push(...userResults.slice(0, 5), ...hashtagResults.slice(0, 5));
-    setResults(searchResults.slice(0, 8));
+    try {
+      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&limit=8`);
+      if (response.ok) {
+        const data = await response.json();
+        const searchResults: SearchResult[] = data.results.map((result: any) => ({
+          type: result.type,
+          id: result.id,
+          name: result.name,
+          avatar: result.avatar,
+          title: result.title,
+          department: result.department,
+          followers: result.followers,
+          posts: result.posts,
+          description: result.description,
+          category: result.category,
+          rating: result.rating,
+          reviews: result.reviews
+        }));
+        setResults(searchResults);
+      } else {
+        console.error('Search API error:', response.statusText);
+        setResults([]);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      setResults([]);
+    }
   };
 
   // Handle input change
@@ -110,7 +106,29 @@ export default function SearchBar({
   };
 
   // Handle result selection
-  const handleResultSelect = (result: SearchResult) => {
+  const handleResultSelect = async (result: SearchResult) => {
+    // Record search interaction (only if we have a valid user ID from auth)
+    try {
+      const currentUserId = getCurrentUserId();
+      if (currentUserId) {
+        await fetch('/api/search', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: currentUserId,
+            query,
+            resultType: result.type,
+            resultId: result.id,
+            resultName: result.name
+          })
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to record search interaction:', error);
+    }
+
     if (result.type === 'user') {
       onUserSelect(result.id);
     } else {

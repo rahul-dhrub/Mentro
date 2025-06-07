@@ -75,6 +75,9 @@ export interface SearchResult {
   followers?: number;
   posts?: number;
   description?: string;
+  category?: string;
+  rating?: number;
+  reviews?: number;
 }
 
 export interface UserProfile extends Author {

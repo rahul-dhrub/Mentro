@@ -13,6 +13,11 @@
  *           enum: [all, personal]
  *         description: Filter posts by type (all posts or user's personal posts)
  *       - in: query
+ *         name: userId
+ *         schema:
+ *           type: string
+ *         description: Filter posts by specific user ID (MongoDB ObjectId or Clerk ID)
+ *       - in: query
  *         name: page
  *         schema:
  *           type: integer
@@ -132,6 +137,7 @@ import User from '@/models/User';
 import Comment from '@/models/Comment';
 import { bunnyClient } from '@/lib/bunny';
 import { mockPosts } from '@/app/feed/mockData';
+import mongoose from 'mongoose';
 
 // Verify environment variables
 const verifyEnvVariables = () => {
@@ -156,58 +162,151 @@ export async function GET(request: NextRequest) {
     // Get authentication data from Clerk
     const { userId } = await auth();
     
-    // If no authenticated user, return mock data
-    if (!userId) {
-      console.log('No authenticated user, using mock data');
-      return handleMockData(request);
-    }
-
     // Connect to database
     await connectDB();
 
     // Get query params
     const url = new URL(request.url);
     const type = url.searchParams.get('type') || 'all';
+    const targetUserId = url.searchParams.get('userId'); // New parameter for specific user posts
     const page = parseInt(url.searchParams.get('page') || '1');
     const limit = parseInt(url.searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
 
-    // Find the user in our database
-    const dbUser = await User.findOne({ clerkId: userId });
-    if (!dbUser) {
-      console.log('User not found in database, using mock data');
-      return handleMockData(request);
+    // Find the current user in our database (if authenticated)
+    let dbUser = null;
+    if (userId) {
+      dbUser = await User.findOne({ clerkId: userId });
     }
 
     // Define query for posts based on filter type
     let query = {};
     if (type === 'personal') {
-      // For personal posts, only fetch posts by the current user
-      query = { userId: dbUser._id };
-    }
+      // For personal posts, only fetch posts by the current user (requires authentication)
+      if (!userId) {
+        return NextResponse.json({ error: 'Authentication required for personal posts' }, { status: 401 });
+      }
+      
+      // For personal posts, we primarily use the MongoDB ObjectId approach
+      // If user not found in database, return empty results since posts are created with MongoDB ObjectIds
+      if (dbUser) {
+        query = { userId: dbUser._id };
+      } else {
+        // User not found in database - return empty results
+        return NextResponse.json({
+          posts: [],
+          pagination: {
+            currentPage: page,
+            totalPages: 0,
+            total: 0,
+            hasMore: false
+          }
+        });
+      }
+    } else if (targetUserId) {
+      // For specific user posts, fetch posts by the target user ID
+      // targetUserId can be either MongoDB ObjectId or Clerk user ID
+      const targetUser = await User.findOne({
+        $or: [
+          { _id: targetUserId },
+          { clerkId: targetUserId }
+        ]
+      });
+      if (targetUser) {
+        query = { userId: targetUser._id };
+      } else {
+        // If target user not found, return empty results
+        return NextResponse.json({
+          posts: [],
+          pagination: {
+            currentPage: page,
+            totalPages: 0,
+            total: 0,
+            hasMore: false
+          }
+        });
+      }
+          }
 
     // Fetch posts from database with pagination
-    const posts = await Post.find(query)
-      .sort({ createdAt: -1 }) // Sort by newest first
-      .skip(skip)
-      .limit(limit)
-      .populate({
-        path: 'userId',
-        model: User,
-        select: 'name email profilePicture clerkId'
-      })
-      .populate({
-        path: 'comments',
-        model: Comment,
-        populate: {
+    let posts = [];
+    let totalPosts = 0;
+
+    if (type === 'personal' && dbUser) {
+      // For personal posts, use the user's MongoDB ObjectId
+      // This is the primary and most reliable approach since posts are created with MongoDB ObjectIds
+      
+      // Convert to ObjectId explicitly to ensure proper comparison
+      const userObjectId = new mongoose.Types.ObjectId(dbUser._id);
+      
+      posts = await Post.find({ userId: userObjectId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
           path: 'userId',
           model: User,
-          select: 'name email profilePicture'
+          select: 'name email profilePicture clerkId'
+        })
+        .populate({
+          path: 'comments',
+          model: Comment,
+          populate: {
+            path: 'userId',
+            model: User,
+            select: 'name email profilePicture'
+          }
+        });
+
+      totalPosts = await Post.countDocuments({ userId: userObjectId });
+    } else {
+      // For other queries, use the regular approach
+      posts = await Post.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: 'userId',
+          model: User,
+          select: 'name email profilePicture clerkId'
+        })
+        .populate({
+          path: 'comments',
+          model: Comment,
+          populate: {
+            path: 'userId',
+            model: User,
+            select: 'name email profilePicture'
+          }
+        });
+
+      totalPosts = await Post.countDocuments(query);
+    }
+
+    // Handle posts where userId population failed (likely Clerk ID strings)
+    const postsWithUnpopulatedUsers = posts.filter(post => !post.userId || typeof post.userId === 'string');
+    
+    if (postsWithUnpopulatedUsers.length > 0) {
+      console.log(`🔍 Found ${postsWithUnpopulatedUsers.length} posts with unpopulated userIds, attempting manual lookup`);
+      
+      // Get unique Clerk IDs that failed population
+      const clerkIds = [...new Set(postsWithUnpopulatedUsers.map(post => post.userId).filter(Boolean))];
+      
+      // Find users by Clerk IDs
+      const usersByClerkId = await User.find({ clerkId: { $in: clerkIds } });
+      const clerkIdToUserMap = new Map();
+      usersByClerkId.forEach(user => {
+        clerkIdToUserMap.set(user.clerkId, user);
+      });
+      
+      // Manually populate the failed posts
+      postsWithUnpopulatedUsers.forEach(post => {
+        const user = clerkIdToUserMap.get(post.userId);
+        if (user) {
+          post.userId = user; // Replace string with user object
         }
       });
-
-    // Get total count for pagination
-    const totalPosts = await Post.countDocuments(query);
+         }
 
     // Format the posts for response
     const formattedPosts = posts.map(post => ({
@@ -216,7 +315,7 @@ export async function GET(request: NextRequest) {
       media: post.media || [],
       likes: post.likedBy ? post.likedBy.length : 0,
       likedBy: post.likedBy || [],
-      isLikedByCurrentUser: post.likedBy ? post.likedBy.includes(dbUser._id) : false,
+      isLikedByCurrentUser: dbUser && post.likedBy ? post.likedBy.includes(dbUser._id) : false,
       comments: (post.comments || []).map((comment: any) => ({
         id: comment._id.toString(),
         content: comment.content,
@@ -233,13 +332,20 @@ export async function GET(request: NextRequest) {
         timestamp: comment.createdAt,
         likes: comment.likedBy ? comment.likedBy.length : 0,
         likedBy: comment.likedBy || [],
-        isLikedByCurrentUser: comment.likedBy ? comment.likedBy.includes(dbUser._id) : false
+        isLikedByCurrentUser: dbUser && comment.likedBy ? comment.likedBy.includes(dbUser._id) : false
       })),
-      author: {
+      author: post.userId && post.userId._id ? {
+        // Successfully populated user
         id: post.userId._id.toString(),
         name: post.userId.name,
         email: post.userId.email,
         avatar: post.userId.profilePicture || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'
+      } : {
+        // Failed to populate user (userId might be a Clerk ID string or non-existent user)
+        id: post.userId || 'unknown',
+        name: 'Unknown User',
+        email: 'unknown@example.com',
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'
       },
       timestamp: post.createdAt
     }));
