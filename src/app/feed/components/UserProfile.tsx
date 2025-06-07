@@ -14,6 +14,7 @@ interface UserProfileProps {
   onLike: (postId: string) => void;
   onComment: (postId: string, content: string) => void;
   onShare: (postId: string) => void;
+  onUserSelect?: (userId: string) => void;
 }
 
 export default function UserProfile({ 
@@ -21,7 +22,8 @@ export default function UserProfile({
   currentUser, 
   onLike, 
   onComment, 
-  onShare 
+  onShare,
+  onUserSelect
 }: UserProfileProps) {
   const [userProfile, setUserProfile] = useState<UserProfileType | null>(null);
   const [activeTab, setActiveTab] = useState<'posts' | 'publications' | 'blogs' | 'about'>('posts');
@@ -30,6 +32,8 @@ export default function UserProfile({
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   const [followersModalOpen, setFollowersModalOpen] = useState(false);
   const [followingModalOpen, setFollowingModalOpen] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isFollowActionLoading, setIsFollowActionLoading] = useState(false);
 
   // Function to refresh rating data
   const refreshRatingData = async () => {
@@ -227,9 +231,14 @@ export default function UserProfile({
     fetchUserProfile();
   }, [userId]);
 
-  const handleFollow = async () => {
+  const handleFollow = () => {
+    setShowConfirmModal(true);
+  };
+
+  const confirmFollow = async () => {
     if (!userProfile) return;
 
+    setIsFollowActionLoading(true);
     try {
       const method = isFollowing ? 'DELETE' : 'POST';
       const response = await fetch(`/api/users/${userProfile.id}/follow`, {
@@ -256,10 +265,19 @@ export default function UserProfile({
       } else {
         const errorData = await response.json();
         console.error('Error:', errorData.error);
+        alert(errorData.error || 'Failed to update follow status');
       }
     } catch (error) {
       console.error('Error updating follow status:', error);
+      alert('Failed to update follow status. Please try again.');
+    } finally {
+      setIsFollowActionLoading(false);
+      setShowConfirmModal(false);
     }
+  };
+
+  const cancelFollow = () => {
+    setShowConfirmModal(false);
   };
 
   if (isLoading) {
@@ -556,6 +574,7 @@ export default function UserProfile({
         userId={userProfile.id}
         userName={userProfile.name}
         type="followers"
+        onUserSelect={onUserSelect}
       />
 
       {/* Following Modal */}
@@ -565,7 +584,52 @@ export default function UserProfile({
         userId={userProfile.id}
         userName={userProfile.name}
         type="following"
+        onUserSelect={onUserSelect}
       />
+
+      {/* Follow Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-white bg-opacity-80 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              {isFollowing ? 'Unfollow User' : 'Follow User'}
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {isFollowing 
+                ? `Are you sure you want to unfollow ${userProfile.name}? You will no longer see their posts in your feed.`
+                : `Are you sure you want to follow ${userProfile.name}? You will start seeing their posts in your feed.`
+              }
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={cancelFollow}
+                disabled={isFollowActionLoading}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmFollow}
+                disabled={isFollowActionLoading}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isFollowing
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+              >
+                {isFollowActionLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>{isFollowing ? 'Unfollowing...' : 'Following...'}</span>
+                  </div>
+                ) : (
+                  isFollowing ? 'Unfollow' : 'Follow'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

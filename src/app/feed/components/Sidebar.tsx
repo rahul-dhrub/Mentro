@@ -21,9 +21,11 @@ interface SidebarProps {
   };
   onShowPublications?: () => void;
   onRatingClick?: () => void;
+  onFollowersClick?: () => void;
+  onFollowingClick?: () => void;
 }
 
-export default function Sidebar({ author, stats, socialLinks, onShowPublications, onRatingClick }: SidebarProps) {
+export default function Sidebar({ author, stats, socialLinks, onShowPublications, onRatingClick, onFollowersClick, onFollowingClick }: SidebarProps) {
   const router = useRouter();
 
   const handleBlogsClick = () => {
@@ -49,12 +51,18 @@ export default function Sidebar({ author, stats, socialLinks, onShowPublications
 
       {/* Stats Section */}
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="bg-gray-50 rounded-lg p-3 text-center">
+        <div 
+          className="bg-gray-50 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-100 transition-colors"
+          onClick={onFollowersClick}
+        >
           <FiUsers className="mx-auto mb-2 text-blue-500" size={20} />
           <p className="text-lg font-semibold text-gray-900">{stats.followers}</p>
           <p className="text-xs text-gray-500">Followers</p>
         </div>
-        <div className="bg-gray-50 rounded-lg p-3 text-center">
+        <div 
+          className="bg-gray-50 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-100 transition-colors"
+          onClick={onFollowingClick}
+        >
           <FiUserPlus className="mx-auto mb-2 text-indigo-500" size={20} />
           <p className="text-lg font-semibold text-gray-900">{stats.following}</p>
           <p className="text-xs text-gray-500">Following</p>

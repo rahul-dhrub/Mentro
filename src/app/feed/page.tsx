@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import dynamic from 'next/dynamic';
 import { useAuth } from '@clerk/nextjs';
 import { FiX, FiArrowLeft } from 'react-icons/fi';
 import CreatePost from './components/CreatePost';
@@ -14,33 +13,10 @@ import SearchBar from './components/SearchBar';
 import UserProfile from './components/UserProfile';
 import HashtagFeed from './components/HashtagFeed';
 import RatingModal from './components/RatingModal';
+import FollowersModal from './components/FollowersModal';
 import { Post, Author, Publication } from './types';
 import { mockAuthors, mockPublications } from './mockData';
-import Lottie from "lottie-react";
 
-const mockCourses = [
-  {
-    id: '1',
-    title: 'Advanced Machine Learning',
-    code: 'CS501',
-    students: 35,
-    progress: 75
-  },
-  {
-    id: '2',
-    title: 'Data Structures and Algorithms',
-    code: 'CS301',
-    students: 42,
-    progress: 60
-  },
-  {
-    id: '3',
-    title: 'Software Engineering',
-    code: 'CS401',
-    students: 28,
-    progress: 45
-  }
-];
 
 export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -59,6 +35,8 @@ export default function FeedPage() {
   const [isPublicationsModalOpen, setIsPublicationsModalOpen] = useState(false);
   const [publications, setPublications] = useState<Publication[]>([]);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+  const [isFollowersModalOpen, setIsFollowersModalOpen] = useState(false);
+  const [followersModalType, setFollowersModalType] = useState<'followers' | 'following'>('followers');
   
   // Sidebar stats state
   const [sidebarStats, setSidebarStats] = useState({
@@ -430,6 +408,23 @@ export default function FeedPage() {
     setIsRatingModalOpen(true);
   };
 
+  const handleFollowersClick = () => {
+    setFollowersModalType('followers');
+    setIsFollowersModalOpen(true);
+  };
+
+  const handleFollowingClick = () => {
+    setFollowersModalType('following');
+    setIsFollowersModalOpen(true);
+  };
+
+  const handleFollowersCountChange = (newCount: number, type: 'followers' | 'following') => {
+    setSidebarStats(prev => ({
+      ...prev,
+      [type]: newCount
+    }));
+  };
+
   // Publications handling
   const fetchPublications = async () => {
     try {
@@ -581,6 +576,7 @@ export default function FeedPage() {
           onLike={handleLike}
           onComment={handleComment}
           onShare={handleShare}
+          onUserSelect={handleUserSelect}
         />
       );
     }
@@ -665,6 +661,8 @@ export default function FeedPage() {
               }}
               onShowPublications={() => setIsPublicationsModalOpen(true)}
               onRatingClick={handleRatingClick}
+              onFollowersClick={handleFollowersClick}
+              onFollowingClick={handleFollowingClick}
             />
           </div>
         </div>
@@ -719,6 +717,8 @@ export default function FeedPage() {
                   }}
                   onShowPublications={() => setIsPublicationsModalOpen(true)}
                   onRatingClick={handleRatingClick}
+                  onFollowersClick={handleFollowersClick}
+                  onFollowingClick={handleFollowingClick}
                 />
               </div>
             </div>
@@ -798,6 +798,19 @@ export default function FeedPage() {
           // Refresh sidebar stats when reviews change
           fetchSidebarStats(currentUser.id);
         }}
+      />
+
+      <FollowersModal
+        isOpen={isFollowersModalOpen}
+        onClose={() => setIsFollowersModalOpen(false)}
+        userId={currentUser.id}
+        userName={currentUser.name}
+        type={followersModalType}
+        currentUserId={currentUser.id}
+        onCountChange={(newCount) => {
+          handleFollowersCountChange(newCount, followersModalType);
+        }}
+        onUserSelect={handleUserSelect}
       />
     </div>
   );
