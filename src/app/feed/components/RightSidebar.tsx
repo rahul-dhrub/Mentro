@@ -45,9 +45,10 @@ interface ConversationMessage {
 
 interface RightSidebarProps {
   messages: Message[];
+  upcomingClasses?: Class[];
 }
 
-export default function RightSidebar({ messages: mockMessages }: RightSidebarProps) {
+export default function RightSidebar({ messages: mockMessages, upcomingClasses }: RightSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [conversations, setConversations] = useState<ConversationMessage[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);

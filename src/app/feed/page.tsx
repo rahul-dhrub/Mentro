@@ -807,6 +807,7 @@ export default function FeedPage() {
                       id: '1',
                       title: 'Advanced Machine Learning',
                       time: '10:00 AM - 11:30 AM',
+                      date: 'Today',
                       room: 'CS-101',
                       students: 35
                     },
@@ -814,6 +815,7 @@ export default function FeedPage() {
                       id: '2',
                       title: 'Data Structures',
                       time: '2:00 PM - 3:30 PM',
+                      date: 'Tomorrow',
                       room: 'CS-203',
                       students: 42
                     }
@@ -859,6 +861,7 @@ export default function FeedPage() {
                   id: '1',
                   title: 'Advanced Machine Learning',
                   time: '10:00 AM - 11:30 AM',
+                  date: 'Today',
                   room: 'CS-101',
                   students: 35
                 },
@@ -866,6 +869,7 @@ export default function FeedPage() {
                   id: '2',
                   title: 'Data Structures',
                   time: '2:00 PM - 3:30 PM',
+                  date: 'Tomorrow',
                   room: 'CS-203',
                   students: 42
                 }

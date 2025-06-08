@@ -4,13 +4,27 @@ export interface IUser extends mongoose.Document {
   clerkId: string;
   name: string;
   email: string;
+  phone?: string;
   profilePicture?: string;
+  bannerImage?: string;
   bio?: string;
   title?: string;
   department?: string;
+  location?: string;
+  dateOfBirth?: string;
   role: 'admin' | 'instructor' | 'student';
   isOnline: boolean;
   lastActive: Date;
+  
+  // Extended profile fields
+  expertise: string[];
+  achievements: string[];
+  introVideo?: string;
+  social: {
+    github?: string;
+    linkedin?: string;
+    website?: string;
+  };
   
   // User activity and relationships
   ratings: number[]; // Array of ratings given/received by this user
@@ -27,10 +41,18 @@ export interface IUser extends mongoose.Document {
   averageRating: number; // Average rating as an instructor
   totalReviews: number; // Total number of reviews received as instructor
   totalStudents: number; // Total students across all owned courses
+  totalHours: number; // Total hours of content taught/learned
   
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Social links sub-schema
+const socialSchema = new mongoose.Schema({
+  github: { type: String, default: '' },
+  linkedin: { type: String, default: '' },
+  website: { type: String, default: '' }
+}, { _id: false });
 
 const userSchema = new mongoose.Schema<IUser>(
   {
@@ -53,13 +75,22 @@ const userSchema = new mongoose.Schema<IUser>(
       lowercase: true,
       match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
     },
+    phone: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     profilePicture: {
       type: String,
       default: '',
     },
+    bannerImage: {
+      type: String,
+      default: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80',
+    },
     bio: {
       type: String,
-      maxlength: [500, 'Bio cannot be more than 500 characters'],
+      maxlength: [1000, 'Bio cannot be more than 1000 characters'],
       default: '',
     },
     title: {
@@ -69,6 +100,15 @@ const userSchema = new mongoose.Schema<IUser>(
     department: {
       type: String,
       default: 'Computer Science',
+    },
+    location: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    dateOfBirth: {
+      type: String,
+      default: '',
     },
     role: {
       type: String,
@@ -82,6 +122,26 @@ const userSchema = new mongoose.Schema<IUser>(
     lastActive: {
       type: Date,
       default: Date.now,
+    },
+    
+    // Extended profile fields
+    expertise: [{
+      type: String,
+      trim: true,
+      maxlength: [50, 'Expertise item cannot be more than 50 characters'],
+    }],
+    achievements: [{
+      type: String,
+      trim: true,
+      maxlength: [200, 'Achievement cannot be more than 200 characters'],
+    }],
+    introVideo: {
+      type: String,
+      default: '',
+    },
+    social: {
+      type: socialSchema,
+      default: () => ({}),
     },
     
     // User activity and relationships
@@ -132,6 +192,10 @@ const userSchema = new mongoose.Schema<IUser>(
       type: Number,
       default: 0,
     },
+    totalHours: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
@@ -139,9 +203,10 @@ const userSchema = new mongoose.Schema<IUser>(
 );
 
 // Indexes for better performance
+userSchema.index({ clerkId: 1 });
+userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
-userSchema.index({ ownedCourseIds: 1 });
-userSchema.index({ enrolledCourseIds: 1 });
+userSchema.index({ createdAt: -1 });
 
 // Pre-save middleware to calculate statistics
 userSchema.pre('save', function(this: IUser, next) {

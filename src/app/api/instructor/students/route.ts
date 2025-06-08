@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
 import connectDB from '@/lib/db';
 import Course from '@/models/Course';
 import User from '@/models/User';
@@ -7,13 +7,17 @@ import mongoose from 'mongoose';
 
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = getAuth(request);
+    const { userId } = await auth();
     
     if (!userId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     await connectDB();
+
+    // Ensure models are registered
+    Course;
+    User;
 
     // First, get the instructor's MongoDB user ID
     const instructor = await User.findOne({ clerkId: userId });
