@@ -43,6 +43,16 @@ export interface IUser extends mongoose.Document {
   totalStudents: number; // Total students across all owned courses
   totalHours: number; // Total hours of content taught/learned
   
+  // User settings
+  settings: {
+    darkMode: boolean;
+    notificationsEnabled: boolean;
+    emailNotifications: boolean;
+    pushNotifications: boolean;
+    language: string;
+    timezone: string;
+  };
+  
   createdAt: Date;
   updatedAt: Date;
 }
@@ -52,6 +62,16 @@ const socialSchema = new mongoose.Schema({
   github: { type: String, default: '' },
   linkedin: { type: String, default: '' },
   website: { type: String, default: '' }
+}, { _id: false });
+
+// Settings sub-schema
+const settingsSchema = new mongoose.Schema({
+  darkMode: { type: Boolean, default: false },
+  notificationsEnabled: { type: Boolean, default: true },
+  emailNotifications: { type: Boolean, default: true },
+  pushNotifications: { type: Boolean, default: true },
+  language: { type: String, default: 'en' },
+  timezone: { type: String, default: 'UTC' }
 }, { _id: false });
 
 const userSchema = new mongoose.Schema<IUser>(
@@ -195,6 +215,12 @@ const userSchema = new mongoose.Schema<IUser>(
     totalHours: {
       type: Number,
       default: 0,
+    },
+    
+    // User settings
+    settings: {
+      type: settingsSchema,
+      default: () => ({}),
     },
   },
   {

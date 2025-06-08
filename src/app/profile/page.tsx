@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { FiEdit2 } from 'react-icons/fi';
+import { FiEdit2, FiArrowLeft } from 'react-icons/fi';
 import CourseCard from './components/CourseCard';
 import CourseFilters from './components/CourseFilters';
 import ProfileStats from './components/ProfileStats';
@@ -70,6 +70,7 @@ interface UserProfile {
 
 export default function ProfilePage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const userId = searchParams.get('userId');
   const isViewingOtherUser = !!userId;
   
@@ -525,6 +526,15 @@ export default function ProfilePage() {
           onImageUpload={handleBannerUpload}
           disabled={isViewingOtherUser}
         />
+        
+        {/* Back Button */}
+        <button
+          onClick={() => router.back()}
+          className="absolute top-4 left-4 z-50 p-3 bg-white/90 backdrop-blur-sm border border-white/30 hover:bg-white/95 rounded-full transition-colors shadow-lg"
+          title="Go Back"
+        >
+          <FiArrowLeft size={20} className="text-gray-700" />
+        </button>
 
         {/* Profile Header */}
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -532,27 +542,30 @@ export default function ProfilePage() {
             <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-8 border border-white/30 shadow-2xl">
               <div className="flex flex-col lg:flex-row items-center lg:items-start gap-8">
                 {/* Profile Image */}
-                <ProfileImageUpload
-                  profileImage={user.profileImage}
-                  userName={user.name}
-                  isUploading={isUploadingImage}
-                  onImageUpload={handleImageUpload}
-                  disabled={isViewingOtherUser}
-                />
+                <div className="flex flex-col items-center">
+                  <ProfileImageUpload
+                    profileImage={user.profileImage}
+                    userName={user.name}
+                    isUploading={isUploadingImage}
+                    onImageUpload={handleImageUpload}
+                    disabled={isViewingOtherUser}
+                  />
+                  {!isViewingOtherUser && (
+                    <button
+                      onClick={() => setIsEditingProfile(!isEditingProfile)}
+                      className="mt-3 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                      title="Edit Profile"
+                    >
+                      <FiEdit2 size={16} />
+                      Edit Info
+                    </button>
+                  )}
+                </div>
 
                 {/* Profile Info - Left Side */}
                 <div className="flex-1 text-center lg:text-left">
                   <div className="flex items-center justify-center lg:justify-start gap-3 mb-2">
                     <h1 className="text-3xl font-bold text-gray-900">{user.name}</h1>
-                    {!isViewingOtherUser && (
-                      <button
-                        onClick={() => setIsEditingProfile(!isEditingProfile)}
-                        className="p-2 text-gray-700 hover:bg-gray-200 rounded-full transition-colors"
-                        title="Edit Profile"
-                      >
-                        <FiEdit2 size={20} />
-                      </button>
-                    )}
                   </div>
                   <p className="text-xl text-blue-600 font-semibold mb-6">{user.title}</p>
 
