@@ -13,6 +13,7 @@ interface PostCardProps {
   onLike: (postId: string) => void;
   onComment: (postId: string, comment: string, media?: Media[]) => void;
   onShare: (postId: string) => void;
+  onDelete?: (postId: string) => void;
   currentUser: Author;
   onUserSelect?: (userId: string) => void;
   onHashtagSelect?: (hashtag: string) => void;
@@ -29,10 +30,11 @@ interface PostHashtag {
 
 const defaultAvatar = 'https://api.dicebear.com/7.x/avataaars/svg?seed=default';
 
-export default function PostCard({ post, onLike, onComment, onShare, currentUser, onUserSelect, onHashtagSelect }: PostCardProps) {
+export default function PostCard({ post, onLike, onComment, onShare, onDelete, currentUser, onUserSelect, onHashtagSelect }: PostCardProps) {
   const [comment, setComment] = useState('');
   const [showComments, setShowComments] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
   const [commentMedia, setCommentMedia] = useState<Media[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,21 +52,25 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
   const fileInputRef = useRef<HTMLInputElement>(null);
   const replyFileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
         setShowEmojiPicker(false);
       }
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
     }
 
-    if (showEmojiPicker) {
+    if (showEmojiPicker || showDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
       };
     }
-  }, [showEmojiPicker]);
+  }, [showEmojiPicker, showDropdown]);
 
   // Fetch comments when comments section is opened
   useEffect(() => {
@@ -599,6 +605,18 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
     }
   };
 
+  const handleDeletePost = async () => {
+    if (!onDelete) return;
+    
+    const confirmed = window.confirm('Are you sure you want to delete this post? This action cannot be undone.');
+    if (confirmed) {
+      onDelete(post.id);
+      setShowDropdown(false);
+    }
+  };
+
+  const isOwnPost = currentUser.id === post.author.id;
+
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm p-4 mb-6">
       {/* Author Info */}
@@ -623,9 +641,45 @@ export default function PostCard({ post, onLike, onComment, onShare, currentUser
           </h3>
           <p className="text-gray-600 text-sm">{post.author.title} • {post.author.department}</p>
         </div>
-        <button className="ml-auto text-gray-400 hover:text-gray-600 cursor-pointer">
-          <FiMoreHorizontal size={20} />
-        </button>
+        <div className="ml-auto relative">
+          <button 
+            onClick={() => setShowDropdown(!showDropdown)}
+            className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
+          >
+            <FiMoreHorizontal size={20} />
+          </button>
+          
+          {/* Dropdown Menu */}
+          {showDropdown && (
+            <div 
+              ref={dropdownRef}
+              className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[150px]"
+            >
+              <div className="py-1">
+                {isOwnPost && onDelete && (
+                  <button
+                    onClick={handleDeletePost}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer flex items-center space-x-2"
+                  >
+                    <FiX size={16} />
+                    <span>Delete Post</span>
+                  </button>
+                )}
+                
+                {!isOwnPost && (
+                  <>
+                    <button className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer">
+                      Report Post
+                    </button>
+                    <button className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer">
+                      Hide Post
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Post Content */}

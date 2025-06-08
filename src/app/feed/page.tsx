@@ -406,7 +406,35 @@ export default function FeedPage() {
   };
 
   const handleShare = (postId: string) => {
-    console.log('Shared post:', postId);
+    console.log('Share post:', postId);
+  };
+
+  const handleDelete = async (postId: string) => {
+    try {
+      // Check if the post.id is a valid MongoDB ObjectId (24 hex characters)
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(postId);
+      
+      if (!isValidObjectId) {
+        // For mock data posts, just remove from local state
+        setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+        return;
+      }
+
+      const response = await fetch(`/api/posts/${postId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete post');
+      }
+
+      // Remove post from local state
+      setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      // You might want to show an error message to the user
+    }
   };
 
   const handleRatingClick = () => {
@@ -582,6 +610,7 @@ export default function FeedPage() {
           onComment={handleComment}
           onShare={handleShare}
           onUserSelect={handleUserSelect}
+          onDelete={handleDelete}
         />
       );
     }
@@ -595,6 +624,7 @@ export default function FeedPage() {
           onComment={handleComment}
           onShare={handleShare}
           onUserSelect={handleUserSelect}
+          onDelete={handleDelete}
         />
       );
     }
@@ -620,6 +650,7 @@ export default function FeedPage() {
               onShare={handleShare}
               onUserSelect={handleUserSelect}
               onHashtagSelect={handleHashtagSelect}
+              onDelete={handleDelete}
             />
           ))}
           

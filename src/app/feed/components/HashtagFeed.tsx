@@ -13,6 +13,7 @@ interface HashtagFeedProps {
   onComment: (postId: string, content: string) => void;
   onShare: (postId: string) => void;
   onUserSelect?: (userId: string) => void;
+  onDelete?: (postId: string) => void;
 }
 
 interface HashtagInfo {
@@ -47,7 +48,8 @@ export default function HashtagFeed({
   onLike, 
   onComment, 
   onShare,
-  onUserSelect
+  onUserSelect,
+  onDelete
 }: HashtagFeedProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'posts' | 'blogs'>('posts');
@@ -463,12 +465,13 @@ export default function HashtagFeed({
               onLike={onLike}
               onComment={onComment}
               onShare={onShare}
-                    onUserSelect={onUserSelect}
-                    onHashtagSelect={(hashtag) => {
-                      // Navigate to the selected hashtag using Next.js router
-                      const cleanHashtag = hashtag.startsWith('#') ? hashtag : `#${hashtag}`;
-                      router.push(`/feed/hashtag/${encodeURIComponent(cleanHashtag)}`);
-                    }}
+              onDelete={onDelete}
+              onUserSelect={onUserSelect}
+              onHashtagSelect={(hashtag) => {
+                // Navigate to the selected hashtag using Next.js router
+                const cleanHashtag = hashtag.startsWith('#') ? hashtag : `#${hashtag}`;
+                router.push(`/feed/hashtag/${encodeURIComponent(cleanHashtag)}`);
+              }}
             />
                 ))}
                 

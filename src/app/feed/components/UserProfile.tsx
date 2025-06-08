@@ -16,6 +16,7 @@ interface UserProfileProps {
   onComment: (postId: string, content: string) => void;
   onShare: (postId: string) => void;
   onUserSelect?: (userId: string) => void;
+  onDelete?: (postId: string) => void;
 }
 
 export default function UserProfile({ 
@@ -24,7 +25,8 @@ export default function UserProfile({
   onLike, 
   onComment, 
   onShare,
-  onUserSelect
+  onUserSelect,
+  onDelete
 }: UserProfileProps) {
   const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfileType | null>(null);
@@ -448,6 +450,7 @@ export default function UserProfile({
                     const cleanHashtag = hashtag.startsWith('#') ? hashtag : `#${hashtag}`;
                     router.push(`/feed/hashtag/${encodeURIComponent(cleanHashtag)}`);
                   }}
+                  onDelete={onDelete}
                 />
               ))
             ) : (
