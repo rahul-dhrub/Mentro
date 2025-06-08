@@ -203,8 +203,7 @@ const userSchema = new mongoose.Schema<IUser>(
 );
 
 // Indexes for better performance
-userSchema.index({ clerkId: 1 });
-userSchema.index({ email: 1 });
+// Note: clerkId and email already have unique indexes from field definitions
 userSchema.index({ role: 1 });
 userSchema.index({ createdAt: -1 });
 

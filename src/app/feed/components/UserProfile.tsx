@@ -310,12 +310,18 @@ export default function UserProfile({
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
         <div className="flex flex-col md:flex-row md:items-center md:space-x-6">
           {/* Avatar */}
-          <div className="flex-shrink-0 mb-4 md:mb-0">
+          <div className="flex-shrink-0 mb-4 md:mb-0 flex flex-col items-center md:items-start">
             <img
               src={userProfile.avatar}
               alt={userProfile.name}
-              className="w-32 h-32 rounded-full object-cover mx-auto md:mx-0"
+              className="w-32 h-32 rounded-full object-cover mx-auto md:mx-0 mb-3"
             />
+            <button
+              onClick={() => router.push(`/profile?userId=${userProfile.id}`)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+            >
+              Detail
+            </button>
           </div>
 
           {/* Profile Info */}
