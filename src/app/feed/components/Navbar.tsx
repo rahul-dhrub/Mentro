@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { FiBell, FiBook, FiCalendar, FiMessageSquare, FiSettings, FiUser, FiLogOut, FiMenu, FiX, FiMoreHorizontal } from 'react-icons/fi';
+import { FiBell, FiBook, FiCalendar, FiMessageSquare, FiSettings, FiUser, FiLogOut, FiMenu, FiX, FiMoreHorizontal, FiArrowLeft } from 'react-icons/fi';
 import SearchBar from './SearchBar';
 
 interface NavbarProps {
@@ -21,6 +21,7 @@ interface NavbarProps {
   isSearchActive: boolean;
   setIsSearchActive: (active: boolean) => void;
   onBackToFeed: () => void;
+  onBack?: () => void;
 }
 
 export default function Navbar({ 
@@ -33,7 +34,8 @@ export default function Navbar({
   onHashtagSelect,
   isSearchActive,
   setIsSearchActive,
-  onBackToFeed
+  onBackToFeed,
+  onBack
 }: NavbarProps) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -72,8 +74,18 @@ export default function Navbar({
     <nav className="bg-white/90 backdrop-blur-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          {/* Left Side - Logo and Menu */}
+          {/* Left Side - Back Button, Logo and Menu */}
           <div className="flex items-center space-x-4">
+            {/* Back Button */}
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="p-2 text-gray-600 hover:text-blue-600 cursor-pointer"
+                title="Go Back"
+              >
+                <FiArrowLeft size={20} />
+              </button>
+            )}
             {!isSidebarVisible && (
               <button
                 onClick={onSidebarToggle}

@@ -11,7 +11,7 @@ import AssignmentsTab from './components/tabs/AssignmentsTab';
 import QuizzesTab from './components/tabs/QuizzesTab';
 import FacultyTab from './components/tabs/FacultyTab';
 import StudentsTab from './components/tabs/StudentsTab';
-import { Assignment, Quiz, Faculty, Student } from './types';
+import { Assignment, Quiz, Faculty } from './types';
 import useChaptersAndLessons from './hooks/useChaptersAndLessons';
 import useCourseData from './hooks/useCourseData';
 import useCourseStats from './hooks/useCourseStats';
@@ -98,17 +98,7 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
     fetchFaculty();
   }, [courseId]);
   
-  // Student state
-  const [students, setStudents] = useState<Student[]>([
-    {
-      id: '1',
-      name: 'John Doe',
-      email: 'john@example.com',
-      progress: 75,
-      lastActivity: '2 hours ago',
-      status: 'active'
-    }
-  ]);
+
 
   // Event handlers
   const handleEditCourse = () => {
@@ -329,7 +319,7 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
       case 'students':
         return (
           <StudentsTab
-            students={students}
+            courseId={courseId || ''}
             onExportList={handleExportStudentList}
             onViewStudentDetails={handleViewStudentDetails}
           />

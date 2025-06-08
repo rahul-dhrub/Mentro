@@ -9,6 +9,11 @@ export interface IFaculty {
   joinedAt: Date;
 }
 
+export interface IEnrolledStudent {
+  userId: string;
+  lessonsCompleted: number;
+}
+
 export interface ICourse extends Document {
   _id: string;
   title: string;
@@ -16,7 +21,8 @@ export interface ICourse extends Document {
   code: string; // Course code (e.g., CS101)
   instructorId: mongoose.Types.ObjectId; // Reference to User
   faculty: IFaculty[]; // Faculty members for this course
-  students: mongoose.Types.ObjectId[]; // Array of student IDs
+  students: mongoose.Types.ObjectId[]; // Array of student IDs (legacy)
+  enrolledStudents: IEnrolledStudent[]; // Detailed student enrollment info
   chapters: mongoose.Types.ObjectId[]; // Array of chapter IDs
   
   // Course metadata
@@ -94,6 +100,18 @@ const FacultySchema = new Schema<IFaculty>({
   },
 }, { _id: false });
 
+const EnrolledStudentSchema = new Schema<IEnrolledStudent>({
+  userId: {
+    type: String,
+    required: true,
+  },
+  lessonsCompleted: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+}, { _id: false });
+
 const CourseSchema = new Schema<ICourse>(
   {
     title: {
@@ -122,6 +140,7 @@ const CourseSchema = new Schema<ICourse>(
       type: Schema.Types.ObjectId,
       ref: 'User',
     }],
+    enrolledStudents: [EnrolledStudentSchema],
     chapters: [{
       type: Schema.Types.ObjectId,
       ref: 'Chapter',
@@ -252,8 +271,8 @@ CourseSchema.index({ 'faculty.email': 1 });
 
 // Pre-save middleware to update calculated fields
 CourseSchema.pre('save', function(this: ICourse, next) {
-  // Update total students count
-  this.totalStudents = this.students.length;
+  // Update total students count (use enrolledStudents if available, fallback to legacy students)
+  this.totalStudents = this.enrolledStudents ? this.enrolledStudents.length : this.students.length;
   
   // Calculate average rating from ratings array
   if (this.ratings && this.ratings.length > 0) {

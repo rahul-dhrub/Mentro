@@ -308,6 +308,16 @@ export default function FeedPage() {
     setIsSearchActive(false);
   };
 
+  // Handle back navigation
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      // If no history, navigate to home
+      window.location.href = '/';
+    }
+  };
+
   const handleTogglePersonalPosts = (isPersonal: boolean) => {
     setIsPersonalPosts(isPersonal);
   };
@@ -686,6 +696,7 @@ export default function FeedPage() {
         isSearchActive={isSearchActive}
         setIsSearchActive={setIsSearchActive}
         onBackToFeed={handleBackToFeed}
+        onBack={handleBack}
       />
       
       <div className="pt-16 flex max-w-7xl mx-auto">
