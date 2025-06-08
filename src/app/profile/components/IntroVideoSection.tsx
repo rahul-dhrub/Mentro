@@ -12,6 +12,7 @@ interface IntroVideoSectionProps {
   onVideoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onSave: () => void;
   onCancel: () => void;
+  showEditButton?: boolean;
 }
 
 export default function IntroVideoSection({
@@ -23,7 +24,8 @@ export default function IntroVideoSection({
   onVideoChange,
   onVideoUpload,
   onSave,
-  onCancel
+  onCancel,
+  showEditButton = true
 }: IntroVideoSectionProps) {
   // Helper function to check if URL is a Bunny CDN iframe embed
   const isBunnyIframeEmbed = (url: string): boolean => {
@@ -39,13 +41,15 @@ export default function IntroVideoSection({
     <div className="bg-white rounded-lg shadow-sm p-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold text-gray-900">Introduction Video</h2>
-        <button
-          onClick={onToggleEdit}
-          className="flex items-center gap-2 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-        >
-          <FiEdit2 size={16} />
-          {isEditing ? 'Cancel' : 'Edit'}
-        </button>
+        {showEditButton && (
+          <button
+            onClick={onToggleEdit}
+            className="flex items-center gap-2 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+          >
+            <FiEdit2 size={16} />
+            {isEditing ? 'Cancel' : 'Edit'}
+          </button>
+        )}
       </div>
 
       {isEditing ? (
@@ -184,13 +188,15 @@ export default function IntroVideoSection({
               <div className="text-center">
                 <FiVideo className="mx-auto text-gray-400 mb-3" size={48} />
                 <p className="text-gray-500 mb-2">No introduction video added yet</p>
-                <button
-                  onClick={onToggleEdit}
-                  className="flex items-center gap-2 mx-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                >
-                  <FiUpload size={16} />
-                  Add Video
-                </button>
+                {showEditButton && (
+                  <button
+                    onClick={onToggleEdit}
+                    className="flex items-center gap-2 mx-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  >
+                    <FiUpload size={16} />
+                    Add Video
+                  </button>
+                )}
               </div>
             </div>
           )}

@@ -9,6 +9,7 @@ interface ExpertiseSectionProps {
   onExpertiseChange: (expertise: string[]) => void;
   onSave: () => void;
   onCancel: () => void;
+  showEditButton?: boolean;
 }
 
 export default function ExpertiseSection({
@@ -17,7 +18,8 @@ export default function ExpertiseSection({
   onToggleEdit,
   onExpertiseChange,
   onSave,
-  onCancel
+  onCancel,
+  showEditButton = true
 }: ExpertiseSectionProps) {
   const handleRemoveSkill = (index: number) => {
     const newExpertise = expertise.filter((_, i) => i !== index);
@@ -34,13 +36,15 @@ export default function ExpertiseSection({
     <div className="bg-white rounded-lg shadow-sm p-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold text-gray-900">Expertise</h2>
-        <button
-          onClick={onToggleEdit}
-          className="flex items-center gap-2 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-        >
-          <FiEdit2 size={16} />
-          {isEditing ? 'Cancel' : 'Edit'}
-        </button>
+        {showEditButton && (
+          <button
+            onClick={onToggleEdit}
+            className="flex items-center gap-2 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+          >
+            <FiEdit2 size={16} />
+            {isEditing ? 'Cancel' : 'Edit'}
+          </button>
+        )}
       </div>
       
       {isEditing ? (

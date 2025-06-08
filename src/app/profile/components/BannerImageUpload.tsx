@@ -7,12 +7,14 @@ interface BannerImageUploadProps {
   bannerImage: string;
   isUploading: boolean;
   onImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
 }
 
 export default function BannerImageUpload({ 
   bannerImage, 
   isUploading, 
-  onImageUpload 
+  onImageUpload,
+  disabled = false
 }: BannerImageUploadProps) {
   return (
     <div className="relative h-80 w-full overflow-hidden group">
@@ -25,8 +27,9 @@ export default function BannerImageUpload({
       />
       
       {/* Upload Overlay */}
-      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20">
-        <label htmlFor="banner-image-upload" className={`cursor-pointer ${isUploading ? 'pointer-events-none' : ''}`}>
+      {!disabled && (
+        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20">
+          <label htmlFor="banner-image-upload" className={`cursor-pointer ${isUploading ? 'pointer-events-none' : ''}`}>
           <div className="flex flex-col items-center text-white">
             {isUploading ? (
               <>
@@ -52,6 +55,7 @@ export default function BannerImageUpload({
           </div>
         </label>
       </div>
+      )}
       
       {/* Hidden File Input */}
       <input

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { FiEdit2 } from 'react-icons/fi';
 import CourseCard from './components/CourseCard';
@@ -67,6 +68,10 @@ interface UserProfile {
 }
 
 export default function ProfilePage() {
+  const searchParams = useSearchParams();
+  const userId = searchParams.get('userId');
+  const isViewingOtherUser = !!userId;
+  
   const [user, setUser] = useState<UserProfile | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -96,6 +101,12 @@ export default function ProfilePage() {
 
   // Save profile data to database
   const saveProfile = async (updatedData: Partial<UserProfile>) => {
+    // Prevent saving when viewing other user's profile
+    if (isViewingOtherUser) {
+      showToast('Cannot edit other users profiles', 'error');
+      return;
+    }
+    
     try {
       const response = await fetch('/api/profile', {
         method: 'PUT',
@@ -125,12 +136,59 @@ export default function ProfilePage() {
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
-        const response = await fetch('/api/profile');
+        let response;
+        if (userId) {
+          // Fetch specific user profile
+          response = await fetch(`/api/users/${userId}`);
+        } else {
+          // Fetch current user profile
+          response = await fetch('/api/profile');
+        }
+        
         if (!response.ok) {
           throw new Error(`Failed to fetch profile: ${response.status}`);
         }
+        
         const data = await response.json();
-        setUser(data.profile);
+        
+        // Handle different response formats
+        let profile;
+        if (userId) {
+          // API response for specific user has user data in 'user' field
+          const userData = data.user;
+          profile = {
+            id: userData._id,
+            name: userData.name,
+            email: userData.email,
+            phone: userData.phone || '',
+            role: userData.role,
+            title: userData.title,
+            bio: userData.bio || '',
+            profileImage: userData.profilePicture || '',
+            bannerImage: userData.bannerImage || '',
+            location: userData.location || '',
+            joinDate: userData.joinDate || userData.createdAt,
+            dateOfBirth: userData.dateOfBirth || '',
+            expertise: userData.expertise || [],
+            achievements: userData.achievements || [],
+            introVideo: userData.introVideo || '',
+            social: userData.social || { github: '', linkedin: '', website: '' },
+            stats: {
+              totalCourses: userData.stats?.totalCourses || 0,
+              totalStudents: userData.stats?.totalStudents || 0,
+              completedCourses: userData.stats?.completedCourses || 0,
+              inProgressCourses: userData.stats?.inProgressCourses || 0,
+              averageRating: userData.stats?.averageRating || 0,
+              totalHours: userData.stats?.totalHours || 0,
+            },
+            recentActivity: userData.recentActivity || []
+          };
+        } else {
+          // Current user profile response
+          profile = data.profile;
+        }
+        
+        setUser(profile);
       } catch (error) {
         console.error('Error fetching user profile:', error);
         showToast('Failed to load profile data', 'error');
@@ -138,14 +196,22 @@ export default function ProfilePage() {
     };
 
     fetchUserProfile();
-  }, []);
+  }, [userId]);
 
   // Fetch courses data for faculty
   useEffect(() => {
     const fetchCourses = async () => {
       if (user && user.role === 'instructor') {
         try {
-          const response = await fetch('/api/profile/courses');
+          let response;
+          if (userId) {
+            // Fetch courses for specific user
+            response = await fetch(`/api/users/${userId}/courses`);
+          } else {
+            // Fetch courses for current user
+            response = await fetch('/api/profile/courses');
+          }
+          
           if (response.ok) {
             const data = await response.json();
             setCourses(data.courses);
@@ -161,7 +227,7 @@ export default function ProfilePage() {
     };
 
     fetchCourses();
-  }, [user]);
+  }, [user, userId]);
 
   // Fetch students data for instructor and update stats
   useEffect(() => {
@@ -306,6 +372,8 @@ export default function ProfilePage() {
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (isViewingOtherUser) return;
+    
     const file = event.target.files?.[0];
     if (!file) return;
     
@@ -332,6 +400,8 @@ export default function ProfilePage() {
   };
 
   const handleBannerUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (isViewingOtherUser) return;
+    
     const file = event.target.files?.[0];
     if (!file) return;
     
@@ -361,6 +431,8 @@ export default function ProfilePage() {
   };
 
   const handleVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (isViewingOtherUser) return;
+    
     const file = event.target.files?.[0];
     if (!file) return;
     
@@ -403,6 +475,7 @@ export default function ProfilePage() {
           bannerImage={user.bannerImage}
           isUploading={isUploadingBanner}
           onImageUpload={handleBannerUpload}
+          disabled={isViewingOtherUser}
         />
 
         {/* Profile Header */}
@@ -416,19 +489,22 @@ export default function ProfilePage() {
                   userName={user.name}
                   isUploading={isUploadingImage}
                   onImageUpload={handleImageUpload}
+                  disabled={isViewingOtherUser}
                 />
 
                 {/* Profile Info - Left Side */}
                 <div className="flex-1 text-center lg:text-left">
                   <div className="flex items-center justify-center lg:justify-start gap-3 mb-2">
                     <h1 className="text-3xl font-bold text-gray-900">{user.name}</h1>
-                    <button
-                      onClick={() => setIsEditingProfile(!isEditingProfile)}
-                      className="p-2 text-gray-700 hover:bg-gray-200 rounded-full transition-colors"
-                      title="Edit Profile"
-                    >
-                      <FiEdit2 size={20} />
-                    </button>
+                    {!isViewingOtherUser && (
+                      <button
+                        onClick={() => setIsEditingProfile(!isEditingProfile)}
+                        className="p-2 text-gray-700 hover:bg-gray-200 rounded-full transition-colors"
+                        title="Edit Profile"
+                      >
+                        <FiEdit2 size={20} />
+                      </button>
+                    )}
                   </div>
                   <p className="text-xl text-blue-600 font-semibold mb-6">{user.title}</p>
 
@@ -596,6 +672,7 @@ export default function ProfilePage() {
                   }
                 }}
                 onCancel={() => setIsEditingVideo(false)}
+                showEditButton={!isViewingOtherUser}
               />
 
               <AboutSection
@@ -612,6 +689,7 @@ export default function ProfilePage() {
                   }
                 }}
                 onCancel={() => setIsEditingOverview(false)}
+                showEditButton={!isViewingOtherUser}
               />
 
               <ExpertiseSection
@@ -628,6 +706,7 @@ export default function ProfilePage() {
                   }
                 }}
                 onCancel={() => setIsEditingOverview(false)}
+                showEditButton={!isViewingOtherUser}
               />
             </div>
           )}
@@ -647,6 +726,7 @@ export default function ProfilePage() {
                 }
               }}
               onCancel={() => setIsEditingAchievements(false)}
+              showEditButton={!isViewingOtherUser}
             />
           )}
 

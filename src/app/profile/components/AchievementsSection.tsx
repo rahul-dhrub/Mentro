@@ -9,6 +9,7 @@ interface AchievementsSectionProps {
   onAchievementsChange: (achievements: string[]) => void;
   onSave: () => void;
   onCancel: () => void;
+  showEditButton?: boolean;
 }
 
 export default function AchievementsSection({
@@ -17,7 +18,8 @@ export default function AchievementsSection({
   onToggleEdit,
   onAchievementsChange,
   onSave,
-  onCancel
+  onCancel,
+  showEditButton = true
 }: AchievementsSectionProps) {
   const handleUpdateAchievement = (index: number, value: string) => {
     const newAchievements = [...achievements];
@@ -40,13 +42,15 @@ export default function AchievementsSection({
     <div className="bg-white rounded-lg shadow-sm p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Achievements</h2>
-        <button
-          onClick={onToggleEdit}
-          className="flex items-center gap-2 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-        >
-          <FiEdit2 size={16} />
-          {isEditing ? 'Cancel' : 'Edit'}
-        </button>
+        {showEditButton && (
+          <button
+            onClick={onToggleEdit}
+            className="flex items-center gap-2 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+          >
+            <FiEdit2 size={16} />
+            {isEditing ? 'Cancel' : 'Edit'}
+          </button>
+        )}
       </div>
       
       {isEditing ? (
@@ -104,12 +108,14 @@ export default function AchievementsSection({
             <div className="col-span-full text-center py-8">
               <FiAward className="mx-auto text-gray-400 mb-3" size={48} />
               <p className="text-gray-500 mb-2">No achievements added yet</p>
-              <button
-                onClick={onToggleEdit}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-              >
-                Add Achievement
-              </button>
+              {showEditButton && (
+                <button
+                  onClick={onToggleEdit}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  Add Achievement
+                </button>
+              )}
             </div>
           )}
         </div>
