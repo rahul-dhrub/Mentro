@@ -21,12 +21,14 @@ interface StudentsTabProps {
   courseId: string;
   onExportList: () => void;
   onViewStudentDetails: (studentId: string) => void;
+  onViewStudentProfile: (studentId: string) => void;
 }
 
 export default function StudentsTab({
   courseId,
   onExportList,
-  onViewStudentDetails
+  onViewStudentDetails,
+  onViewStudentProfile
 }: StudentsTabProps) {
   const [students, setStudents] = useState<Student[]>([]);
   const [totalLessons, setTotalLessons] = useState(0);
@@ -424,7 +426,7 @@ export default function StudentsTab({
 
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Enrolled Students</h2>
+        <h2 className="text-xl font-semibold text-gray-900">Enrolled Students</h2>
           <p className="text-sm text-gray-600 mt-1">
             {students.length} students enrolled • {totalLessons} total lessons
           </p>
@@ -549,7 +551,11 @@ export default function StudentsTab({
                 <tr key={student.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                      <div 
+                        className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500 hover:ring-offset-2 transition-all"
+                        onClick={() => onViewStudentProfile(student.id)}
+                        title={`View ${student.name}'s profile`}
+                      >
                         {student.profilePicture ? (
                           <img 
                             src={student.profilePicture} 
@@ -567,7 +573,13 @@ export default function StudentsTab({
                       </div>
                       <div className="ml-4">
                         <div className="flex items-center space-x-2">
-                          <div className="text-sm font-medium text-gray-900">{student.name}</div>
+                          <div 
+                            className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600 hover:underline transition-colors"
+                            onClick={() => onViewStudentProfile(student.id)}
+                            title={`View ${student.name}'s profile`}
+                          >
+                            {student.name}
+                          </div>
                           <OnlineStatusIndicator 
                             status={student.onlineStatus} 
                             lastActiveFormatted={student.lastActiveFormatted} 

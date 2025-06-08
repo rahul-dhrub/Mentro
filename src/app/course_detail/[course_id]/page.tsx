@@ -11,6 +11,7 @@ import AssignmentsTab from './components/tabs/AssignmentsTab';
 import QuizzesTab from './components/tabs/QuizzesTab';
 import FacultyTab from './components/tabs/FacultyTab';
 import StudentsTab from './components/tabs/StudentsTab';
+import UserProfile from '@/app/feed/components/UserProfile';
 import { Assignment, Quiz, Faculty } from './types';
 import useChaptersAndLessons from './hooks/useChaptersAndLessons';
 import useCourseData from './hooks/useCourseData';
@@ -21,6 +22,10 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
   // Tab state
   const [activeTab, setActiveTab] = useState('overview');
   const [courseId, setCourseId] = useState<string | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectedFacultyId, setSelectedFacultyId] = useState<string | null>(null);
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [showFacultyProfile, setShowFacultyProfile] = useState(false);
   const router = useRouter();
   
   // Initialize course ID from params
@@ -206,6 +211,16 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
     console.log('View student details:', studentId);
   };
 
+  const handleViewStudentProfile = (studentId: string) => {
+    setSelectedStudentId(studentId);
+    setShowUserProfile(true);
+  };
+
+  const handleViewFacultyProfile = (facultyId: string) => {
+    setSelectedFacultyId(facultyId);
+    setShowFacultyProfile(true);
+  };
+
   // Show loading state while course ID is being resolved or data is loading
   if (!courseId || courseLoading || chaptersLoading || (activeTab === 'faculty' && facultyLoading)) {
     return (
@@ -314,6 +329,7 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
             onRemoveFaculty={handleRemoveFaculty}
             onTransferOwnership={handleTransferOwnership}
             onFacultyUpdate={handleFacultyUpdate}
+            onViewFacultyProfile={handleViewFacultyProfile}
           />
         );
       case 'students':
@@ -322,6 +338,7 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
             courseId={courseId || ''}
             onExportList={handleExportStudentList}
             onViewStudentDetails={handleViewStudentDetails}
+            onViewStudentProfile={handleViewStudentProfile}
           />
         );
       default:
@@ -353,6 +370,82 @@ export default function FacultyCourseDetail({ params }: { params: Promise<{ cour
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 overflow-visible">
         {renderActiveTab()}
       </div>
+
+      {/* Student Profile Modal */}
+      {showUserProfile && selectedStudentId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Student Profile</h2>
+              <button
+                onClick={() => {
+                  setShowUserProfile(false);
+                  setSelectedStudentId(null);
+                }}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <FiX size={24} />
+              </button>
+            </div>
+            <div className="p-6">
+              <UserProfile
+                userId={selectedStudentId}
+                currentUser={{
+                  id: 'current-user-id', // Replace with actual current user ID
+                  name: 'Current User', // Replace with actual current user name
+                  avatar: '/default-avatar.png' // Replace with actual current user avatar
+                }}
+                onLike={(postId: string) => console.log('Like post:', postId)}
+                onComment={(postId: string, content: string) => console.log('Comment on post:', postId, content)}
+                onShare={(postId: string) => console.log('Share post:', postId)}
+                onUserSelect={(userId: string) => {
+                  setSelectedStudentId(userId);
+                  // Keep the modal open to show the new user profile
+                }}
+                onDelete={(postId: string) => console.log('Delete post:', postId)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Faculty Profile Modal */}
+      {showFacultyProfile && selectedFacultyId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Faculty Profile</h2>
+              <button
+                onClick={() => {
+                  setShowFacultyProfile(false);
+                  setSelectedFacultyId(null);
+                }}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <FiX size={24} />
+              </button>
+            </div>
+            <div className="p-6">
+              <UserProfile
+                userId={selectedFacultyId}
+                currentUser={{
+                  id: 'current-user-id', // Replace with actual current user ID
+                  name: 'Current User', // Replace with actual current user name
+                  avatar: '/default-avatar.png' // Replace with actual current user avatar
+                }}
+                onLike={(postId: string) => console.log('Like post:', postId)}
+                onComment={(postId: string, content: string) => console.log('Comment on post:', postId, content)}
+                onShare={(postId: string) => console.log('Share post:', postId)}
+                onUserSelect={(userId: string) => {
+                  setSelectedFacultyId(userId);
+                  // Keep the modal open to show the new user profile
+                }}
+                onDelete={(postId: string) => console.log('Delete post:', postId)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

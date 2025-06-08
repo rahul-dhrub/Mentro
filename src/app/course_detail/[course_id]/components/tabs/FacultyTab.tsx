@@ -12,6 +12,7 @@ interface FacultyTabProps {
   onRemoveFaculty: (facultyId: string) => void;
   onTransferOwnership: (newOwnerEmail: string) => void;
   onFacultyUpdate: (faculty: Faculty[]) => void;
+  onViewFacultyProfile: (facultyId: string) => void;
 }
 
 export default function FacultyTab({
@@ -20,7 +21,8 @@ export default function FacultyTab({
   onAddFaculty,
   onRemoveFaculty,
   onTransferOwnership,
-  onFacultyUpdate
+  onFacultyUpdate,
+  onViewFacultyProfile
 }: FacultyTabProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [facultyEmail, setFacultyEmail] = useState('');
@@ -395,10 +397,22 @@ export default function FacultyTab({
             <div key={member.id} className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <FacultyAvatar member={member} />
+                  <div
+                    className="cursor-pointer hover:ring-2 hover:ring-blue-500 hover:ring-offset-2 transition-all rounded-full"
+                    onClick={() => onViewFacultyProfile(member.id)}
+                    title={`View ${member.name}'s profile`}
+                  >
+                    <FacultyAvatar member={member} />
+                  </div>
                   <div>
                     <div className="flex items-center space-x-2">
-                      <h3 className="text-lg font-medium text-gray-900">{member.name}</h3>
+                      <h3 
+                        className="text-lg font-medium text-gray-900 cursor-pointer hover:text-blue-600 hover:underline transition-colors"
+                        onClick={() => onViewFacultyProfile(member.id)}
+                        title={`View ${member.name}'s profile`}
+                      >
+                        {member.name}
+                      </h3>
                       {member.role === 'owner' && (
                         <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
                           Owner

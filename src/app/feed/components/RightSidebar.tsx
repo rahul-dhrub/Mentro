@@ -106,10 +106,10 @@ export default function RightSidebar({ upcomingClasses, messages: mockMessages }
 
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm p-6 w-80">
-      {/* Upcoming Classes */}
+      {/* Upcoming Events */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Upcoming Classes</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Upcoming Events</h2>
           <FiCalendar className="text-gray-400" size={20} />
         </div>
         <div className="space-y-4">
