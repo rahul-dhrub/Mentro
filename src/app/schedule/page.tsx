@@ -10,7 +10,7 @@ import TaskDetails from './components/TaskDetails';
 import TaskTypeManager from './components/TaskTypeManager';
 import AddEventModal from './components/AddEventModal';
 import { ScheduleTask, DaySchedule, TaskType, defaultTaskTypes, AddEventFormData, getTaskTypeColors, getTaskTypeIcons } from './types';
-import { getScheduleData } from './data';
+import { scheduleAPI } from '@/lib/api/schedule';
 
 export default function SchedulePage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -26,6 +26,8 @@ export default function SchedulePage() {
   const [taskTypes, setTaskTypes] = useState<TaskType[]>(defaultTaskTypes);
   const [scheduleData, setScheduleData] = useState<DaySchedule[]>([]);
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Update current time every minute
   useEffect(() => {
@@ -38,7 +40,28 @@ export default function SchedulePage() {
 
   // Load schedule data
   useEffect(() => {
-    setScheduleData(getScheduleData());
+    const loadScheduleData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const response = await scheduleAPI.getSchedule();
+        if (response.success && response.schedule) {
+          setScheduleData(response.schedule);
+        } else {
+          setError(response.error || 'Failed to load schedule');
+          setScheduleData([]);
+        }
+      } catch (error) {
+        console.error('Error loading schedule data:', error);
+        setError('Failed to load schedule data');
+        setScheduleData([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadScheduleData();
   }, []);
 
   const handleWeekChange = (direction: 'prev' | 'next') => {
@@ -68,39 +91,51 @@ export default function SchedulePage() {
     setSelectedTask(task);
   };
 
-  const handleAddEvent = (eventData: AddEventFormData) => {
-    const newTask: ScheduleTask = {
-      id: `task-${Date.now()}`,
-      title: eventData.title,
-      type: eventData.type,
-      startTime: eventData.startTime,
-      endTime: eventData.endTime,
-      location: eventData.location || undefined,
-      attendees: typeof eventData.attendees === 'number' ? eventData.attendees : undefined,
-      description: eventData.description || undefined,
-      isOnline: eventData.isOnline,
-    };
+  const handleAddEvent = async (eventData: AddEventFormData) => {
+    try {
+      const response = await scheduleAPI.createScheduleItem({
+        title: eventData.title,
+        type: eventData.type,
+        startTime: eventData.startTime,
+        endTime: eventData.endTime,
+        date: eventData.date,
+        location: eventData.location || undefined,
+        attendees: typeof eventData.attendees === 'number' ? eventData.attendees : undefined,
+        description: eventData.description || undefined,
+        isOnline: eventData.isOnline,
+      });
 
-    // Add to schedule data
-    setScheduleData(prevData => {
-      const existingDayIndex = prevData.findIndex(day => day.date === eventData.date);
-      
-      if (existingDayIndex >= 0) {
-        // Update existing day
-        const updatedData = [...prevData];
-        updatedData[existingDayIndex] = {
-          ...updatedData[existingDayIndex],
-          tasks: [...updatedData[existingDayIndex].tasks, newTask]
-        };
-        return updatedData;
+      if (response.success && response.scheduleItem) {
+        const newTask = response.scheduleItem;
+
+        // Add to schedule data locally
+        setScheduleData(prevData => {
+          const existingDayIndex = prevData.findIndex(day => day.date === eventData.date);
+          
+          if (existingDayIndex >= 0) {
+            // Update existing day
+            const updatedData = [...prevData];
+            updatedData[existingDayIndex] = {
+              ...updatedData[existingDayIndex],
+              tasks: [...updatedData[existingDayIndex].tasks, newTask]
+            };
+            return updatedData;
+          } else {
+            // Add new day
+            return [...prevData, {
+              date: eventData.date,
+              tasks: [newTask]
+            }];
+          }
+        });
       } else {
-        // Add new day
-        return [...prevData, {
-          date: eventData.date,
-          tasks: [newTask]
-        }];
+        console.error('Failed to create schedule item:', response.error);
+        alert('Failed to create schedule item. Please try again.');
       }
-    });
+    } catch (error) {
+      console.error('Error creating schedule item:', error);
+      alert('Failed to create schedule item. Please try again.');
+    }
   };
 
   const getSelectedDateTasks = (): ScheduleTask[] => {
@@ -125,6 +160,35 @@ export default function SchedulePage() {
   // Generate colors and icons based on current task types
   const taskTypeColors = getTaskTypeColors(taskTypes);
   const taskTypeIcons = getTaskTypeIcons(taskTypes);
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading schedule...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Error: {error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

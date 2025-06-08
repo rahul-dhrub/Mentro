@@ -4,11 +4,14 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FiCalendar, FiClock, FiMessageSquare, FiSearch, FiSend, FiExternalLink } from 'react-icons/fi';
+import { scheduleAPI } from '@/lib/api/schedule';
+import { ScheduleTask } from '@/app/schedule/types';
 
 interface Class {
   id: string;
   title: string;
   time: string;
+  date: string;
   room: string;
   students: number;
 }
@@ -41,15 +44,89 @@ interface ConversationMessage {
 }
 
 interface RightSidebarProps {
-  upcomingClasses: Class[];
   messages: Message[];
 }
 
-export default function RightSidebar({ upcomingClasses, messages: mockMessages }: RightSidebarProps) {
+export default function RightSidebar({ messages: mockMessages }: RightSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [conversations, setConversations] = useState<ConversationMessage[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const [useRealMessages, setUseRealMessages] = useState(false);
+  const [upcomingEvents, setUpcomingEvents] = useState<Class[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+
+  // Fetch upcoming events from schedule
+  useEffect(() => {
+    const fetchUpcomingEvents = async () => {
+      try {
+        setIsLoadingEvents(true);
+        
+        // Get today's date and next 7 days
+        const today = new Date();
+        const nextWeek = new Date();
+        nextWeek.setDate(today.getDate() + 7);
+        
+        const startDate = today.toISOString().split('T')[0];
+        const endDate = nextWeek.toISOString().split('T')[0];
+        
+        const response = await scheduleAPI.getSchedule(startDate, endDate);
+        
+        if (response.success && response.schedule) {
+          // Transform schedule data to upcoming events format
+          const events: Class[] = [];
+          const now = new Date();
+          
+          response.schedule.forEach(daySchedule => {
+            daySchedule.tasks.forEach((task: ScheduleTask) => {
+              // Create a date object for this task
+              const taskDateTime = new Date(`${daySchedule.date}T${task.startTime}`);
+              
+              // Only include future events
+              if (taskDateTime > now) {
+                // Format the date for display
+                const eventDate = new Date(daySchedule.date);
+                const formattedDate = eventDate.toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric'
+                });
+                
+                events.push({
+                  id: task.id,
+                  title: task.title,
+                  time: `${task.startTime} - ${task.endTime}`,
+                  date: formattedDate,
+                  room: task.location || 'TBD',
+                  students: task.attendees || 0
+                });
+              }
+            });
+          });
+          
+          // Sort by datetime and take first 3
+          events.sort((a, b) => {
+            const aTime = new Date(`${startDate}T${a.time.split(' - ')[0]}`);
+            const bTime = new Date(`${startDate}T${b.time.split(' - ')[0]}`);
+            return aTime.getTime() - bTime.getTime();
+          });
+          
+          setUpcomingEvents(events.slice(0, 3));
+        }
+      } catch (error) {
+        console.error('Error fetching upcoming events:', error);
+        setUpcomingEvents([]);
+      } finally {
+        setIsLoadingEvents(false);
+      }
+    };
+
+    fetchUpcomingEvents();
+    
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchUpcomingEvents, 300000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Fetch real conversations
   useEffect(() => {
@@ -110,29 +187,62 @@ export default function RightSidebar({ upcomingClasses, messages: mockMessages }
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Upcoming Events</h2>
-          <FiCalendar className="text-gray-400" size={20} />
+          <div className="flex items-center space-x-2">
+            <Link 
+              href="/schedule" 
+              className="text-blue-600 hover:text-blue-800 transition-colors"
+              title="View full schedule"
+            >
+              <FiExternalLink size={18} />
+            </Link>
+            <FiCalendar className="text-gray-400" size={20} />
+          </div>
         </div>
         <div className="space-y-4">
-          {upcomingClasses.map((classItem) => (
-            <div
-              key={classItem.id}
-              className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors cursor-pointer"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-medium text-gray-900">{classItem.title}</h3>
-                  <div className="flex items-center text-sm text-gray-500 mt-1">
-                    <FiClock className="mr-1" size={14} />
-                    {classItem.time}
-                  </div>
-                </div>
-                <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                  {classItem.students} students
-                </span>
-              </div>
-              <p className="text-sm text-gray-600 mt-2">Room {classItem.room}</p>
+          {isLoadingEvents ? (
+            <div className="flex justify-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
             </div>
-          ))}
+          ) : upcomingEvents.length > 0 ? (
+            upcomingEvents.map((event) => (
+              <Link
+                key={event.id}
+                href="/schedule"
+                className="block bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-medium text-gray-900">{event.title}</h3>
+                    <div className="flex items-center text-sm text-gray-500 mt-1">
+                      <FiCalendar className="mr-1" size={14} />
+                      {event.date}
+                    </div>
+                    <div className="flex items-center text-sm text-gray-500 mt-1">
+                      <FiClock className="mr-1" size={14} />
+                      {event.time}
+                    </div>
+                  </div>
+                  {event.students > 0 && (
+                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                      {event.students} attendees
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600 mt-2">{event.room}</p>
+              </Link>
+            ))
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <FiCalendar className="mx-auto mb-2" size={24} />
+              <p className="text-sm">No upcoming events</p>
+              <Link 
+                href="/schedule" 
+                className="text-blue-600 hover:text-blue-800 text-sm"
+              >
+                Create an event
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
