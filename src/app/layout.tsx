@@ -12,6 +12,7 @@ import {
 import OnlineStatusProvider from '@/components/OnlineStatusProvider';
 import { CartProvider } from '@/contexts/CartContext';
 import { WishlistProvider } from '@/contexts/WishlistContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,22 +41,24 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
           suppressHydrationWarning={true}
         >
-          <CartProvider>
-            <WishlistProvider>
-              <OnlineStatusProvider>
-                {/* <header className="flex justify-end items-center p-4 gap-4 h-16">
-                  <SignedOut>
-                    <SignInButton />
-                    <SignUpButton />
-                  </SignedOut>
-                  <SignedIn>
-                    <UserButton />
-                  </SignedIn>
-                </header> */}
-                {children}
-              </OnlineStatusProvider>
-            </WishlistProvider>
-          </CartProvider>
+          <ThemeProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <OnlineStatusProvider>
+                  {/* <header className="flex justify-end items-center p-4 gap-4 h-16">
+                    <SignedOut>
+                      <SignInButton />
+                      <SignUpButton />
+                    </SignedOut>
+                    <SignedIn>
+                      <UserButton />
+                    </SignedIn>
+                  </header> */}
+                  {children}
+                </OnlineStatusProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>

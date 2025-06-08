@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { FiBell, FiBook, FiCalendar, FiMessageSquare, FiSettings, FiUser, FiLogOut, FiMenu, FiX, FiMoreHorizontal, FiArrowLeft } from 'react-icons/fi';
 import SearchBar from './SearchBar';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface NavbarProps {
   user: {
@@ -40,6 +41,7 @@ export default function Navbar({
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showNavMenu, setShowNavMenu] = useState(false);
+  const { notificationsEnabled } = useTheme();
 
   const notifications = [
     {
@@ -205,43 +207,45 @@ export default function Navbar({
             )}
             
             {/* Notifications */}
-            <div className="relative">
-              <button
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="p-2 text-gray-600 hover:text-blue-600 relative cursor-pointer"
-              >
-                <FiBell size={20} />
-                {notifications.some(n => n.unread) && (
-                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />
-                )}
-              </button>
+            {notificationsEnabled && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="p-2 text-gray-600 hover:text-blue-600 relative cursor-pointer"
+                >
+                  <FiBell size={20} />
+                  {notifications.some(n => n.unread) && (
+                    <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />
+                  )}
+                </button>
 
-              {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 py-2">
-                  <div className="px-4 py-2 border-b border-gray-100">
-                    <h3 className="font-semibold text-gray-900">Notifications</h3>
-                  </div>
-                  <div className="max-h-96 overflow-y-auto">
-                    {notifications.map((notification) => (
-                      <div
-                        key={notification.id}
-                        className={`px-4 py-3 hover:bg-gray-50 cursor-pointer ${
-                          notification.unread ? 'bg-blue-50' : ''
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium text-gray-900">{notification.title}</p>
-                            <p className="text-sm text-gray-600">{notification.message}</p>
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 py-2">
+                    <div className="px-4 py-2 border-b border-gray-100">
+                      <h3 className="font-semibold text-gray-900">Notifications</h3>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto">
+                      {notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className={`px-4 py-3 hover:bg-gray-50 cursor-pointer ${
+                            notification.unread ? 'bg-blue-50' : ''
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium text-gray-900">{notification.title}</p>
+                              <p className="text-sm text-gray-600">{notification.message}</p>
+                            </div>
+                            <span className="text-xs text-gray-500">{notification.time}</span>
                           </div>
-                          <span className="text-xs text-gray-500">{notification.time}</span>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {/* Profile Menu */}
             <div className="relative">
