@@ -57,6 +57,7 @@ interface UserProfile {
     inProgressCourses?: number;
     averageRating: number;
     totalHours: number;
+    totalReviews?: number;
   };
   recentActivity: {
     id: string;
@@ -235,7 +236,16 @@ export default function ProfilePage() {
       if (user && user.role === 'instructor') {
         try {
           setIsLoadingStudents(true);
-          const response = await fetch('/api/instructor/students');
+          let response;
+          
+          if (userId) {
+            // Fetch stats for specific user
+            response = await fetch(`/api/users/${userId}/stats`);
+          } else {
+            // Fetch stats for current user
+            response = await fetch('/api/instructor/students');
+          }
+          
           if (response.ok) {
             const data = await response.json();
             
@@ -247,18 +257,24 @@ export default function ProfilePage() {
                 ...prevUser,
                 stats: {
                   ...prevUser.stats,
-                  totalStudents: data.totalStudents,
-                  totalCourses: data.totalCourses
+                  totalStudents: data.totalStudents || 0,
+                  totalCourses: data.totalCourses || 0,
+                  averageRating: data.averageRating || 0,
+                  totalHours: data.totalHours || 0
                 }
               };
             });
           } else {
             console.error('Failed to fetch students data:', response.status);
-            showToast('Failed to load students data', 'error');
+            if (!userId) { // Only show error for current user
+              showToast('Failed to load students data', 'error');
+            }
           }
         } catch (error) {
           console.error('Error fetching students data:', error);
-          showToast('Error loading students data', 'error');
+          if (!userId) { // Only show error for current user
+            showToast('Error loading students data', 'error');
+          }
         } finally {
           setIsLoadingStudents(false);
         }
@@ -266,7 +282,39 @@ export default function ProfilePage() {
     };
 
     fetchStudentsData();
-  }, [user?.id]);
+  }, [user?.id, userId]);
+
+  // Fetch rating data for other users
+  useEffect(() => {
+    const fetchRatingData = async () => {
+      if (userId && user) {
+        try {
+          const response = await fetch(`/api/users/${userId}/reviews?limit=1`);
+          if (response.ok) {
+            const data = await response.json();
+            
+            // Update user stats with rating data
+            setUser(prevUser => {
+              if (!prevUser) return null;
+              
+              return {
+                ...prevUser,
+                stats: {
+                  ...prevUser.stats,
+                  averageRating: data.averageRating || 0,
+                  totalReviews: data.totalReviews || 0
+                }
+              };
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching rating data:', error);
+        }
+      }
+    };
+
+    fetchRatingData();
+  }, [userId, user?.id]);
 
   // Filter courses for faculty
   const categories = useMemo(() => Array.from(new Set(courses.map(course => course.category))), [courses]);
