@@ -40,6 +40,31 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Helper function to apply theme class
+  const applyTheme = (isDark: boolean) => {
+    if (typeof document !== 'undefined') {
+      const html = document.documentElement;
+      
+      if (isDark) {
+        html.classList.add('dark');
+      } else {
+        html.classList.remove('dark');
+      }
+      
+      // Update CSS custom properties for components that still use them
+      const root = document.querySelector(':root') as HTMLElement;
+      if (root) {
+        if (isDark) {
+          root.style.setProperty('--background', '#0a0a0a');
+          root.style.setProperty('--foreground', '#ededed');
+        } else {
+          root.style.setProperty('--background', '#ffffff');
+          root.style.setProperty('--foreground', '#171717');
+        }
+      }
+    }
+  };
+
   // Load settings from database on component mount
   useEffect(() => {
     const loadSettings = async () => {
@@ -52,12 +77,8 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
           setDarkMode(settings.darkMode);
           setNotificationsEnabled(settings.notificationsEnabled);
           
-          // Apply dark mode class to document
-          if (settings.darkMode) {
-            document.documentElement.classList.add('dark');
-          } else {
-            document.documentElement.classList.remove('dark');
-          }
+          // Apply theme based on settings
+          applyTheme(settings.darkMode);
         } else {
           // Fallback to localStorage if API fails
           const savedDarkMode = localStorage.getItem('darkMode');
@@ -66,9 +87,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
           if (savedDarkMode !== null) {
             const isDarkMode = JSON.parse(savedDarkMode);
             setDarkMode(isDarkMode);
-            if (isDarkMode) {
-              document.documentElement.classList.add('dark');
-            }
+            applyTheme(isDarkMode);
+          } else {
+            // If no saved preference, ensure light mode is applied
+            applyTheme(false);
           }
           
           if (savedNotifications !== null) {
@@ -77,6 +99,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         }
       } catch (error) {
         console.error('Error loading settings:', error);
+        
         // Fallback to localStorage
         const savedDarkMode = localStorage.getItem('darkMode');
         const savedNotifications = localStorage.getItem('notificationsEnabled');
@@ -84,9 +107,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         if (savedDarkMode !== null) {
           const isDarkMode = JSON.parse(savedDarkMode);
           setDarkMode(isDarkMode);
-          if (isDarkMode) {
-            document.documentElement.classList.add('dark');
-          }
+          applyTheme(isDarkMode);
+        } else {
+          // If no saved preference, ensure light mode is applied
+          applyTheme(false);
         }
         
         if (savedNotifications !== null) {
@@ -115,12 +139,8 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         if (typeof newSettings.darkMode !== 'undefined') {
           setDarkMode(newSettings.darkMode);
           
-          // Apply dark mode class
-          if (newSettings.darkMode) {
-            document.documentElement.classList.add('dark');
-          } else {
-            document.documentElement.classList.remove('dark');
-          }
+          // Apply theme
+          applyTheme(newSettings.darkMode);
         }
         
         if (typeof newSettings.notificationsEnabled !== 'undefined') {
@@ -134,6 +154,8 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       // Fallback to localStorage
       if (typeof newSettings.darkMode !== 'undefined') {
         localStorage.setItem('darkMode', JSON.stringify(newSettings.darkMode));
+        // Still apply the theme even if the API fails
+        applyTheme(newSettings.darkMode);
       }
       if (typeof newSettings.notificationsEnabled !== 'undefined') {
         localStorage.setItem('notificationsEnabled', JSON.stringify(newSettings.notificationsEnabled));
@@ -153,12 +175,8 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         setDarkMode(settings.darkMode);
         setNotificationsEnabled(settings.notificationsEnabled);
         
-        // Apply dark mode class
-        if (settings.darkMode) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
+        // Apply theme
+        applyTheme(settings.darkMode);
       }
     } catch (error) {
       console.error('Error refreshing settings:', error);

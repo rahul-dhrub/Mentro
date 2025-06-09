@@ -12,11 +12,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Use dark class instead of system preference */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 body {
@@ -33,6 +32,12 @@ body {
   color: #000000;
 }
 
+/* Dark mode styles for markdown */
+.dark .markdown-preview,
+.dark .markdown-rendered {
+  color: #ededed;
+}
+
 .markdown-preview h1,
 .markdown-rendered h1 {
   font-size: 2rem;
@@ -44,6 +49,12 @@ body {
   color: #000000;
 }
 
+.dark .markdown-preview h1,
+.dark .markdown-rendered h1 {
+  color: #ededed;
+  border-bottom-color: #374151;
+}
+
 .markdown-preview h2,
 .markdown-rendered h2 {
   font-size: 1.5rem;
@@ -51,6 +62,11 @@ body {
   margin-top: 1.5rem;
   margin-bottom: 0.75rem;
   color: #000000;
+}
+
+.dark .markdown-preview h2,
+.dark .markdown-rendered h2 {
+  color: #ededed;
 }
 
 .markdown-preview h3,
@@ -62,16 +78,31 @@ body {
   color: #000000;
 }
 
+.dark .markdown-preview h3,
+.dark .markdown-rendered h3 {
+  color: #ededed;
+}
+
 .markdown-preview p,
 .markdown-rendered p {
   margin-bottom: 1rem;
   color: #000000;
 }
 
+.dark .markdown-preview p,
+.dark .markdown-rendered p {
+  color: #ededed;
+}
+
 .markdown-preview a,
 .markdown-rendered a {
   color: #4f46e5;
   text-decoration: underline;
+}
+
+.dark .markdown-preview a,
+.dark .markdown-rendered a {
+  color: #818cf8;
 }
 
 .markdown-preview img,
@@ -90,6 +121,12 @@ body {
   font-style: italic;
 }
 
+.dark .markdown-preview blockquote,
+.dark .markdown-rendered blockquote {
+  border-left-color: #374151;
+  color: #ededed;
+}
+
 .markdown-preview pre,
 .markdown-rendered pre {
   background-color: #f3f4f6;
@@ -97,6 +134,11 @@ body {
   padding: 1rem;
   overflow-x: auto;
   margin: 1rem 0;
+}
+
+.dark .markdown-preview pre,
+.dark .markdown-rendered pre {
+  background-color: #1f2937;
 }
 
 .markdown-preview code,
@@ -107,6 +149,12 @@ body {
   font-family: monospace;
   font-size: 0.875rem;
   color: #000000;
+}
+
+.dark .markdown-preview code,
+.dark .markdown-rendered code {
+  background-color: #1f2937;
+  color: #ededed;
 }
 
 .markdown-preview pre code,
@@ -123,6 +171,11 @@ body {
   color: #000000;
 }
 
+.dark .markdown-preview ul,
+.dark .markdown-rendered ul {
+  color: #ededed;
+}
+
 .markdown-preview ol,
 .markdown-rendered ol {
   list-style-type: decimal;
@@ -131,10 +184,20 @@ body {
   color: #000000;
 }
 
+.dark .markdown-preview ol,
+.dark .markdown-rendered ol {
+  color: #ededed;
+}
+
 .markdown-preview li,
 .markdown-rendered li {
   margin-bottom: 0.5rem;
   color: #000000;
+}
+
+.dark .markdown-preview li,
+.dark .markdown-rendered li {
+  color: #ededed;
 }
 
 /* Style for embedded videos and iframes */
