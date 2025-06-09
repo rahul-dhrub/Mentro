@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { FiUsers, FiStar, FiBookOpen, FiAward, FiMail, FiLinkedin, FiTwitter, FiUserPlus } from 'react-icons/fi';
+import { FiUsers, FiStar, FiBookOpen, FiAward, FiMail, FiLinkedin, FiTwitter, FiUserPlus, FiBriefcase } from 'react-icons/fi';
 import { Author } from '../types';
 
 interface SidebarProps {
@@ -102,6 +102,13 @@ export default function Sidebar({ author, stats, socialLinks, onShowPublications
         >
           <FiUsers className="mr-2" />
           Student Projects
+        </a>
+        <a
+          href="/jobs"
+          className="flex items-center text-gray-600 hover:text-blue-600 transition-colors cursor-pointer"
+        >
+          <FiBriefcase className="mr-2" />
+          Jobs
         </a>
       </div>
 
