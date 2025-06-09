@@ -14,6 +14,9 @@ import { CartProvider } from '@/contexts/CartContext';
 import { WishlistProvider } from '@/contexts/WishlistContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { FirebaseAnalyticsProvider } from '@/components/FirebaseAnalyticsProvider';
+import AuthAnalyticsTracker from '@/components/AuthAnalyticsTracker';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import PerformanceTracker from '@/components/PerformanceTracker';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,26 +45,30 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
           suppressHydrationWarning={true}
         >
-          <ThemeProvider>
-            <CartProvider>
-              <WishlistProvider>
-                <OnlineStatusProvider>
-                  <FirebaseAnalyticsProvider>
-                    {/* <header className="flex justify-end items-center p-4 gap-4 h-16">
-                      <SignedOut>
-                        <SignInButton />
-                        <SignUpButton />
-                      </SignedOut>
-                      <SignedIn>
-                        <UserButton />
-                      </SignedIn>
-                    </header> */}
-                    {children}
-                  </FirebaseAnalyticsProvider>
-                </OnlineStatusProvider>
-              </WishlistProvider>
-            </CartProvider>
-          </ThemeProvider>
+          <ErrorBoundary>
+            <ThemeProvider>
+              <CartProvider>
+                <WishlistProvider>
+                  <OnlineStatusProvider>
+                    <FirebaseAnalyticsProvider>
+                      <AuthAnalyticsTracker />
+                      <PerformanceTracker />
+                      {/* <header className="flex justify-end items-center p-4 gap-4 h-16">
+                        <SignedOut>
+                          <SignInButton />
+                          <SignUpButton />
+                        </SignedOut>
+                        <SignedIn>
+                          <UserButton />
+                        </SignedIn>
+                      </header> */}
+                      {children}
+                    </FirebaseAnalyticsProvider>
+                  </OnlineStatusProvider>
+                </WishlistProvider>
+              </CartProvider>
+            </ThemeProvider>
+          </ErrorBoundary>
         </body>
       </html>
     </ClerkProvider>

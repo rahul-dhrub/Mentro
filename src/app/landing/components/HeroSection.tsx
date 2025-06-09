@@ -23,7 +23,8 @@ export default function HeroSection({ activeTab, setActiveTab }: HeroSectionProp
       cta_name: role === 'student' ? 'start_learning' : 'start_tutoring',
       cta_location: 'hero_section',
       user_role: role,
-      is_signed_in: isSignedIn
+      is_signed_in: isSignedIn,
+      redirect_destination: 'home'
     });
 
     // Clear any previous errors
@@ -57,23 +58,23 @@ export default function HeroSection({ activeTab, setActiveTab }: HeroSectionProp
       });
 
       if (response.ok) {
-        // Successfully updated role, redirect to feed
+        // Successfully updated role, redirect to home
         router.push('/feed');
       } else {
         const errorData = await response.json();
         console.error('Failed to update role:', errorData.error);
         setError('Failed to update your role. Redirecting anyway...');
-        // Still redirect to feed after a short delay, user can set role later
+        // Still redirect to home after a short delay, user can set role later
         setTimeout(() => {
-          router.push('/feed');
+          router.push('/');
         }, 2000);
       }
     } catch (error) {
       console.error('Error updating role:', error);
-      setError('Network error. Redirecting to feed...');
-      // Still redirect to feed after a short delay, user can set role later
+      setError('Network error. Redirecting to home...');
+      // Still redirect to home after a short delay, user can set role later
       setTimeout(() => {
-        router.push('/feed');
+        router.push('/');
       }, 2000);
     } finally {
       setIsUpdating(false);

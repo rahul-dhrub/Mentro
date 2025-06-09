@@ -16,6 +16,13 @@ interface AnalyticsContextType {
   trackSearch: (searchTerm: string, searchCategory?: string) => void;
   trackPurchase: (transactionId: string, value: number, currency?: string, items?: any[]) => void;
   trackAddToCart: (itemId: string, itemName: string, value: number, currency?: string) => void;
+  trackFormSubmit: (formName: string, formData?: Record<string, any>) => void;
+  trackButtonClick: (buttonName: string, context?: string, additionalData?: Record<string, any>) => void;
+  trackVideoEvent: (action: 'play' | 'pause' | 'complete' | 'seek', videoId: string, videoTitle?: string, currentTime?: number) => void;
+  trackDownload: (fileName: string, fileType: string, fileSize?: number) => void;
+  trackShare: (contentType: string, contentId: string, method: string) => void;
+  trackEngagement: (engagementType: string, value?: number, additionalData?: Record<string, any>) => void;
+  trackPerformance: (metricName: string, value: number, unit?: string) => void;
   setUserProperty: (properties: Record<string, string>) => void;
   setAnalyticsUserId: (userId: string) => void;
   isAnalyticsReady: boolean;

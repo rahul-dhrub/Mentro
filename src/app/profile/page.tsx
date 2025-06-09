@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { FiEdit2, FiArrowLeft } from 'react-icons/fi';
+import { useAnalytics } from '@/components/FirebaseAnalyticsProvider';
 import CourseCard from './components/CourseCard';
 import CourseFilters from './components/CourseFilters';
 import ProfileStats from './components/ProfileStats';
@@ -71,6 +72,7 @@ interface UserProfile {
 export default function ProfilePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const analytics = useAnalytics();
   const userId = searchParams.get('userId');
   const isViewingOtherUser = !!userId;
   
@@ -97,6 +99,11 @@ export default function ProfilePage() {
 
   // Toast notification function
   const showToast = (message: string, type: 'success' | 'error') => {
+    analytics.trackEvent('profile_toast_notification', {
+      message_type: type,
+      is_viewing_other_user: isViewingOtherUser
+    });
+    
     setToast({ message, type });
     setTimeout(() => setToast(null), 5000); // Hide after 5 seconds
   };

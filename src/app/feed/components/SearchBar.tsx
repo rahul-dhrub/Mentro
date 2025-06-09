@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { FiSearch, FiUser, FiHash } from 'react-icons/fi';
 import { SearchResult } from '../types';
+import { useAnalytics } from '@/components/FirebaseAnalyticsProvider';
 
 interface SearchBarProps {
   onUserSelect: (userId: string) => void;
@@ -32,6 +33,7 @@ export default function SearchBar({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const analytics = useAnalytics();
 
   // Search function using API
   const performSearch = async (searchQuery: string) => {
@@ -72,6 +74,17 @@ export default function SearchBar({
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    
+    // Track search query
+    if (value.length >= 2) {
+      analytics.trackSearch(value, 'feed_search');
+      analytics.trackEvent('search_input_change', {
+        query_length: value.length,
+        search_context: 'feed',
+        has_results: results.length > 0
+      });
+    }
+    
     setQuery(value);
     performSearch(value);
     setShowResults(true);
@@ -107,6 +120,17 @@ export default function SearchBar({
 
   // Handle result selection
   const handleResultSelect = async (result: SearchResult) => {
+    // Track search result selection
+    analytics.trackEvent('search_result_select', {
+      query: query,
+      result_type: result.type,
+      result_id: result.id,
+      result_name: result.name,
+      result_position: results.findIndex(r => r.id === result.id),
+      total_results: results.length,
+      search_context: 'feed'
+    });
+
     // Record search interaction (only if we have a valid user ID from auth)
     try {
       const currentUserId = getCurrentUserId();

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { FiX, FiArrowLeft } from 'react-icons/fi';
+import { useAnalytics } from '@/components/FirebaseAnalyticsProvider';
 import CreatePost from './components/CreatePost';
 import PostCard from './components/PostCard';
 import Sidebar from './components/Sidebar';
@@ -33,6 +34,7 @@ export default function FeedPage() {
   });
   const observerTarget = useRef<HTMLDivElement>(null);
   const { userId, isLoaded, isSignedIn } = useAuth();
+  const analytics = useAnalytics();
   const [isPublicationsModalOpen, setIsPublicationsModalOpen] = useState(false);
   const [publications, setPublications] = useState<Publication[]>([]);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
@@ -288,6 +290,12 @@ export default function FeedPage() {
 
   // Search handlers
   const handleUserSelect = (userId: string) => {
+    analytics.trackEvent('feed_user_select', {
+      selected_user_id: userId,
+      view_mode: 'user',
+      source: 'search'
+    });
+    
     setSelectedUserId(userId);
     setSelectedHashtag(null);
     setViewMode('user');
@@ -295,6 +303,12 @@ export default function FeedPage() {
   };
 
   const handleHashtagSelect = (hashtag: string) => {
+    analytics.trackEvent('feed_hashtag_select', {
+      hashtag: hashtag,
+      view_mode: 'hashtag',
+      source: 'search'
+    });
+    
     setSelectedHashtag(hashtag);
     setSelectedUserId(null);
     setViewMode('hashtag');
@@ -319,15 +333,32 @@ export default function FeedPage() {
   };
 
   const handleTogglePersonalPosts = (isPersonal: boolean) => {
+    analytics.trackEvent('feed_toggle_personal_posts', {
+      is_personal: isPersonal,
+      previous_mode: isPersonalPosts ? 'personal' : 'all'
+    });
+    
     setIsPersonalPosts(isPersonal);
   };
 
   const toggleSidebar = () => {
-    setIsSidebarVisible(!isSidebarVisible);
+    const isOpening = !isSidebarVisible;
+    analytics.trackEvent('feed_sidebar_toggle', {
+      action: isOpening ? 'open' : 'close',
+      sidebar_type: 'left'
+    });
+    
+    setIsSidebarVisible(isOpening);
   };
 
   const toggleRightSidebar = () => {
-    setIsRightSidebarVisible(!isRightSidebarVisible);
+    const isOpening = !isRightSidebarVisible;
+    analytics.trackEvent('feed_sidebar_toggle', {
+      action: isOpening ? 'open' : 'close',
+      sidebar_type: 'right'
+    });
+    
+    setIsRightSidebarVisible(isOpening);
   };
 
   const handlePostCreate = (newPost: Post) => {

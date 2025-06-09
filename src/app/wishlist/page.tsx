@@ -1,18 +1,36 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { useCart } from '../../contexts/CartContext';
 import { FiArrowLeft, FiHeart, FiShoppingCart, FiTrash2, FiStar, FiUsers, FiClock, FiCheck } from 'react-icons/fi';
 import Link from 'next/link';
+import { useAnalytics } from '@/components/FirebaseAnalyticsProvider';
 
 export default function WishlistPage() {
   const router = useRouter();
   const { wishlist, removeFromWishlist, clearWishlist } = useWishlist();
   const { addToCart, isInCart } = useCart();
+  const analytics = useAnalytics();
+
+  // Track page view
+  useEffect(() => {
+    analytics.trackEvent('wishlist_page_view', {
+      items_count: wishlist.totalItems,
+      is_empty: wishlist.totalItems === 0
+    });
+  }, [analytics, wishlist.totalItems]);
 
   const handleAddToCart = (item: any) => {
+    analytics.trackEvent('wishlist_add_to_cart', {
+      course_id: item.id,
+      course_title: item.title,
+      course_price: item.price,
+      course_category: item.category,
+      source: 'wishlist_page'
+    });
+
     // Convert wishlist item to cart item format
     const cartItem = {
       id: item.id,
@@ -44,11 +62,25 @@ export default function WishlistPage() {
   };
 
   const handleRemoveFromWishlist = (itemId: string) => {
+    const item = wishlist.items.find(i => i.id === itemId);
+    
+    analytics.trackEvent('wishlist_remove_item', {
+      course_id: itemId,
+      course_title: item?.title || 'Unknown',
+      source: 'wishlist_page',
+      remaining_items: wishlist.totalItems - 1
+    });
+    
     removeFromWishlist(itemId);
   };
 
   const handleClearWishlist = () => {
     if (window.confirm('Are you sure you want to clear your entire wishlist?')) {
+      analytics.trackEvent('wishlist_clear_all', {
+        items_count: wishlist.totalItems,
+        source: 'wishlist_page'
+      });
+      
       clearWishlist();
     }
   };

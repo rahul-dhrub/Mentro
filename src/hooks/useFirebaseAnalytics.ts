@@ -128,6 +128,82 @@ export const useFirebaseAnalytics = () => {
     }
   };
 
+  // Track form submissions
+  const trackFormSubmit = (formName: string, formData?: Record<string, any>) => {
+    if (analytics) {
+      logEvent(analytics, 'form_submit', {
+        form_name: formName,
+        ...formData
+      });
+    }
+  };
+
+  // Track button clicks
+  const trackButtonClick = (buttonName: string, context?: string, additionalData?: Record<string, any>) => {
+    if (analytics) {
+      logEvent(analytics, 'button_click', {
+        button_name: buttonName,
+        context: context,
+        ...additionalData
+      });
+    }
+  };
+
+  // Track video interactions
+  const trackVideoEvent = (action: 'play' | 'pause' | 'complete' | 'seek', videoId: string, videoTitle?: string, currentTime?: number) => {
+    if (analytics) {
+      logEvent(analytics, 'video_' + action, {
+        video_id: videoId,
+        video_title: videoTitle,
+        current_time: currentTime
+      });
+    }
+  };
+
+  // Track file downloads
+  const trackDownload = (fileName: string, fileType: string, fileSize?: number) => {
+    if (analytics) {
+      logEvent(analytics, 'file_download', {
+        file_name: fileName,
+        file_type: fileType,
+        file_size: fileSize
+      });
+    }
+  };
+
+  // Track social sharing
+  const trackShare = (contentType: string, contentId: string, method: string) => {
+    if (analytics) {
+      logEvent(analytics, 'share', {
+        content_type: contentType,
+        content_id: contentId,
+        method: method
+      });
+    }
+  };
+
+  // Track user engagement
+  const trackEngagement = (engagementType: string, value?: number, additionalData?: Record<string, any>) => {
+    if (analytics) {
+      logEvent(analytics, 'engagement', {
+        engagement_type: engagementType,
+        value: value,
+        ...additionalData
+      });
+    }
+  };
+
+  // Track performance metrics
+  const trackPerformance = (metricName: string, value: number, unit?: string) => {
+    if (analytics) {
+      logEvent(analytics, 'performance_metric', {
+        metric_name: metricName,
+        value: value,
+        unit: unit
+      });
+    }
+  };
+
   return {
     trackPageView,
     trackEvent,
@@ -139,6 +215,13 @@ export const useFirebaseAnalytics = () => {
     trackSearch,
     trackPurchase,
     trackAddToCart,
+    trackFormSubmit,
+    trackButtonClick,
+    trackVideoEvent,
+    trackDownload,
+    trackShare,
+    trackEngagement,
+    trackPerformance,
     setUserProperty,
     setAnalyticsUserId,
     isAnalyticsReady: !!analytics

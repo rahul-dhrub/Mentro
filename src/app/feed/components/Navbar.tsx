@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { FiBell, FiBook, FiCalendar, FiMessageSquare, FiSettings, FiUser, FiLogOut, FiMenu, FiX, FiMoreHorizontal, FiArrowLeft } from 'react-icons/fi';
 import SearchBar from './SearchBar';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useClerk } from '@clerk/nextjs';
+import { useAnalytics } from '@/components/FirebaseAnalyticsProvider';
 
 interface NavbarProps {
   user: {
@@ -42,6 +44,8 @@ export default function Navbar({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showNavMenu, setShowNavMenu] = useState(false);
   const { notificationsEnabled } = useTheme();
+  const { signOut } = useClerk();
+  const analytics = useAnalytics();
 
   const notifications = [
     {
@@ -70,6 +74,62 @@ export default function Navbar({
   const handleBackToFeed = () => {
     setIsSearchActive(false);
     onBackToFeed();
+  };
+
+  const handleSignOut = async () => {
+    try {
+      // Track sign out event
+      analytics.trackEvent('navbar_sign_out_click', {
+        page_location: 'feed_navbar',
+        user_name: user.name,
+        user_title: user.title
+      });
+
+      // Close the profile menu
+      setShowProfileMenu(false);
+      
+      // Sign out using Clerk
+      await signOut();
+      
+      // Track successful sign out
+      analytics.trackEvent('user_sign_out_success', {
+        sign_out_method: 'navbar_button',
+        page_location: 'feed'
+      });
+    } catch (error) {
+      console.error('Error signing out:', error);
+      
+      // Track sign out error
+      analytics.trackEvent('user_sign_out_error', {
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+        page_location: 'feed_navbar'
+      });
+    }
+  };
+
+  const handleNotificationClick = (notificationId: string, notificationTitle: string) => {
+    analytics.trackEvent('notification_click', {
+      notification_id: notificationId,
+      notification_title: notificationTitle,
+      page_location: 'feed_navbar'
+    });
+  };
+
+  const handleNavigationClick = (navItem: string) => {
+    analytics.trackEvent('navbar_navigation_click', {
+      nav_item: navItem,
+      page_location: 'feed_navbar',
+      is_mobile: false
+    });
+  };
+
+  const handleMobileNavigationClick = (navItem: string) => {
+    analytics.trackEvent('navbar_navigation_click', {
+      nav_item: navItem,
+      page_location: 'feed_navbar',
+      is_mobile: true
+    });
+    setShowNavMenu(false);
   };
 
   return (
@@ -116,16 +176,32 @@ export default function Navbar({
 
           {/* Navigation Links - Desktop */}
           <div className="hidden md:flex items-center space-x-8 pl-3">
-            <Link href="/courses" className="text-gray-600 hover:text-blue-600 cursor-pointer">
+            <Link 
+              href="/courses" 
+              onClick={() => handleNavigationClick('courses')}
+              className="text-gray-600 hover:text-blue-600 cursor-pointer"
+            >
               Courses
             </Link>
-            <Link href="/schedule" className="text-gray-600 hover:text-blue-600 cursor-pointer">
+            <Link 
+              href="/schedule" 
+              onClick={() => handleNavigationClick('schedule')}
+              className="text-gray-600 hover:text-blue-600 cursor-pointer"
+            >
               Schedule
             </Link>
-            <Link href="/students" className="text-gray-600 hover:text-blue-600 cursor-pointer">
+            <Link 
+              href="/students" 
+              onClick={() => handleNavigationClick('students')}
+              className="text-gray-600 hover:text-blue-600 cursor-pointer"
+            >
               Students
             </Link>
-            <Link href="/resources" className="text-gray-600 hover:text-blue-600 cursor-pointer">
+            <Link 
+              href="/resources" 
+              onClick={() => handleNavigationClick('resources')}
+              className="text-gray-600 hover:text-blue-600 cursor-pointer"
+            >
               Resources
             </Link>
           </div>
@@ -161,7 +237,7 @@ export default function Navbar({
                     <Link
                       href="/courses"
                       className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 cursor-pointer"
-                      onClick={() => setShowNavMenu(false)}
+                      onClick={() => handleMobileNavigationClick('courses')}
                     >
                       <FiBook className="mr-2" size={16} />
                       Courses
@@ -169,7 +245,7 @@ export default function Navbar({
                     <Link
                       href="/schedule"
                       className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 cursor-pointer"
-                      onClick={() => setShowNavMenu(false)}
+                      onClick={() => handleMobileNavigationClick('schedule')}
                     >
                       <FiCalendar className="mr-2" size={16} />
                       Schedule
@@ -177,7 +253,7 @@ export default function Navbar({
                     <Link
                       href="/students"
                       className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 cursor-pointer"
-                      onClick={() => setShowNavMenu(false)}
+                      onClick={() => handleMobileNavigationClick('students')}
                     >
                       <FiUser className="mr-2" size={16} />
                       Students
@@ -185,7 +261,7 @@ export default function Navbar({
                     <Link
                       href="/resources"
                       className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50 cursor-pointer"
-                      onClick={() => setShowNavMenu(false)}
+                      onClick={() => handleMobileNavigationClick('resources')}
                     >
                       <FiBook className="mr-2" size={16} />
                       Resources
@@ -228,6 +304,7 @@ export default function Navbar({
                       {notifications.map((notification) => (
                         <div
                           key={notification.id}
+                          onClick={() => handleNotificationClick(notification.id, notification.title)}
                           className={`px-4 py-3 hover:bg-gray-50 cursor-pointer ${
                             notification.unread ? 'bg-blue-50' : ''
                           }`}
@@ -286,6 +363,7 @@ export default function Navbar({
                       Settings
                     </Link>
                     <button
+                      onClick={handleSignOut}
                       className="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-50 cursor-pointer"
                     >
                       <FiLogOut className="mr-2" size={16} />
