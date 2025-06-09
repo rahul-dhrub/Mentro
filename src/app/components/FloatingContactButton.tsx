@@ -22,7 +22,7 @@ export default function FloatingContactButton() {
       {/* Floating Contact Button */}
       <button
         onClick={handleContactClick}
-        className="absolute bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg transition-all duration-300 hover:scale-110 z-[9999] group"
+        className="absolute bottom-10 right-10 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg transition-all duration-300 hover:scale-110 z-[9999] group"
         aria-label="Contact us"
         style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 9999 }}
       >
