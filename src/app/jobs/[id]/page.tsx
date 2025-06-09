@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useUser } from '@clerk/nextjs';
 import {
   FiArrowLeft,
   FiMapPin,
@@ -15,6 +16,7 @@ import {
   FiExternalLink,
   FiCheck,
   FiX,
+  FiEdit,
 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { useAnalytics } from '@/components/FirebaseAnalyticsProvider';
@@ -60,6 +62,7 @@ export default function JobDetailPage() {
   const params = useParams();
   const router = useRouter();
   const analytics = useAnalytics();
+  const { user, isLoaded } = useUser();
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [showApplyModal, setShowApplyModal] = useState(false);
@@ -67,6 +70,8 @@ export default function JobDetailPage() {
   const [uploading, setUploading] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
   const [checkingApplication, setCheckingApplication] = useState(false);
+  const [isJobOwner, setIsJobOwner] = useState(false);
+  const [checkingOwnership, setCheckingOwnership] = useState(true);
 
   // Application form data
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -78,6 +83,38 @@ export default function JobDetailPage() {
     fetchJob();
     checkApplicationStatus();
   }, []);
+
+  // Check if current user owns this job
+  useEffect(() => {
+    const checkJobOwnership = async () => {
+      if (!isLoaded || !user || !job) {
+        setCheckingOwnership(false);
+        return;
+      }
+
+      try {
+        const userEmail = user.emailAddresses[0]?.emailAddress?.toLowerCase();
+        const jobOwnerEmail = job.recruiterEmail?.toLowerCase();
+        
+        setIsJobOwner(userEmail === jobOwnerEmail);
+        
+        // Track job ownership check
+        analytics.trackEvent('job_ownership_check', {
+          job_id: job._id,
+          is_owner: userEmail === jobOwnerEmail,
+          user_email: userEmail,
+          job_owner_email: jobOwnerEmail
+        });
+      } catch (error) {
+        console.error('Error checking job ownership:', error);
+        setIsJobOwner(false);
+      } finally {
+        setCheckingOwnership(false);
+      }
+    };
+
+    checkJobOwnership();
+  }, [isLoaded, user, job, analytics]);
 
   const checkApplicationStatus = async () => {
     try {
@@ -532,60 +569,83 @@ export default function JobDetailPage() {
               </div>
             </div>
             
-            {/* Apply Button */}
-            <div className="ml-6">
-              {checkingApplication ? (
-                <button
-                  disabled
-                  className="flex items-center space-x-2 bg-gray-400 text-white px-6 py-3 rounded-lg cursor-not-allowed"
-                >
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                  <span>Checking...</span>
-                </button>
-              ) : hasApplied ? (
-                <button
-                  disabled
-                  className="flex items-center space-x-2 bg-green-600 text-white px-6 py-3 rounded-lg cursor-not-allowed"
-                >
-                  <FiCheck size={18} />
-                  <span>Applied</span>
-                </button>
-              ) : job.easyApply ? (
+            {/* Action Buttons */}
+            <div className="ml-6 flex items-center space-x-4">
+              {/* Edit Button - Only show for job owners */}
+              {!checkingOwnership && isJobOwner && (
                 <button
                   onClick={() => {
-                    analytics.trackEvent('job_apply_modal_open', {
+                    analytics.trackEvent('job_edit_button_click', {
                       job_id: job._id,
                       job_title: job.title,
-                      company: job.company,
-                      work_type: job.workType,
-                      employment_type: job.employmentType,
-                      application_type: 'easy_apply'
+                      company: job.company
                     });
-                    setShowApplyModal(true);
+                    router.push(`/jobs/${job._id}/edit`);
                   }}
-                  className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex items-center space-x-2 bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors"
                 >
-                  <span>Easy Apply</span>
+                  <FiEdit size={18} />
+                  <span>Edit Job</span>
                 </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    analytics.trackEvent('job_external_apply_click', {
-                      job_id: job._id,
-                      job_title: job.title,
-                      company: job.company,
-                      work_type: job.workType,
-                      employment_type: job.employmentType,
-                      external_link: job.externalLink,
-                      application_type: 'external'
-                    });
-                    handleExternalApply();
-                  }}
-                  className="flex items-center space-x-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <FiExternalLink size={18} />
-                  <span>Apply Now</span>
-                </button>
+              )}
+
+              {/* Apply Button - Only show for non-owners */}
+              {!isJobOwner && (
+                <div>
+                  {checkingApplication ? (
+                    <button
+                      disabled
+                      className="flex items-center space-x-2 bg-gray-400 text-white px-6 py-3 rounded-lg cursor-not-allowed"
+                    >
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                      <span>Checking...</span>
+                    </button>
+                  ) : hasApplied ? (
+                    <button
+                      disabled
+                      className="flex items-center space-x-2 bg-green-600 text-white px-6 py-3 rounded-lg cursor-not-allowed"
+                    >
+                      <FiCheck size={18} />
+                      <span>Applied</span>
+                    </button>
+                  ) : job.easyApply ? (
+                    <button
+                      onClick={() => {
+                        analytics.trackEvent('job_apply_modal_open', {
+                          job_id: job._id,
+                          job_title: job.title,
+                          company: job.company,
+                          work_type: job.workType,
+                          employment_type: job.employmentType,
+                          application_type: 'easy_apply'
+                        });
+                        setShowApplyModal(true);
+                      }}
+                      className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <span>Easy Apply</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        analytics.trackEvent('job_external_apply_click', {
+                          job_id: job._id,
+                          job_title: job.title,
+                          company: job.company,
+                          work_type: job.workType,
+                          employment_type: job.employmentType,
+                          external_link: job.externalLink,
+                          application_type: 'external'
+                        });
+                        handleExternalApply();
+                      }}
+                      className="flex items-center space-x-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      <FiExternalLink size={18} />
+                      <span>Apply Now</span>
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>
