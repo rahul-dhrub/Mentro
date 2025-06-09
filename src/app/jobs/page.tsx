@@ -153,13 +153,22 @@ export default function JobsPage() {
                 Job Opportunities
               </h1>
             </div>
-            <Link
-              href="/jobs/post"
-              className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <FiPlus size={20} />
-              <span>Post a Job</span>
-            </Link>
+            <div className="flex items-center space-x-3">
+              <Link
+                href="/jobs/applications"
+                className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <FiUsers size={20} />
+                <span>Applications</span>
+              </Link>
+              <Link
+                href="/jobs/post"
+                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <FiPlus size={20} />
+                <span>Post a Job</span>
+              </Link>
+            </div>
           </div>
           
           {/* Search Bar */}

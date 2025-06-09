@@ -153,6 +153,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const jobId = searchParams.get('jobId');
     const status = searchParams.get('status');
+    const search = searchParams.get('search');
     const type = searchParams.get('type'); // 'sent' for user's applications, 'received' for recruiter
 
     await connectDB();
@@ -183,6 +184,21 @@ export async function GET(request: NextRequest) {
       } else {
         // All applications for recruiter's jobs
         const recruiterJobs = await Job.find({ recruiterId: user._id }).select('_id');
+        
+        if (recruiterJobs.length === 0) {
+          // No jobs found for this recruiter, return empty results
+          return NextResponse.json({
+            applications: [],
+            pagination: {
+              page,
+              limit,
+              total: 0,
+              totalPages: 0,
+              hasNextPage: false,
+              hasPrevPage: false,
+            },
+          });
+        }
         query.jobId = { $in: recruiterJobs.map(job => job._id) };
       }
       populateOptions = [
@@ -201,13 +217,89 @@ export async function GET(request: NextRequest) {
       query.status = status;
     }
 
+    // Add search functionality
+    if (search) {
+      query.$or = [
+        { applicantName: { $regex: search, $options: 'i' } },
+        { applicantEmail: { $regex: search, $options: 'i' } },
+        { mobileNumber: { $regex: search, $options: 'i' } },
+      ];
+    }
+
     const skip = (page - 1) * limit;
-    const applications = await Application.find(query)
-      .populate(populateOptions)
-      .sort({ appliedAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
+    let applications: any[] = [];
+    
+    try {
+      applications = await Application.find(query)
+        .populate(populateOptions)
+        .sort({ appliedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+    } catch (error: any) {
+      // Handle cast errors for invalid ObjectIds (e.g., Clerk IDs stored as applicantId)
+      if (error.name === 'CastError') {
+        console.warn('CastError in applications query, filtering invalid data:', error.message);
+        
+        // First, get applications without population to identify valid ones
+        const rawApplications = await Application.find(query)
+          .sort({ appliedAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean();
+        
+        // Filter applications that have valid ObjectIds for applicantId and jobId
+        const validApplications = rawApplications.filter(app => {
+          // Check if applicantId is a valid ObjectId (24 character hex string)
+          const isValidApplicantId = /^[0-9a-fA-F]{24}$/.test(app.applicantId?.toString() || '');
+          const isValidJobId = /^[0-9a-fA-F]{24}$/.test(app.jobId?.toString() || '');
+          return isValidApplicantId && isValidJobId;
+        });
+        
+        // Now populate the valid applications
+        if (validApplications.length > 0) {
+          const validIds = validApplications.map(app => app._id);
+          applications = await Application.find({ _id: { $in: validIds } })
+            .populate(populateOptions)
+            .sort({ appliedAt: -1 })
+            .lean();
+        } else {
+          applications = [];
+        }
+      } else {
+        throw error; // Re-throw if it's not a cast error
+      }
+    }
+
+    // If searching by job title, filter applications after population
+    if (search && type === 'received') {
+      try {
+        const allApplications = await Application.find(query)
+          .populate(populateOptions)
+          .sort({ appliedAt: -1 })
+          .lean();
+        
+        const filteredApplications = allApplications.filter(app => 
+          app.applicantName.toLowerCase().includes(search.toLowerCase()) ||
+          app.applicantEmail.toLowerCase().includes(search.toLowerCase()) ||
+          (app.mobileNumber && app.mobileNumber.toLowerCase().includes(search.toLowerCase())) ||
+          (app.jobId && typeof app.jobId === 'object' && 'title' in app.jobId && 
+           app.jobId.title.toLowerCase().includes(search.toLowerCase()))
+        );
+        
+        const startIndex = skip;
+        const endIndex = skip + limit;
+        applications = filteredApplications.slice(startIndex, endIndex);
+      } catch (error: any) {
+        // If there's a cast error in search, fall back to the already filtered applications
+        if (error.name === 'CastError') {
+          console.warn('CastError in search filtering, using base applications');
+          // applications already set from the previous try-catch block
+        } else {
+          throw error;
+        }
+      }
+    }
 
     const total = await Application.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
