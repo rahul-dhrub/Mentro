@@ -5,6 +5,7 @@ import { Course } from '../types';
 import { useRouter } from 'next/navigation';
 import { useCart } from '../../../contexts/CartContext';
 import { useWishlist } from '../../../contexts/WishlistContext';
+import { useAnalytics } from '@/components/FirebaseAnalyticsProvider';
 
 interface CourseSidebarProps {
   course: Course;
@@ -17,6 +18,7 @@ export default function CourseSidebar({ course, isStudent = false, userRole, onE
   const router = useRouter();
   const { addToCart, isInCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const analytics = useAnalytics();
 
   const courseInCart = isInCart(course.id);
   const courseInWishlist = isInWishlist(course.id);
@@ -27,13 +29,26 @@ export default function CourseSidebar({ course, isStudent = false, userRole, onE
   const handlePrimaryButtonClick = () => {
     if (isStudent) {
       if (courseInCart) {
+        // Track cart navigation
+        analytics.trackEvent('cart_navigation', {
+          source: 'course_sidebar',
+          course_id: course.id
+        });
         // Navigate to cart if already in cart
         router.push('/cart');
       } else {
+        // Track add to cart
+        analytics.trackAddToCart(course.id, course.title, course.price);
         // Add to cart
         addToCart(course);
       }
     } else {
+      // Track course detail navigation
+      analytics.trackEvent('course_detail_navigation', {
+        source: 'course_sidebar',
+        course_id: course.id,
+        course_name: course.title
+      });
       // Navigate to course detail page
       router.push(`/course_detail/${course.id}`);
     }
@@ -41,13 +56,30 @@ export default function CourseSidebar({ course, isStudent = false, userRole, onE
 
   const handleSecondaryButtonClick = () => {
     if (isStudent) {
+      // Track buy now click
+      analytics.trackEvent('buy_now_click', {
+        course_id: course.id,
+        course_name: course.title,
+        course_price: course.price,
+        source: 'course_sidebar'
+      });
       // TODO: Buy now functionality
       console.log('Buy now:', course.id);
     } else {
       // Call edit functionality if user can edit, otherwise fallback
       if (canEdit && onEditClick) {
+        analytics.trackEvent('course_edit_click', {
+          course_id: course.id,
+          course_name: course.title,
+          source: 'course_sidebar'
+        });
         onEditClick();
       } else {
+        analytics.trackEvent('course_view_details_click', {
+          course_id: course.id,
+          course_name: course.title,
+          source: 'course_sidebar'
+        });
         console.log('View course details:', course.id);
       }
     }
@@ -55,8 +87,21 @@ export default function CourseSidebar({ course, isStudent = false, userRole, onE
 
   const handleWishlistClick = () => {
     if (courseInWishlist) {
+      analytics.trackEvent('remove_from_wishlist', {
+        course_id: course.id,
+        course_name: course.title,
+        course_price: course.price,
+        source: 'course_sidebar'
+      });
       removeFromWishlist(course.id);
     } else {
+      analytics.trackEvent('add_to_wishlist', {
+        course_id: course.id,
+        course_name: course.title,
+        course_price: course.price,
+        instructor_name: course.instructor.name,
+        source: 'course_sidebar'
+      });
       addToWishlist({
         id: course.id,
         title: course.title,

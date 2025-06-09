@@ -1,6 +1,41 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
+import { useAnalytics } from '@/components/FirebaseAnalyticsProvider';
+
 export default function PricingSection() {
+  const router = useRouter();
+  const { isSignedIn } = useUser();
+  const analytics = useAnalytics();
+
+  const handlePricingClick = (plan: 'basic' | 'pro' | 'enterprise', price: number) => {
+    analytics.trackEvent('pricing_plan_click', {
+      plan_name: plan,
+      plan_price: price,
+      cta_location: 'pricing_section',
+      is_signed_in: isSignedIn
+    });
+
+    if (plan === 'enterprise') {
+      analytics.trackEvent('contact_sales_click', {
+        source: 'pricing_section',
+        plan: 'enterprise'
+      });
+      // You can add contact modal or redirect to contact page
+      return;
+    }
+
+    if (!isSignedIn) {
+      analytics.trackEvent('signup_redirect', {
+        source: 'pricing_section',
+        intended_plan: plan
+      });
+      router.push('/sign-in');
+    } else {
+      router.push('/feed');
+    }
+  };
   return (
     <div className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -40,7 +75,10 @@ export default function PricingSection() {
                   <span className="text-gray-600">Community support</span>
                 </li>
               </ul>
-              <button className="w-full py-3 px-6 bg-gray-100 text-gray-900 rounded-lg font-semibold hover:bg-gray-200 transition-colors">
+              <button 
+                onClick={() => handlePricingClick('basic', 0)}
+                className="w-full py-3 px-6 bg-gray-100 text-gray-900 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+              >
                 Start Free
               </button>
             </div>
@@ -83,7 +121,10 @@ export default function PricingSection() {
                   <span className="text-gray-600">Custom branding</span>
                 </li>
               </ul>
-              <button className="w-full py-3 px-6 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+              <button 
+                onClick={() => handlePricingClick('pro', 29)}
+                className="w-full py-3 px-6 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+              >
                 Get Started
               </button>
             </div>
@@ -123,7 +164,10 @@ export default function PricingSection() {
                   <span className="text-gray-600">Team management</span>
                 </li>
               </ul>
-              <button className="w-full py-3 px-6 bg-gray-100 text-gray-900 rounded-lg font-semibold hover:bg-gray-200 transition-colors">
+              <button 
+                onClick={() => handlePricingClick('enterprise', 99)}
+                className="w-full py-3 px-6 bg-gray-100 text-gray-900 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+              >
                 Contact Sales
               </button>
             </div>

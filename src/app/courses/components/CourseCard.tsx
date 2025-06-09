@@ -5,6 +5,7 @@ import { FiStar, FiUsers, FiClock, FiShoppingCart, FiCheck, FiHeart } from 'reac
 import { Course } from '../types';
 import { useCart } from '../../../contexts/CartContext';
 import { useWishlist } from '../../../contexts/WishlistContext';
+import { useAnalytics } from '@/components/FirebaseAnalyticsProvider';
 
 interface CourseCardProps {
   course: Course;
@@ -16,11 +17,13 @@ export default function CourseCard({ course, userRole }: CourseCardProps) {
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const courseInCart = isInCart(course.id);
   const courseInWishlist = isInWishlist(course.id);
+  const analytics = useAnalytics();
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent link navigation
     e.stopPropagation();
     if (!courseInCart) {
+      analytics.trackAddToCart(course.id, course.title, course.price);
       addToCart(course);
     }
   };
@@ -30,8 +33,19 @@ export default function CourseCard({ course, userRole }: CourseCardProps) {
     e.stopPropagation();
     
     if (courseInWishlist) {
+      analytics.trackEvent('remove_from_wishlist', {
+        course_id: course.id,
+        course_name: course.title,
+        course_price: course.price
+      });
       removeFromWishlist(course.id);
     } else {
+      analytics.trackEvent('add_to_wishlist', {
+        course_id: course.id,
+        course_name: course.title,
+        course_price: course.price,
+        instructor_name: course.instructor.name
+      });
       addToWishlist({
         id: course.id,
         title: course.title,

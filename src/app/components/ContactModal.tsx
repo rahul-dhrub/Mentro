@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { FiX, FiMail, FiPhone, FiMessageSquare, FiSend, FiLoader } from 'react-icons/fi';
+import { useAnalytics } from '@/components/FirebaseAnalyticsProvider';
 
 interface ContactModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errors, setErrors] = useState<Partial<ContactFormData>>({});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const analytics = useAnalytics();
 
   // Auto-resize textarea function
   const autoResize = () => {
@@ -94,8 +96,19 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
     e.preventDefault();
     
     if (!validateForm()) {
+      analytics.trackEvent('contact_form_validation_failed', {
+        source: 'contact_modal',
+        errors: Object.keys(errors)
+      });
       return;
     }
+
+    analytics.trackEvent('contact_form_submit', {
+      source: 'contact_modal',
+      has_email: !!formData.email,
+      has_mobile: !!formData.mobile,
+      message_length: formData.message.length
+    });
 
     setIsSubmitting(true);
     setSubmitStatus('idle');
@@ -110,6 +123,9 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
       });
 
       if (response.ok) {
+        analytics.trackEvent('contact_form_success', {
+          source: 'contact_modal'
+        });
         setSubmitStatus('success');
         setFormData({ email: '', mobile: '', message: '' });
         setTimeout(() => {
@@ -121,6 +137,10 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
       }
     } catch (error) {
       console.error('Error sending contact form:', error);
+      analytics.trackEvent('contact_form_error', {
+        source: 'contact_modal',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
       setSubmitStatus('error');
     } finally {
       setIsSubmitting(false);

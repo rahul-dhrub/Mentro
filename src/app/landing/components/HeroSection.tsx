@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { useState } from 'react';
+import { useAnalytics } from '@/components/FirebaseAnalyticsProvider';
 
 interface HeroSectionProps {
   activeTab: string;
@@ -14,8 +15,17 @@ export default function HeroSection({ activeTab, setActiveTab }: HeroSectionProp
   const { user, isSignedIn, isLoaded } = useUser();
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const analytics = useAnalytics();
 
   const handleRoleSelection = async (role: 'student' | 'instructor') => {
+    // Track CTA click
+    analytics.trackEvent('cta_click', {
+      cta_name: role === 'student' ? 'start_learning' : 'start_tutoring',
+      cta_location: 'hero_section',
+      user_role: role,
+      is_signed_in: isSignedIn
+    });
+
     // Clear any previous errors
     setError(null);
 
@@ -25,6 +35,11 @@ export default function HeroSection({ activeTab, setActiveTab }: HeroSectionProp
     }
 
     if (!isSignedIn) {
+      // Track sign-in redirect
+      analytics.trackEvent('signup_redirect', {
+        source: 'hero_section',
+        intended_role: role
+      });
       // If user is not signed in, redirect to sign-in page
       router.push('/sign-in');
       return;

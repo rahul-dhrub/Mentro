@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { FiEdit3, FiTrash2, FiHeart, FiShare, FiBookmark } from 'react-icons/fi';
+import { useAnalytics } from '@/components/FirebaseAnalyticsProvider';
 
 interface Blog {
     _id?: string;
@@ -25,10 +26,17 @@ const BlogActions: React.FC<BlogActionsProps> = ({ blog, onEdit, onDelete }) => 
     const { userId } = useAuth();
     const router = useRouter();
     const [isDeleting, setIsDeleting] = useState(false);
+    const analytics = useAnalytics();
 
     const isOwner = blog && userId && blog.author.id === userId;
 
     const handleEdit = () => {
+        analytics.trackEvent('blog_edit_click', {
+            blog_id: blog?._id || blog?.id,
+            blog_title: blog?.title,
+            author_id: blog?.author.id
+        });
+        
         if (onEdit) {
             onEdit();
         } else if (blog) {
@@ -39,6 +47,12 @@ const BlogActions: React.FC<BlogActionsProps> = ({ blog, onEdit, onDelete }) => 
 
     const handleDelete = async () => {
         if (!blog || !onDelete) return;
+
+        analytics.trackEvent('blog_delete_attempt', {
+            blog_id: blog._id || blog.id,
+            blog_title: blog.title,
+            author_id: blog.author.id
+        });
 
         const confirmed = window.confirm('Are you sure you want to delete this blog? This action cannot be undone.');
         if (!confirmed) return;
@@ -73,6 +87,13 @@ const BlogActions: React.FC<BlogActionsProps> = ({ blog, onEdit, onDelete }) => 
                 {/* Public Actions */}
                 <div className="flex items-center space-x-4">
                     <button
+                        onClick={() => {
+                            analytics.trackEvent('blog_like', {
+                                blog_id: blog?._id || blog?.id,
+                                blog_title: blog?.title,
+                                author_id: blog?.author.id
+                            });
+                        }}
                         className="flex items-center space-x-2 text-gray-700 hover:text-red-600 bg-gray-100 hover:bg-red-50 px-4 py-2 rounded-md transition-colors"
                         aria-label="Like this post"
                     >
@@ -81,6 +102,13 @@ const BlogActions: React.FC<BlogActionsProps> = ({ blog, onEdit, onDelete }) => 
                     </button>
                     
                     <button
+                        onClick={() => {
+                            analytics.trackEvent('blog_share', {
+                                blog_id: blog?._id || blog?.id,
+                                blog_title: blog?.title,
+                                author_id: blog?.author.id
+                            });
+                        }}
                         className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 px-4 py-2 rounded-md transition-colors"
                         aria-label="Share this post"
                     >
@@ -89,6 +117,13 @@ const BlogActions: React.FC<BlogActionsProps> = ({ blog, onEdit, onDelete }) => 
                     </button>
                     
                     <button
+                        onClick={() => {
+                            analytics.trackEvent('blog_save', {
+                                blog_id: blog?._id || blog?.id,
+                                blog_title: blog?.title,
+                                author_id: blog?.author.id
+                            });
+                        }}
                         className="flex items-center space-x-2 text-gray-700 hover:text-green-600 bg-gray-100 hover:bg-green-50 px-4 py-2 rounded-md transition-colors"
                         aria-label="Save this post"
                     >

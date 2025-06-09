@@ -3,15 +3,25 @@
 import React, { useState } from 'react';
 import { FiMessageCircle, FiX, FiMail, FiPhone, FiSend } from 'react-icons/fi';
 import ContactModal from './ContactModal';
+import { useAnalytics } from '@/components/FirebaseAnalyticsProvider';
 
 export default function FloatingContactButton() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const analytics = useAnalytics();
+
+  const handleContactClick = () => {
+    analytics.trackEvent('contact_button_click', {
+      source: 'floating_button',
+      location: 'global'
+    });
+    setIsModalOpen(true);
+  };
 
   return (
     <>
       {/* Floating Contact Button */}
       <button
-        onClick={() => setIsModalOpen(true)}
+        onClick={handleContactClick}
         className="absolute bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg transition-all duration-300 hover:scale-110 z-[9999] group"
         aria-label="Contact us"
         style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 9999 }}

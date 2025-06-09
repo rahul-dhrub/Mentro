@@ -10,6 +10,7 @@ import Sidebar from './components/Sidebar';
 import MainContent from './components/MainContent';
 import { Course, Category, CourseFilter } from './types';
 import { coursesAPI } from '@/lib/api/courses';
+import { useAnalytics } from '@/components/FirebaseAnalyticsProvider';
 
 export default function StudentCoursesPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,6 +32,7 @@ export default function StudentCoursesPage() {
   const { userId, isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
   const router = useRouter();
+  const analytics = useAnalytics();
 
   // Fetch user role
   useEffect(() => {
@@ -143,6 +145,19 @@ export default function StudentCoursesPage() {
     fetchCategories();
   }, []);
 
+  // Track category selection
+  useEffect(() => {
+    if (selectedCategory) {
+      const categoryName = categories.find(cat => cat.id === selectedCategory)?.name;
+      if (categoryName) {
+        analytics.trackEvent('category_selected', {
+          category_name: categoryName,
+          category_id: selectedCategory
+        });
+      }
+    }
+  }, [selectedCategory, categories, analytics]);
+
   // Filter courses based on local filters (rating, duration)
   const filteredCourses = courses.filter(course => {
     const matchesRating = !filters.rating || course.rating >= filters.rating;
@@ -152,6 +167,14 @@ export default function StudentCoursesPage() {
 
   const handleFilterChange = (newFilters: CourseFilter) => {
     setFilters(newFilters);
+    
+    // Track filter usage
+    analytics.trackEvent('filter_applied', {
+      level: newFilters.level,
+      rating: newFilters.rating,
+      duration: newFilters.duration,
+      category: selectedCategory
+    });
   };
 
   const handleClearFilters = () => {
@@ -166,6 +189,14 @@ export default function StudentCoursesPage() {
     // The course has already been created in the database by the modal
     // Just add it to the local state and refresh categories
     setCourses(prevCourses => [newCourse, ...prevCourses]);
+    
+    // Track course creation
+    analytics.trackEvent('course_created', {
+      course_id: newCourse.id,
+      course_name: newCourse.title,
+      category: newCourse.category,
+      level: newCourse.level
+    });
     
     // Refresh categories to update the course count
     const refreshCategories = async () => {
@@ -189,7 +220,13 @@ export default function StudentCoursesPage() {
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
+    const searchTerm = e.target.value;
+    setSearchQuery(searchTerm);
+    
+    // Track search events
+    if (searchTerm.length > 2) {
+      analytics.trackSearch(searchTerm, 'courses');
+    }
   };
 
   const handleGoBack = () => {

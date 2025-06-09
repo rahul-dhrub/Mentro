@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { useCart } from '../../contexts/CartContext';
 import { BillingAddress, SavedAddress, Coupon, OrderSummary } from './checkout';
+import { useAnalytics } from '@/components/FirebaseAnalyticsProvider';
 
 // Import our new components
 import {
@@ -19,6 +20,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { isSignedIn, userId } = useAuth();
   const { cart, clearCart } = useCart();
+  const analytics = useAnalytics();
   
   const [billingAddress, setBillingAddress] = useState<BillingAddress>({
     firstName: '',
@@ -347,6 +349,27 @@ export default function CheckoutPage() {
 
     // Simulate payment processing
     setTimeout(() => {
+      // Generate transaction ID
+      const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Track purchase completion
+      analytics.trackPurchase(
+        transactionId,
+        orderSummary.total,
+        'USD',
+        cart.items.map(item => ({
+          item_id: item.courseId,
+          item_name: item.title,
+          value: item.price,
+          quantity: 1
+        }))
+      );
+
+      // Track individual course enrollments
+      cart.items.forEach(item => {
+        analytics.trackCourseEnroll(item.courseId, item.title);
+      });
+
       alert('Order placed successfully! (This is a demo)');
       clearCart();
       router.push('/courses');

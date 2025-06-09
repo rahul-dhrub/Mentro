@@ -5,12 +5,23 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '../../contexts/CartContext';
 import { FiTrash2, FiArrowLeft, FiShoppingBag } from 'react-icons/fi';
 import Link from 'next/link';
+import { useAnalytics } from '@/components/FirebaseAnalyticsProvider';
 
 export default function CartPage() {
   const router = useRouter();
   const { cart, removeFromCart, clearCart } = useCart();
+  const analytics = useAnalytics();
 
   const handleRemoveItem = (courseId: string) => {
+    const item = cart.items.find(item => item.courseId === courseId);
+    if (item) {
+      analytics.trackEvent('remove_from_cart', {
+        item_id: courseId,
+        item_name: item.title,
+        value: item.price,
+        currency: 'USD'
+      });
+    }
     removeFromCart(courseId);
   };
 
@@ -21,6 +32,18 @@ export default function CartPage() {
   };
 
   const handleCheckout = () => {
+    // Track begin checkout event
+    analytics.trackEvent('begin_checkout', {
+      currency: 'USD',
+      value: cart.totalAmount,
+      items: cart.items.map(item => ({
+        item_id: item.courseId,
+        item_name: item.title,
+        value: item.price,
+        quantity: 1
+      }))
+    });
+    
     router.push('/checkout');
   };
 
