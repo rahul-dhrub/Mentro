@@ -1,51 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_cnVsaW5nLW9yaW9sZS0zMy5jbGVyay5hY2NvdW50cy5kZXYk
+CLERK_SECRET_KEY=sk_test_D9ZsnPja40rvwtVZj9O654kuPVM9u6f2fIePM2lmOh
 
-## Getting Started
+REDIS_URL=redis://localhost:6379
+# or use your cloud Redis URL
+# REDIS_URL=redis://default:<password>@<host>:<port>
 
-First, run the development server:
+---.env.local-------ended-----
+----.env----started-------
+MONGODB_URI=mongodb://localhost:27017/mentro
+WEBHOOK_SECRET=whsec_u3fPkAbB/1y5kz9ifeB2MFON3W6TSJNC
+BUNNY_STORAGE_ZONE=mentro-resources
+BUNNY_PULL_ZONE=mentro45
+BUNNY_STORAGE_API_KEY=943593ca-616b-48ac-ad7bab096ea0-cf2c-4dba
+BUNNY_BASE_URL=https://storage.bunnycdn.com
+BUNNY_STREAM_LIBRARY=424950
+BUNNY_STREAM_API_KEY=46593f97-d377-483a-90f02b3502f3-dcaf-4b5f
+BUNNY_STORAGE_REGION=sg
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+# PAYU_MERCHANT_KEY=sD58Wg
+# PAYU_SALT=your_salt
+# PAYU_BASE_URL=https://sandboxsecure.payu.in/_payment
+NEXT_PUBLIC_BASE_URL=http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+NEXT_PUBLIC_FIREBASE_API_KEY="AIzaSyBm-ZB1GDH6VarHGcTS3IS66SLzIH_5hcs"
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="mentro-8734a.firebaseapp.com"
+NEXT_PUBLIC_FIREBASE_PROJECT_ID="mentro-8734a"
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="mentro-8734a.firebasestorage.app"
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="468087070121"
+NEXT_PUBLIC_FIREBASE_APP_ID="1:468087070121:web:c3a204c6921756d762f8b8"
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="G-7274PTDV6Q"
 
 
 
---------------------------------
-// Get first page of all posts
-fetch('/api/posts?type=all&page=1&limit=10')
-
-// Get second page
-fetch('/api/posts?type=all&page=2&limit=10')
-
-// Get first page of personal posts
-fetch('/api/posts?type=personal&page=1&limit=10')
-
-// Get second page of personal posts
-fetch('/api/posts?type=personal&page=2&limit=10')
